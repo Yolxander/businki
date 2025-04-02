@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 
-
 class ProjectController extends Controller
 {
     public function index()
@@ -32,10 +31,10 @@ class ProjectController extends Controller
                 ->get();
 
             foreach ($projects as $project) {
+                // Attach tasks and subtasks
                 $project->tasks = DB::table('tasks')
                     ->where('project_id', $project->id)
                     ->whereRaw("LENGTH(project_id::text) = 36")
-                    ->select('*')
                     ->get()
                     ->map(function ($task) {
                         $task->subtasks = DB::table('subtasks')
@@ -44,6 +43,12 @@ class ProjectController extends Controller
                             ->get();
                         return $task;
                     });
+
+                // Attach timeline events
+                $project->timeline = DB::table('project_timeline_events')
+                    ->where('project_id', $project->id)
+                    ->orderBy('event_date')
+                    ->get();
             }
 
             return response()->json([
@@ -104,6 +109,12 @@ class ProjectController extends Controller
                             ->get();
                         return $task;
                     });
+
+                // Attach timeline events
+                $project->timeline = DB::table('project_timeline_events')
+                    ->where('project_id', $project->id)
+                    ->orderBy('event_date')
+                    ->get();
             }
 
             return response()->json([
