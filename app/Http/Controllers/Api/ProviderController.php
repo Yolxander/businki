@@ -23,7 +23,10 @@ class ProviderController extends Controller
 
         $user_id = $request->input('user_id');
 
-        $provider = Provider::where('user_id',$user_id)->with('projects.tasks.subtasks')->get();
+        $provider = Provider::where('user_id',$user_id)->with(
+            'projects.tasks.subtasks',
+            'providerType'
+        )->get();
 
         return response()->json([
             'provider' => $provider
