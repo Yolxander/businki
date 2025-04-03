@@ -10,6 +10,8 @@ Route::get('/', function () {
 
 Route::get('/project',[ProjectController::class,'index']);
 Route::get('/projects/by-client', [ProjectController::class, 'getByClient']);
-
 Route::get('/projects/all',[ProjectController::class,'allProjects']);
+
+
+//providers
 Route::get('/providers/by-user',[ProviderController::class,'getByUser']);

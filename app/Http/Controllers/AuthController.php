@@ -1,0 +1,90 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
+
+class AuthController extends Controller
+{
+    public function register(Request $request)
+    {
+        Log::info('request', (array)$request);
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|confirmed|min:6',
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        // Automatically log in the user & return token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user,
+        ]);
+    }
+
+    public function login(Request $request)
+    {
+        // Log raw request body
+        Log::info('Login Request Raw Content:', ['content' => $request->getContent()]);
+
+        // Log input as array
+        Log::info('Login Request Input:', $request->all());
+
+        // Validate credentials
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+        ]);
+
+        Log::info('Validated Credentials:', $credentials);
+
+        // Attempt to authenticate
+        if (!Auth::attempt($credentials)) {
+            Log::warning('Authentication failed for email: ' . $credentials['email']);
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        $user = Auth::user();
+
+        if (!$user) {
+            Log::error('Auth::user() returned null even though Auth::attempt succeeded');
+            return response()->json(['message' => 'User not found after auth'], 500);
+        }
+
+        // Ensure Personal Access Token trait is active
+        if (!method_exists($user, 'createToken')) {
+            Log::error('User model is missing HasApiTokens trait');
+            return response()->json(['message' => 'Token creation unavailable'], 500);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        Log::info('User authenticated', ['user_id' => $user->id, 'email' => $user->email]);
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user,
+        ], 200);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json(['message' => 'Logged out']);
+    }
+}
