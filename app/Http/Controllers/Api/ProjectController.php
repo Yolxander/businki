@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Project;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
@@ -130,5 +131,16 @@ class ProjectController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function allProjects()
+    {
+        $projects = Project::with([
+            'tasks.subtasks'
+        ])->get();
+
+        return response()->json([
+            'projects' => $projects
+        ]);
     }
 }
