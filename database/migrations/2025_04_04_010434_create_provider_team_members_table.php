@@ -29,7 +29,8 @@ class CreateProviderTeamMembersTable extends Migration
                 ->on('providers')
                 ->onDelete('cascade');
 
-            $table->unique(['owner_provider_id', 'member_provider_id']); // prevent duplicates
+            $table->unique(['owner_provider_id', 'member_provider_id'], 'ptm_owner_member_unique');
+
         });
     }
 
