@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -40,3 +41,16 @@ Route::prefix('projects')->group(function () {
 
 // Extra route for projects by client
 Route::get('/clients/{clientId}/projects', [ProjectController::class, 'getProjectsByClient']);
+
+
+Route::prefix('tasks')->group(function () {
+    Route::get('/', [TaskController::class, 'index']);
+    Route::get('/{id}', [TaskController::class, 'show']);
+    Route::post('/', [TaskController::class, 'store']);
+    Route::put('/{id}', [TaskController::class, 'update']);
+    Route::delete('/{id}', [TaskController::class, 'destroy']);
+    Route::put('/{id}/toggle-completion', [TaskController::class, 'toggleCompletion']);
+});
+
+// Extra route for tasks by project
+Route::get('/projects/{projectId}/tasks', [TaskController::class, 'getTasksByProject']);
