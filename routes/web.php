@@ -14,4 +14,4 @@ Route::get('/projects/all',[ProjectController::class,'allProjects']);
 
 
 //providers
-Route::get('/providers/by-user',[ProviderController::class,'getByUser']);
+

@@ -2,14 +2,19 @@
 
 return [
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => [
+        'api/*',
+        'sanctum/csrf-cookie',
+        'login',
+        'register',
+    ],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['*',],
 
     'allowed_origins_patterns' => [
-        '^https:\/\/.*\.lite\.vusercontent\.net$',
+        '^https:\/\/[a-z0-9\-]+\.lite\.vusercontent\.net$',
     ],
 
     'allowed_headers' => ['*'],

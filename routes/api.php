@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\CollaborationController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectTimelineEventController;
 use App\Http\Controllers\Api\ProviderController;
+use App\Http\Controllers\Api\ProviderTypeController;
 use App\Http\Controllers\Api\SubtaskController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TaskIssueController;
@@ -68,6 +69,8 @@ Route::prefix('providers')->group(function () {
     Route::get('/{id}', [ProviderController::class, 'show']);
     Route::put('/{id}', [ProviderController::class, 'update']);
     Route::get('/{id}/dashboard', [ProviderController::class, 'dashboard']);
+    Route::post('/', [ProviderController::class, 'store']); // 👈 Add this line
+    Route::get('/by-user/{id}',[ProviderController::class,'getByUser']);
 });
 
 //team-members
@@ -131,4 +134,14 @@ Route::prefix('issues/{issueId}/code-snippets')->group(function () {
 Route::prefix('code-snippets')->group(function () {
     Route::put('/{id}', [CodeSnippetController::class, 'update']);
     Route::delete('/{id}', [CodeSnippetController::class, 'destroy']);
+});
+
+
+//provider types
+Route::prefix('provider-types')->group(function () {
+    Route::get('/', [ProviderTypeController::class, 'index']);
+    Route::get('/{id}', [ProviderTypeController::class, 'show']);
+    Route::post('/', [ProviderTypeController::class, 'store']);
+    Route::put('/{id}', [ProviderTypeController::class, 'update']);
+    Route::delete('/{id}', [ProviderTypeController::class, 'destroy']);
 });

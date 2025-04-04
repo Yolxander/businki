@@ -37,6 +37,10 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+
+        if ($request->getMethod() === 'OPTIONS') {
+            return response()->noContent();
+        }
         // Log raw request body
         Log::info('Login Request Raw Content:', ['content' => $request->getContent()]);
 
