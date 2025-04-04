@@ -20,7 +20,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 
-
+//Clients
 Route::prefix('clients')->group(function () {
     Route::get('/', [ClientController::class, 'index']);
     Route::get('/{id}', [ClientController::class, 'show']);
@@ -30,7 +30,7 @@ Route::prefix('clients')->group(function () {
 });
 
 
-
+//Projects
 Route::prefix('projects')->group(function () {
     Route::get('/', [ProjectController::class, 'index']);
     Route::get('/{id}', [ProjectController::class, 'show']);
@@ -42,7 +42,7 @@ Route::prefix('projects')->group(function () {
 // Extra route for projects by client
 Route::get('/clients/{clientId}/projects', [ProjectController::class, 'getProjectsByClient']);
 
-
+//Task
 Route::prefix('tasks')->group(function () {
     Route::get('/', [TaskController::class, 'index']);
     Route::get('/{id}', [TaskController::class, 'show']);
@@ -54,3 +54,11 @@ Route::prefix('tasks')->group(function () {
 
 // Extra route for tasks by project
 Route::get('/projects/{projectId}/tasks', [TaskController::class, 'getTasksByProject']);
+
+
+//Providers
+Route::prefix('providers')->group(function () {
+    Route::get('/{id}', [ProviderController::class, 'show']);
+    Route::put('/{id}', [ProviderController::class, 'update']);
+    Route::get('/{id}/dashboard', [ProviderController::class, 'dashboard']);
+});
