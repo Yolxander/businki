@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\TeamMemberController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -61,4 +62,11 @@ Route::prefix('providers')->group(function () {
     Route::get('/{id}', [ProviderController::class, 'show']);
     Route::put('/{id}', [ProviderController::class, 'update']);
     Route::get('/{id}/dashboard', [ProviderController::class, 'dashboard']);
+});
+
+//team-members
+Route::prefix('team-members')->group(function () {
+    Route::get('/', [TeamMemberController::class, 'index']); // ?provider_id=1
+    Route::post('/invite', [TeamMemberController::class, 'invite']);
+    Route::put('/{id}', [TeamMemberController::class, 'update']);
 });

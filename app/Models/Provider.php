@@ -48,4 +48,27 @@ class Provider extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    // Providers this one manages as team members
+    public function teamMembers()
+    {
+        return $this->belongsToMany(
+            Provider::class,
+            'provider_team_members',
+            'owner_provider_id',
+            'member_provider_id'
+        )->withPivot('role', 'status')->withTimestamps();
+    }
+
+// Teams this provider is a member of (not owner of)
+    public function teams()
+    {
+        return $this->belongsToMany(
+            Provider::class,
+            'provider_team_members',
+            'member_provider_id',
+            'owner_provider_id'
+        )->withPivot('role', 'status')->withTimestamps();
+    }
+
 }
