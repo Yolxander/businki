@@ -15,7 +15,6 @@ class CreateIssuesTable extends Migration
             $table->text('description')->nullable();
             $table->string('status')->default('open'); // 'open', 'resolved', etc.
             $table->text('fix')->nullable();
-            $table->text('code_snippet')->nullable();
             $table->timestampsTz();
 
             $table->foreign('task_id')->references('id')->on('tasks')->onDelete('cascade');

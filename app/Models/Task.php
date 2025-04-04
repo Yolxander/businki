@@ -38,4 +38,10 @@ class Task extends Model
     {
         return $this->hasMany(Subtask::class);
     }
+
+    public function codeSnippets()
+    {
+        return $this->morphMany(CodeSnippet::class, 'snippable');
+    }
+
 }

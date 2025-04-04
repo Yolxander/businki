@@ -22,4 +22,10 @@ class TaskIssue extends Model
     {
         return $this->belongsTo(Task::class);
     }
+
+    public function codeSnippets()
+    {
+        return $this->morphMany(CodeSnippet::class, 'snippable');
+    }
+
 }

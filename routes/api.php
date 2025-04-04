@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\CodeSnippetController;
 use App\Http\Controllers\Api\CollaborationController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectTimelineEventController;
@@ -114,4 +115,20 @@ Route::prefix('tasks/{taskId}/issues')->group(function () {
 Route::prefix('issues')->group(function () {
     Route::put('/{id}', [TaskIssueController::class, 'update']);
     Route::delete('/{id}', [TaskIssueController::class, 'destroy']);
+});
+
+//code snippets
+Route::prefix('tasks/{taskId}/code-snippets')->group(function () {
+    Route::get('/', [CodeSnippetController::class, 'indexForTask']);
+    Route::post('/', [CodeSnippetController::class, 'storeForTask']);
+});
+
+Route::prefix('issues/{issueId}/code-snippets')->group(function () {
+    Route::get('/', [CodeSnippetController::class, 'indexForIssue']);
+    Route::post('/', [CodeSnippetController::class, 'storeForIssue']);
+});
+
+Route::prefix('code-snippets')->group(function () {
+    Route::put('/{id}', [CodeSnippetController::class, 'update']);
+    Route::delete('/{id}', [CodeSnippetController::class, 'destroy']);
 });
