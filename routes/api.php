@@ -70,3 +70,10 @@ Route::prefix('team-members')->group(function () {
     Route::post('/invite', [TeamMemberController::class, 'invite']);
     Route::put('/{id}', [TeamMemberController::class, 'update']);
 });
+
+//collaboration
+Route::prefix('collaborations')->group(function () {
+    Route::get('/', [CollaborationController::class, 'index']); // ?provider_id=1
+    Route::post('/invite', [CollaborationController::class, 'invite']);
+    Route::put('/{id}', [CollaborationController::class, 'update']);
+});
