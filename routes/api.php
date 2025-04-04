@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ProjectTimelineEventController;
 use App\Http\Controllers\Api\ProviderController;
 use App\Http\Controllers\Api\SubtaskController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\TaskIssueController;
 use App\Http\Controllers\Api\TeamMemberController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -102,4 +103,15 @@ Route::prefix('tasks/{taskId}/subtasks')->group(function () {
 Route::prefix('subtasks')->group(function () {
     Route::put('/{id}', [SubtaskController::class, 'update']);
     Route::delete('/{id}', [SubtaskController::class, 'destroy']);
+});
+
+//task issues
+Route::prefix('tasks/{taskId}/issues')->group(function () {
+    Route::get('/', [TaskIssueController::class, 'index']);
+    Route::post('/', [TaskIssueController::class, 'store']);
+});
+
+Route::prefix('issues')->group(function () {
+    Route::put('/{id}', [TaskIssueController::class, 'update']);
+    Route::delete('/{id}', [TaskIssueController::class, 'destroy']);
 });
