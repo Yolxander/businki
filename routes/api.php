@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\CollaborationController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\ProjectTimelineEventController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TeamMemberController;
 use Illuminate\Http\Request;
@@ -76,4 +78,15 @@ Route::prefix('collaborations')->group(function () {
     Route::get('/', [CollaborationController::class, 'index']); // ?provider_id=1
     Route::post('/invite', [CollaborationController::class, 'invite']);
     Route::put('/{id}', [CollaborationController::class, 'update']);
+});
+
+//Project timeline
+Route::prefix('projects/{projectId}/timeline')->group(function () {
+    Route::get('/', [ProjectTimelineEventController::class, 'index']);
+    Route::post('/', [ProjectTimelineEventController::class, 'store']);
+});
+
+Route::prefix('timeline')->group(function () {
+    Route::put('/{id}', [ProjectTimelineEventController::class, 'update']);
+    Route::delete('/{id}', [ProjectTimelineEventController::class, 'destroy']);
 });

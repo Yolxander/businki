@@ -1,6 +1,5 @@
 <?php
 
-// app/Models/ProjectTimelineEvent.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -10,8 +9,6 @@ class ProjectTimelineEvent extends Model
 {
     use HasFactory;
 
-    public $table = 'project_timeline_events';
-
     protected $fillable = [
         'project_id',
         'title',
@@ -20,4 +17,18 @@ class ProjectTimelineEvent extends Model
         'event_type',
         'created_by',
     ];
+
+    protected $casts = [
+        'event_date' => 'datetime',
+    ];
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }
