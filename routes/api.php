@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\ProjectController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -26,3 +27,16 @@ Route::prefix('clients')->group(function () {
     Route::put('/{id}', [ClientController::class, 'update']);
     Route::delete('/{id}', [ClientController::class, 'destroy']);
 });
+
+
+
+Route::prefix('projects')->group(function () {
+    Route::get('/', [ProjectController::class, 'index']);
+    Route::get('/{id}', [ProjectController::class, 'show']);
+    Route::post('/', [ProjectController::class, 'store']);
+    Route::put('/{id}', [ProjectController::class, 'update']);
+    Route::delete('/{id}', [ProjectController::class, 'destroy']);
+});
+
+// Extra route for projects by client
+Route::get('/clients/{clientId}/projects', [ProjectController::class, 'getProjectsByClient']);
