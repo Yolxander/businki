@@ -31,7 +31,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 //Clients
 Route::prefix('clients')->group(function () {
     Route::get('/', [ClientController::class, 'index']);
-    Route::get('/{id}', [ClientController::class, 'show']);
+    Route::get('info/{id}', [ClientController::class, 'show']);
     Route::post('/', [ClientController::class, 'store']);
     Route::put('/{id}', [ClientController::class, 'update']);
     Route::delete('/{id}', [ClientController::class, 'destroy']);

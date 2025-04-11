@@ -7,6 +7,8 @@ use App\Models\Project;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class ProjectController extends Controller
 {
@@ -25,71 +27,6 @@ class ProjectController extends Controller
         return response()->json($projects);
     }
 
-    public function getByClient(Request $request)
-    {
-        $clientId = $request->input('client_id');
-
-        if (!$clientId || strlen($clientId) !== 36) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid or missing client_id. Must be a valid UUID (36 characters).'
-            ], 400);
-        }
-
-        try {
-            $projects = DB::table('projects')
-                ->select(
-                    'projects.*',
-                    'providers.full_name as provider_name',
-                    'providers.email as provider_email',
-                    'provider_types.name as provider_type',
-                    'auth.users.email as user_email'
-                )
-                ->leftJoin('providers', function ($join) {
-                    $join->on('projects.provider_id', '=', 'providers.id')
-                        ->whereRaw("LENGTH(providers.id::text) = 36");
-                })
-                ->leftJoin('provider_types', 'providers.provider_type_id', '=', 'provider_types.id')
-                ->leftJoin('auth.users', 'providers.id', '=', 'auth.users.id')
-                ->where('projects.client_id', $clientId)
-                ->whereRaw("LENGTH(projects.id::text) = 36")
-                ->whereRaw("LENGTH(projects.provider_id::text) = 36")
-                ->get();
-
-            foreach ($projects as $project) {
-                $project->tasks = DB::table('tasks')
-                    ->where('project_id', $project->id)
-                    ->whereRaw("LENGTH(project_id::text) = 36")
-                    ->get()
-                    ->map(function ($task) {
-                        $task->subtasks = DB::table('subtasks')
-                            ->where('task_id', $task->id)
-                            ->whereRaw("LENGTH(task_id::text) = 36")
-                            ->get();
-                        return $task;
-                    });
-
-                // Attach timeline events
-                $project->timeline = DB::table('project_timeline_events')
-                    ->where('project_id', $project->id)
-                    ->orderBy('event_date')
-                    ->get();
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $projects
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error fetching projects for client: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching project data by client',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
 
     public function allProjects()
     {
@@ -106,58 +43,162 @@ class ProjectController extends Controller
     // GET /api/projects/{id}
     public function show($id)
     {
-        $project = Project::find($id);
+        try {
+            Log::info('Project show request received', ['project_id' => $id]);
 
-        if (!$project) {
-            return response()->json(['message' => 'Project not found'], 404);
+            $project = Project::with('tasks.subtasks','timeline')->find($id);
+
+            if (!$project) {
+                Log::warning('Project not found', ['project_id' => $id]);
+                return response()->json(['message' => 'Project not found'], 404);
+            }
+
+            Log::info('Project retrieved successfully', ['project' => $project]);
+
+            return response()->json($project);
+
+        } catch (\Exception $e) {
+            Log::error('Unexpected error during project show', [
+                'error' => $e->getMessage(),
+                'project_id' => $id,
+            ]);
+
+            return response()->json([
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json($project);
     }
+
 
     // POST /api/projects
+// POST /api/projects
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string',
-            'description' => 'nullable|string',
-            'status' => 'nullable|string',
-            'start_date' => 'nullable|date',
-            'due_date' => 'nullable|date',
-            'client_id' => 'required|exists:clients,id',
-            'provider_id' => 'required|exists:providers,id',
-            'color' => 'nullable|string',
-        ]);
+        try {
+            Log::info('Project store request received', ['input' => $request->all(), 'auth_user_id' => auth()->id()]);
 
-        $project = Project::create($validated);
+            $validated = $request->validate([
+                'name' => 'required|string',
+                'description' => 'nullable|string',
+                'status' => 'nullable|string',
+                'start_date' => 'nullable|date',
+                'due_date' => 'nullable|date',
+                'provider_id' => 'required|exists:providers,id',
+                'color' => 'nullable|string',
+            ]);
 
-        return response()->json($project, 201);
+            // Add client_id from the authenticated user
+            $validated['client_id'] = auth()->id();
+
+            Log::info('Validation passed', ['validated' => $validated]);
+
+            $project = Project::create($validated);
+
+            Log::info('Project created successfully', ['project' => $project]);
+
+            return response()->json($project, 201);
+
+        } catch (ValidationException $e) {
+            Log::error('Validation failed during project store', [
+                'errors' => $e->errors(),
+                'input' => $request->all()
+            ]);
+
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error during project store', [
+                'error' => $e->getMessage(),
+                'input' => $request->all()
+            ]);
+
+            return response()->json([
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
+
+
 
     // PUT /api/projects/{id}
+
     public function update(Request $request, $id)
     {
-        $project = Project::find($id);
+        try {
+            Log::info('Project update request received', [
+                'project_id' => $id,
+                'input' => $request->all()
+            ]);
 
-        if (!$project) {
-            return response()->json(['message' => 'Project not found'], 404);
+            $project = Project::find($id);
+
+            if (!$project) {
+                Log::warning('Project not found during update', ['project_id' => $id]);
+                return response()->json(['message' => 'Project not found'], 404);
+            }
+
+            $validated = $request->validate([
+                'name' => 'sometimes|string',
+                'description' => 'nullable|string',
+                'status' => 'nullable|string',
+                'start_date' => 'nullable|date',
+                'due_date' => 'nullable|date',
+                'client_id' => 'sometimes|exists:clients,id',
+                'color' => 'nullable|string',
+            ]);
+
+            // Convert ISO 8601 to Y-m-d if necessary
+            if (!empty($validated['due_date'])) {
+                $validated['due_date'] = Carbon::parse($validated['due_date'])->format('Y-m-d');
+            }
+
+            if (!empty($validated['start_date'])) {
+                $validated['start_date'] = Carbon::parse($validated['start_date'])->format('Y-m-d');
+            }
+
+            if (isset($validated['client_id'])) {
+                $validated['client_id'] = (int) $validated['client_id'];
+                Log::debug('Final validated update data', $validated);
+            }
+
+            Log::info('Validation passed', ['validated' => $validated]);
+
+            $project->update($validated);
+
+            Log::info('Project updated successfully', ['project' => $project]);
+
+            return response()->json($project);
+
+        } catch (ValidationException $e) {
+            Log::error('Validation failed during project update', [
+                'errors' => $e->errors(),
+                'input' => $request->all(),
+                'project_id' => $id,
+            ]);
+
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error during project update', [
+                'error' => $e->getMessage(),
+                'input' => $request->all(),
+                'project_id' => $id,
+            ]);
+
+            return response()->json([
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $validated = $request->validate([
-            'name' => 'sometimes|string',
-            'description' => 'nullable|string',
-            'status' => 'nullable|string',
-            'start_date' => 'nullable|date',
-            'due_date' => 'nullable|date',
-            'client_id' => 'sometimes|exists:clients,id',
-            'provider_id' => 'sometimes|exists:providers,id',
-            'color' => 'nullable|string',
-        ]);
-
-        $project->update($validated);
-
-        return response()->json($project);
     }
+
+
 
     // DELETE /api/projects/{id}
     public function destroy($id)

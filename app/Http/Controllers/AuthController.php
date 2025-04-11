@@ -41,11 +41,7 @@ class AuthController extends Controller
         if ($request->getMethod() === 'OPTIONS') {
             return response()->noContent();
         }
-        // Log raw request body
-        Log::info('Login Request Raw Content:', ['content' => $request->getContent()]);
 
-        // Log input as array
-        Log::info('Login Request Input:', $request->all());
 
         // Validate credentials
         $credentials = $request->validate([
@@ -53,30 +49,27 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        Log::info('Validated Credentials:', $credentials);
+
 
         // Attempt to authenticate
         if (!Auth::attempt($credentials)) {
-            Log::warning('Authentication failed for email: ' . $credentials['email']);
+
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
         $user = Auth::user();
 
         if (!$user) {
-            Log::error('Auth::user() returned null even though Auth::attempt succeeded');
             return response()->json(['message' => 'User not found after auth'], 500);
         }
 
         // Ensure Personal Access Token trait is active
         if (!method_exists($user, 'createToken')) {
-            Log::error('User model is missing HasApiTokens trait');
             return response()->json(['message' => 'Token creation unavailable'], 500);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        Log::info('User authenticated', ['user_id' => $user->id, 'email' => $user->email]);
 
         return response()->json([
             'access_token' => $token,

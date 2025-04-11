@@ -34,4 +34,9 @@ class Project extends Model
     {
         return $this->hasMany(Task::class);
     }
+
+    public function timeline(){
+
+        return $this->hasOne(ProjectTimelineEvent::class);
+    }
 }
