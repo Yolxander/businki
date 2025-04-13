@@ -101,13 +101,14 @@ Route::prefix('timeline')->group(function () {
 //subtasks
 Route::prefix('tasks/{taskId}/subtasks')->group(function () {
     Route::get('/', [SubtaskController::class, 'index']);
-    Route::post('/', [SubtaskController::class, 'store']);
+    Route::post('/', [SubtaskController::class, 'store']); // ✅ taskId passed from route
 });
 
 Route::prefix('subtasks')->group(function () {
     Route::put('/{id}', [SubtaskController::class, 'update']);
     Route::delete('/{id}', [SubtaskController::class, 'destroy']);
 });
+
 
 //task issues
 Route::prefix('tasks/{taskId}/issues')->group(function () {
