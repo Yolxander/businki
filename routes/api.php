@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CodeSnippetController;
 use App\Http\Controllers\Api\CollaborationController;
@@ -145,4 +146,13 @@ Route::prefix('provider-types')->group(function () {
     Route::post('/', [ProviderTypeController::class, 'store']);
     Route::put('/{id}', [ProviderTypeController::class, 'update']);
     Route::delete('/{id}', [ProviderTypeController::class, 'destroy']);
+});
+
+//calendar
+Route::prefix('calendar-events')->group(function () {
+    Route::get('/', [CalendarEventController::class, 'index']);
+    Route::post('/', [CalendarEventController::class, 'store']);
+    Route::get('/{id}', [CalendarEventController::class, 'show']);
+    Route::put('/{id}', [CalendarEventController::class, 'update']);
+    Route::delete('/{id}', [CalendarEventController::class, 'destroy']);
 });
