@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CodeSnippetController;
 use App\Http\Controllers\Api\CollaborationController;
+use App\Http\Controllers\Api\FileController;
+use App\Http\Controllers\Api\FolderController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectTimelineEventController;
 use App\Http\Controllers\Api\ProviderController;
@@ -12,9 +14,9 @@ use App\Http\Controllers\Api\SubtaskController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TaskIssueController;
 use App\Http\Controllers\Api\TeamMemberController;
+use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -156,3 +158,26 @@ Route::prefix('calendar-events')->group(function () {
     Route::put('/{id}', [CalendarEventController::class, 'update']);
     Route::delete('/{id}', [CalendarEventController::class, 'destroy']);
 });
+
+// Folders
+Route::prefix('folders')->group(function () {
+    Route::get('/', [FolderController::class, 'index']); // ?provider_id=&project_id=&parent_id=
+    Route::post('/', [FolderController::class, 'store']);
+    Route::get('/{id}', [FolderController::class, 'show']);
+    Route::put('/{id}', [FolderController::class, 'update']);
+    Route::delete('/{id}', [FolderController::class, 'destroy']);
+});
+
+// Files
+Route::prefix('folders/{folderId}/files')->group(function () {
+    Route::get('/', [FileController::class, 'index']);
+    Route::post('/', [FileController::class, 'store']);
+});
+
+Route::prefix('files')->group(function () {
+    Route::get('/{id}', [FileController::class, 'show']);
+    Route::post('/{id}', [FileController::class, 'update']);
+    Route::delete('/{id}', [FileController::class, 'destroy']);
+    Route::get('/{id}/download', [FileController::class, 'download']);
+});
+
