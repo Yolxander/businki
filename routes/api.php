@@ -18,6 +18,15 @@ use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\Api\ProposalController;
+use App\Http\Controllers\Api\ProposalContentController;
+use App\Http\Controllers\Api\ProposalVersionController;
+use App\Http\Controllers\Api\ProposalCommentController;
+use App\Http\Controllers\Api\ProposalAttachmentController;
+use App\Http\Controllers\Api\ProposalSignatureController;
+use App\Http\Controllers\Api\ProposalTemplateController;
+use App\Http\Controllers\Api\ProposalExportController;
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -182,3 +191,70 @@ Route::prefix('files')->group(function () {
     Route::get('/{providerId}/files', [FileController::class, 'getFilesByProvider']);
 });
 
+
+Route::prefix('proposals')->group(function () {
+    Route::get('/', [ProposalController::class, 'index']);
+    Route::get('/create', [ProposalController::class, 'create']);
+    Route::post('/', [ProposalController::class, 'store']);
+    Route::get('/{proposal}', [ProposalController::class, 'show']);
+    Route::get('/{proposal}/edit', [ProposalController::class, 'edit']);
+    Route::put('/{proposal}', [ProposalController::class, 'update']);
+    Route::delete('/{proposal}', [ProposalController::class, 'destroy']);
+
+    Route::post('/{proposal}/send', [ProposalController::class, 'send']);
+    Route::post('/{proposal}/accept', [ProposalController::class, 'accept']);
+    Route::post('/{proposal}/reject', [ProposalController::class, 'reject']);
+    Route::post('/{proposal}/duplicate', [ProposalController::class, 'duplicate']);
+    Route::post('/{proposal}/convert-to-template', [ProposalController::class, 'convertToTemplate']);
+
+    Route::prefix('{proposal}/content')->group(function () {
+        Route::get('/', [ProposalContentController::class, 'show']);
+        Route::put('/', [ProposalContentController::class, 'update']);
+    });
+
+    Route::prefix('{proposal}/versions')->group(function () {
+        Route::get('/', [ProposalVersionController::class, 'index']);
+        Route::get('/{version}', [ProposalVersionController::class, 'show']);
+        Route::post('/{version}/restore', [ProposalVersionController::class, 'restore']);
+    });
+
+    //Proposal
+    Route::prefix('{proposal}/comments')->group(function () {
+        Route::get('/', [ProposalCommentController::class, 'index']);
+        Route::post('/', [ProposalCommentController::class, 'store']);
+        Route::put('/{comment}', [ProposalCommentController::class, 'update']);
+        Route::delete('/{comment}', [ProposalCommentController::class, 'destroy']);
+    });
+
+    Route::prefix('{proposal}/attachments')->group(function () {
+        Route::get('/', [ProposalAttachmentController::class, 'index']);
+        Route::post('/', [ProposalAttachmentController::class, 'store']);
+        Route::delete('/{attachment}', [ProposalAttachmentController::class, 'destroy']);
+        Route::get('/{attachment}/download', [ProposalAttachmentController::class, 'download']);
+    });
+
+    Route::prefix('{proposal}/signatures')->group(function () {
+        Route::get('/', [ProposalSignatureController::class, 'index']);
+        Route::post('/', [ProposalSignatureController::class, 'store']);
+        Route::get('/{signature}', [ProposalSignatureController::class, 'show']);
+    });
+
+    Route::prefix('templates')->group(function () {
+        Route::get('/', [ProposalTemplateController::class, 'index']);
+        Route::get('/create', [ProposalTemplateController::class, 'create']);
+        Route::post('/', [ProposalTemplateController::class, 'store']);
+        Route::get('/{template}', [ProposalTemplateController::class, 'show']);
+        Route::get('/{template}/edit', [ProposalTemplateController::class, 'edit']);
+        Route::put('/{template}', [ProposalTemplateController::class, 'update']);
+        Route::delete('/{template}', [ProposalTemplateController::class, 'destroy']);
+        Route::post('/{template}/use', [ProposalTemplateController::class, 'useTemplate']);
+    });
+
+    Route::prefix('{proposal}/export')->group(function () {
+        Route::get('/pdf', [ProposalExportController::class, 'pdf']);
+        Route::get('/docx', [ProposalExportController::class, 'docx']);
+    });
+
+    Route::get('/search', [ProposalController::class, 'search']);
+    Route::get('/filter', [ProposalController::class, 'filter']);
+});
