@@ -12,10 +12,12 @@ class File extends Model
 
     protected $fillable = [
         'folder_id',
+        'provider_id',
+        'project_id',
         'name',
         'type',
         'size',
-        'path',
+        'storage_path',
         'is_starred',
     ];
 

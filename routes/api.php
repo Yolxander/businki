@@ -179,5 +179,6 @@ Route::prefix('files')->group(function () {
     Route::post('/{id}', [FileController::class, 'update']);
     Route::delete('/{id}', [FileController::class, 'destroy']);
     Route::get('/{id}/download', [FileController::class, 'download']);
+    Route::get('/{providerId}/files', [FileController::class, 'getFilesByProvider']);
 });
 
