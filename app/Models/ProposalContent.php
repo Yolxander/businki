@@ -3,12 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class ProposalContent extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'proposal_id',
         'scope_of_work',
@@ -17,6 +14,16 @@ class ProposalContent extends Model
         'timeline_end',
         'pricing',
         'payment_schedule',
+        'signature',
+    ];
+
+    protected $casts = [
+        'deliverables' => 'array',
+        'pricing' => 'array',
+        'payment_schedule' => 'array',
+        'signature' => 'array',
+        'timeline_start' => 'date',
+        'timeline_end' => 'date',
     ];
 
     public function proposal()

@@ -8,6 +8,9 @@ class ProposalService
 {
     public function create(array $data): Proposal
     {
+        // Ensure default status
+        $data['status'] = $data['status'] ?? 'draft';
+
         return Proposal::create($data);
     }
 

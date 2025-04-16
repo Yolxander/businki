@@ -191,69 +191,168 @@ Route::prefix('files')->group(function () {
     Route::get('/{providerId}/files', [FileController::class, 'getFilesByProvider']);
 });
 
-//Proposal
+// Proposal main routes
 Route::prefix('proposals')->group(function () {
+
+    // Fetch all proposals
     Route::get('/', [ProposalController::class, 'index']);
+
+    // Show the form to create a new proposal
     Route::get('/create', [ProposalController::class, 'create']);
+
+    // Store a new proposal
     Route::post('/', [ProposalController::class, 'store']);
-    Route::get('/{proposal}', [ProposalController::class, 'show']);
-    Route::get('/{proposal}/edit', [ProposalController::class, 'edit']);
-    Route::put('/{proposal}', [ProposalController::class, 'update']);
-    Route::delete('/{proposal}', [ProposalController::class, 'destroy']);
 
-    Route::post('/{proposal}/send', [ProposalController::class, 'send']);
-    Route::post('/{proposal}/accept', [ProposalController::class, 'accept']);
-    Route::post('/{proposal}/reject', [ProposalController::class, 'reject']);
-    Route::post('/{proposal}/duplicate', [ProposalController::class, 'duplicate']);
-    Route::post('/{proposal}/convert-to-template', [ProposalController::class, 'convertToTemplate']);
+    // Search proposals by keyword or criteria
+    Route::get('/search', [ProposalController::class, 'search']);
 
-    Route::prefix('{proposal}/content')->group(function () {
-        Route::get('/', [ProposalContentController::class, 'show']);
-        Route::put('/', [ProposalContentController::class, 'update']);
-    });
+    // Filter proposals by attributes (e.g., status, date)
+    Route::get('/filter', [ProposalController::class, 'filter']);
 
-    Route::prefix('{proposal}/versions')->group(function () {
-        Route::get('/', [ProposalVersionController::class, 'index']);
-        Route::get('/{version}', [ProposalVersionController::class, 'show']);
-        Route::post('/{version}/restore', [ProposalVersionController::class, 'restore']);
-    });
-
-    Route::prefix('{proposal}/comments')->group(function () {
-        Route::get('/', [ProposalCommentController::class, 'index']);
-        Route::post('/', [ProposalCommentController::class, 'store']);
-        Route::put('/{comment}', [ProposalCommentController::class, 'update']);
-        Route::delete('/{comment}', [ProposalCommentController::class, 'destroy']);
-    });
-
-    Route::prefix('{proposal}/attachments')->group(function () {
-        Route::get('/', [ProposalAttachmentController::class, 'index']);
-        Route::post('/', [ProposalAttachmentController::class, 'store']);
-        Route::delete('/{attachment}', [ProposalAttachmentController::class, 'destroy']);
-        Route::get('/{attachment}/download', [ProposalAttachmentController::class, 'download']);
-    });
-
-    Route::prefix('{proposal}/signatures')->group(function () {
-        Route::get('/', [ProposalSignatureController::class, 'index']);
-        Route::post('/', [ProposalSignatureController::class, 'store']);
-        Route::get('/{signature}', [ProposalSignatureController::class, 'show']);
-    });
-
+    // -----------------------------------------
+    // Template Management Routes (Global scope)
+    // -----------------------------------------
     Route::prefix('templates')->group(function () {
+        // List all templates
         Route::get('/', [ProposalTemplateController::class, 'index']);
+
+        // Show the form to create a new template
         Route::get('/create', [ProposalTemplateController::class, 'create']);
+
+        // Store a new template
         Route::post('/', [ProposalTemplateController::class, 'store']);
+
+        // Show a specific template
         Route::get('/{template}', [ProposalTemplateController::class, 'show']);
+
+        // Show the form to edit a template
         Route::get('/{template}/edit', [ProposalTemplateController::class, 'edit']);
+
+        // Update an existing template
         Route::put('/{template}', [ProposalTemplateController::class, 'update']);
+
+        // Delete a template
         Route::delete('/{template}', [ProposalTemplateController::class, 'destroy']);
+
+        // Use a template to create a new proposal
         Route::post('/{template}/use', [ProposalTemplateController::class, 'useTemplate']);
     });
 
-    Route::prefix('{proposal}/export')->group(function () {
-        Route::get('/pdf', [ProposalExportController::class, 'pdf']);
-        Route::get('/docx', [ProposalExportController::class, 'docx']);
-    });
+    // ---------------------------------------------------
+    // Instance-Specific Routes (For a specific Proposal)
+    // ---------------------------------------------------
+    Route::prefix('{proposal}')->group(function () {
+        // Show a specific proposal with all details
+        Route::get('/', [ProposalController::class, 'show']);
 
-    Route::get('/search', [ProposalController::class, 'search']);
-    Route::get('/filter', [ProposalController::class, 'filter']);
+        // Show the form to edit a proposal
+        Route::get('/edit', [ProposalController::class, 'edit']);
+
+        // Update the proposal
+        Route::put('/', [ProposalController::class, 'update']);
+
+        // Delete the proposal
+        Route::delete('/', [ProposalController::class, 'destroy']);
+
+        // Mark the proposal as sent
+        Route::post('/send', [ProposalController::class, 'send']);
+
+        // Mark the proposal as accepted
+        Route::post('/accept', [ProposalController::class, 'accept']);
+
+        // Mark the proposal as rejected
+        Route::post('/reject', [ProposalController::class, 'reject']);
+
+        // Duplicate the proposal
+        Route::post('/duplicate', [ProposalController::class, 'duplicate']);
+
+        // Convert the proposal into a reusable template
+        Route::post('/convert-to-template', [ProposalController::class, 'convertToTemplate']);
+
+        // -----------------------------
+        // Proposal Content Routes
+        // -----------------------------
+        Route::prefix('content')->group(function () {
+            // View proposal content
+            Route::get('/', [ProposalContentController::class, 'show']);
+
+            // Update proposal content
+            Route::put('/', [ProposalContentController::class, 'update']);
+        });
+
+        // -----------------------------
+        // Proposal Version Routes
+        // -----------------------------
+        Route::prefix('versions')->group(function () {
+            // List all versions of a proposal
+            Route::get('/', [ProposalVersionController::class, 'index']);
+
+            // Show a specific version
+            Route::get('/{version}', [ProposalVersionController::class, 'show']);
+
+            // Restore a proposal to a specific version
+            Route::post('/{version}/restore', [ProposalVersionController::class, 'restore']);
+        });
+
+        // -----------------------------
+        // Proposal Comment Routes
+        // -----------------------------
+        Route::prefix('comments')->group(function () {
+            // List all comments for a proposal
+            Route::get('/', [ProposalCommentController::class, 'index']);
+
+            // Add a new comment
+            Route::post('/', [ProposalCommentController::class, 'store']);
+
+            // Update a comment
+            Route::put('/{comment}', [ProposalCommentController::class, 'update']);
+
+            // Delete a comment
+            Route::delete('/{comment}', [ProposalCommentController::class, 'destroy']);
+        });
+
+        // -----------------------------
+        // Proposal Attachment Routes
+        // -----------------------------
+        Route::prefix('attachments')->group(function () {
+            // List all attachments
+            Route::get('/', [ProposalAttachmentController::class, 'index']);
+
+            // Upload a new attachment
+            Route::post('/', [ProposalAttachmentController::class, 'store']);
+
+            // Delete an attachment
+            Route::delete('/{attachment}', [ProposalAttachmentController::class, 'destroy']);
+
+            // Download an attachment
+            Route::get('/{attachment}/download', [ProposalAttachmentController::class, 'download']);
+        });
+
+        // -----------------------------
+        // Proposal Signature Routes
+        // -----------------------------
+        Route::prefix('signatures')->group(function () {
+            // List all signatures for a proposal
+            Route::get('/', [ProposalSignatureController::class, 'index']);
+
+            // Add a new signature
+            Route::post('/', [ProposalSignatureController::class, 'store']);
+
+            // View a specific signature
+            Route::get('/{signature}', [ProposalSignatureController::class, 'show']);
+        });
+
+        // -----------------------------
+        // Proposal Export Routes
+        // -----------------------------
+        Route::prefix('export')->group(function () {
+            // Export proposal as PDF
+            Route::get('/pdf', [ProposalExportController::class, 'pdf']);
+
+            // Export proposal as DOCX
+            Route::get('/docx', [ProposalExportController::class, 'docx']);
+        });
+    });
 });
+
+
