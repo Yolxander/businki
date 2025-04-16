@@ -191,7 +191,7 @@ Route::prefix('files')->group(function () {
     Route::get('/{providerId}/files', [FileController::class, 'getFilesByProvider']);
 });
 
-
+//Proposal
 Route::prefix('proposals')->group(function () {
     Route::get('/', [ProposalController::class, 'index']);
     Route::get('/create', [ProposalController::class, 'create']);
@@ -218,7 +218,6 @@ Route::prefix('proposals')->group(function () {
         Route::post('/{version}/restore', [ProposalVersionController::class, 'restore']);
     });
 
-    //Proposal
     Route::prefix('{proposal}/comments')->group(function () {
         Route::get('/', [ProposalCommentController::class, 'index']);
         Route::post('/', [ProposalCommentController::class, 'store']);

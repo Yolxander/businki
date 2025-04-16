@@ -5,50 +5,71 @@ namespace App\Http\Controllers\Api;
 use App\Models\Proposal;
 use App\Models\ProposalAttachment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class ProposalAttachmentController extends Controller
 {
     public function index(Proposal $proposal)
     {
-        return response()->json($proposal->attachments);
+        try {
+            Log::info('Fetching attachments for proposal', ['proposal_id' => $proposal->id]);
+            return response()->json($proposal->attachments);
+        } catch (\Exception $e) {
+            Log::error('Error fetching attachments', ['proposal_id' => $proposal->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to fetch attachments'], 500);
+        }
     }
 
     public function store(Request $request, Proposal $proposal)
     {
-        $data = $request->validate([
-            'file' => 'required|file|max:10240',
-            'uploaded_by' => 'required|exists:users,id',
-        ]);
+        try {
+            $validated = $request->validate([
+                'file' => 'required|file|max:20480', // 20MB max
+                'uploaded_by' => 'required|exists:users,id',
+            ]);
 
-        $file = $request->file('file');
-        $filename = $file->getClientOriginalName();
-        $uuid = (string) Str::uuid();
-        $path = "attachments/{$proposal->id}/{$uuid}_{$filename}";
+            $uploaded = $request->file('file');
+            $path = $uploaded->store("proposals/{$proposal->id}/attachments");
 
-        Storage::put($path, file_get_contents($file));
+            $attachment = $proposal->attachments()->create([
+                'file_name' => $uploaded->getClientOriginalName(),
+                'file_path' => $path,
+                'file_type' => $uploaded->getClientMimeType(),
+                'file_size' => $uploaded->getSize(),
+                'uploaded_by' => $validated['uploaded_by'],
+            ]);
 
-        $attachment = $proposal->attachments()->create([
-            'filename' => $filename,
-            'storage_path' => $path,
-            'uploaded_by' => $data['uploaded_by'],
-        ]);
+            Log::info('Attachment stored', ['attachment_id' => $attachment->id]);
 
-        return response()->json($attachment, 201);
+            return response()->json($attachment, 201);
+        } catch (\Exception $e) {
+            Log::error('Error storing attachment', ['proposal_id' => $proposal->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to store attachment'], 500);
+        }
     }
 
     public function destroy(Proposal $proposal, ProposalAttachment $attachment)
     {
-        Storage::delete($attachment->storage_path);
-        $attachment->delete();
-
-        return response()->json(['message' => 'Attachment deleted']);
+        try {
+            Storage::delete($attachment->file_path);
+            $attachment->delete();
+            Log::info('Attachment deleted', ['attachment_id' => $attachment->id]);
+            return response()->json(['message' => 'Attachment deleted']);
+        } catch (\Exception $e) {
+            Log::error('Error deleting attachment', ['attachment_id' => $attachment->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to delete attachment'], 500);
+        }
     }
 
     public function download(Proposal $proposal, ProposalAttachment $attachment)
     {
-        return Storage::download($attachment->storage_path, $attachment->filename);
+        try {
+            return Storage::download($attachment->file_path, $attachment->file_name);
+        } catch (\Exception $e) {
+            Log::error('Error downloading attachment', ['attachment_id' => $attachment->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to download attachment'], 500);
+        }
     }
 }

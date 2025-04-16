@@ -5,95 +5,58 @@ namespace App\Http\Controllers\Api;
 use App\Models\Proposal;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Services\Proposal\ProposalTemplateService;
 
 class ProposalTemplateController extends Controller
 {
-    public function index()
+    protected ProposalTemplateService $service;
+
+    public function __construct(ProposalTemplateService $service)
     {
-        $templates = Proposal::where('is_template', true)->latest()->get();
-        return response()->json($templates);
+        $this->service = $service;
     }
 
-    public function create()
+    public function index()
     {
-        return response()->json(['message' => 'Ready to create a new template.']);
+        return response()->json($this->service->allTemplates());
+    }
+
+    public function show(Proposal $template)
+    {
+        return response()->json($template->load('content'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'created_by' => 'required|exists:users,id',
+            'client_id' => 'required|exists:clients,id',
+            'project_id' => 'nullable|exists:projects,id',
         ]);
 
-        $template = Proposal::create(array_merge($data, [
-            'is_template' => true,
-            'status' => 'draft',
-        ]));
-
+        $template = $this->service->createTemplate($data);
         return response()->json($template, 201);
-    }
-
-    public function show(Proposal $template)
-    {
-        if (!$template->is_template) {
-            return response()->json(['message' => 'Not a template'], 400);
-        }
-
-        return response()->json($template->load(['content']));
-    }
-
-    public function edit(Proposal $template)
-    {
-        if (!$template->is_template) {
-            return response()->json(['message' => 'Not a template'], 400);
-        }
-
-        return response()->json($template);
     }
 
     public function update(Request $request, Proposal $template)
     {
-        if (!$template->is_template) {
-            return response()->json(['message' => 'Not a template'], 400);
-        }
-
         $data = $request->validate([
             'title' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
         ]);
 
-        $template->update($data);
-        return response()->json($template);
+        $updated = $this->service->updateTemplate($template, $data);
+        return response()->json($updated);
     }
 
     public function destroy(Proposal $template)
     {
-        if (!$template->is_template) {
-            return response()->json(['message' => 'Not a template'], 400);
-        }
-
-        $template->delete();
+        $this->service->deleteTemplate($template);
         return response()->json(['message' => 'Template deleted']);
     }
 
     public function useTemplate(Proposal $template)
     {
-        if (!$template->is_template) {
-            return response()->json(['message' => 'Not a template'], 400);
-        }
-
-        $copy = $template->replicate();
-        $copy->is_template = false;
-        $copy->status = 'draft';
-        $copy->save();
-
-        // Optionally clone content too
-        if ($template->content) {
-            $copy->content()->create($template->content->toArray());
-        }
-
-        return response()->json($copy->load('content'));
+        $proposal = $this->service->useTemplate($template);
+        return response()->json($proposal);
     }
 }
