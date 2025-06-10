@@ -37,11 +37,9 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-
         if ($request->getMethod() === 'OPTIONS') {
             return response()->noContent();
         }
-
 
         // Validate credentials
         $credentials = $request->validate([
@@ -49,11 +47,8 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-
-
         // Attempt to authenticate
         if (!Auth::attempt($credentials)) {
-
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
@@ -70,6 +65,8 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Load the user's profile
+        $user->load('profile');
 
         return response()->json([
             'access_token' => $token,
