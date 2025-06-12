@@ -24,7 +24,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profiles/{profile}', [ProfileController::class, 'update']);
     Route::get('/profiles/{profile}', [ProfileController::class, 'show']);
 
-    Route::apiResource('clients', ClientController::class);
+    // Client routes
+    Route::get('/clients', [ClientController::class, 'index']);
+    Route::post('/clients', [ClientController::class, 'store']);
+    Route::get('/clients/{id}', [ClientController::class, 'show']);
+    Route::put('/clients/{id}', [ClientController::class, 'update']);
+    Route::delete('/clients/{id}', [ClientController::class, 'destroy']);
+    Route::get('/clients/user/me', [ClientController::class, 'getClientsByUser']);
 
     Route::apiResource('intakes', IntakeController::class);
     Route::post('intakes/{intake}/forms', [IntakeController::class, 'storeForm']);
