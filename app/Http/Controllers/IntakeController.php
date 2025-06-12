@@ -30,6 +30,9 @@ class IntakeController extends Controller
                 'expiration_date' => 'required|date',
                 'status' => 'required|in:pending,completed,cancelled',
                 'link' => 'required|string|unique:intakes',
+                'full_name' => 'nullable|string|max:255',
+                'company_name' => 'nullable|string|max:255',
+                'email' => 'nullable|email',
             ]);
 
             if ($validator->fails()) {
@@ -37,7 +40,41 @@ class IntakeController extends Controller
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            $intake = Intake::create($request->all());
+            // Create client if full_name, company_name, and email are provided
+            $clientId = null;
+            if ($request->filled(['full_name', 'company_name', 'email'])) {
+                // Split full name into first and last name
+                $nameParts = explode(' ', $request->full_name, 2);
+                $firstName = $nameParts[0];
+                $lastName = $nameParts[1] ?? '';
+
+                // Create new client
+                $client = \App\Models\Client::create([
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $request->email,
+                    'company_name' => $request->company_name,
+                ]);
+
+                $clientId = $client->id;
+                Log::info('Client created for intake', [
+                    'client_id' => $clientId,
+                    'client_data' => [
+                        'first_name' => $firstName,
+                        'last_name' => $lastName,
+                        'email' => $request->email,
+                        'company_name' => $request->company_name,
+                    ]
+                ]);
+            }
+
+            // Create intake with client_id if available
+            $intakeData = $request->all();
+            if ($clientId) {
+                $intakeData['client_id'] = $clientId;
+            }
+
+            $intake = Intake::create($intakeData);
             Log::info('Intake created successfully', ['intake_id' => $intake->id]);
             return response()->json($intake, 201);
         } catch (\Exception $e) {
@@ -185,6 +222,29 @@ class IntakeController extends Controller
                 ], 422);
             }
 
+            // Create or find client
+            $nameParts = explode(' ', $request->full_name, 2);
+            $firstName = $nameParts[0];
+            $lastName = $nameParts[1] ?? '';
+
+            $client = \App\Models\Client::firstOrCreate(
+                ['email' => $request->email],
+                [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'company_name' => $request->company_name,
+                ]
+            );
+
+            // Update intake with client_id if not already set
+            if (!$intake->client_id) {
+                $intake->update(['client_id' => $client->id]);
+                Log::info('Intake updated with client', [
+                    'intake_id' => $id,
+                    'client_id' => $client->id
+                ]);
+            }
+
             // Transform the data to match the database column names
             $responseData = [
                 'full_name' => $request->full_name,
@@ -204,7 +264,8 @@ class IntakeController extends Controller
 
             Log::info('Intake response stored successfully', [
                 'intake_id' => $id,
-                'response_id' => $response->id
+                'response_id' => $response->id,
+                'client_id' => $client->id
             ]);
 
             return response()->json([
