@@ -5,6 +5,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\ProposalController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('intakes/link/{link}', [IntakeController::class, 'findByLink']);
 
     Route::resource('proposals', ProposalController::class);
+
+    // Project routes
+    Route::apiResource('projects', ProjectController::class);
 
     // Additional proposal routes
     Route::post('proposals/{proposal}/send', [ProposalController::class, 'send'])->name('proposals.send');

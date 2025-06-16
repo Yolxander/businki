@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Proposal;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class ProposalController extends Controller
 {
@@ -12,16 +11,11 @@ class ProposalController extends Controller
     {
         try {
             $proposals = auth()->user()->proposals()->with('intakeResponse')->latest()->paginate(10);
-            Log::info('Proposals retrieved successfully', ['user_id' => auth()->id(), 'count' => $proposals->count()]);
             return response()->json([
                 'status' => 'success',
                 'data' => $proposals
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve proposals', [
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve proposals'
@@ -33,10 +27,6 @@ class ProposalController extends Controller
     {
         try {
             $intakeResponses = auth()->user()->intakeResponses()->whereDoesntHave('proposal')->get();
-            Log::info('Proposal creation form accessed', [
-                'user_id' => auth()->id(),
-                'available_intakes' => $intakeResponses->count()
-            ]);
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -44,10 +34,6 @@ class ProposalController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to load proposal creation form', [
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to load proposal creation form'
@@ -58,12 +44,9 @@ class ProposalController extends Controller
     public function store(Request $request)
     {
         try {
-            Log::info('Raw Request', [
-                'request' => $request->all(),
-            ]);
-
             $validated = $request->validate([
                 'intake_response_id' => 'required|exists:intake_responses,id',
+                'title' => 'required|string|max:255',
                 'scope' => 'required|string',
                 'deliverables' => 'required|array',
                 'deliverables.*' => 'required|string',
@@ -74,23 +57,16 @@ class ProposalController extends Controller
                 'status' => 'required|in:draft,sent,accepted,rejected'
             ]);
 
-            // Calculate total price from timeline items
             $totalPrice = collect($validated['timeline'])->sum('price');
 
             $proposal = auth()->user()->proposals()->create([
                 'intake_response_id' => $validated['intake_response_id'],
+                'title' => $validated['title'],
                 'scope' => $validated['scope'],
                 'deliverables' => $validated['deliverables'],
                 'timeline' => $validated['timeline'],
                 'price' => $totalPrice,
                 'status' => $validated['status']
-            ]);
-
-            Log::info('Proposal created successfully', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'intake_response_id' => $validated['intake_response_id'],
-                'total_price' => $totalPrice
             ]);
 
             return response()->json([
@@ -99,11 +75,6 @@ class ProposalController extends Controller
                 'data' => $proposal->load('intakeResponse')
             ], 201);
         } catch (\Exception $e) {
-            Log::error('Failed to create proposal', [
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage(),
-                'request_data' => $request->except(['scope', 'deliverables', 'timeline'])
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to create proposal',
@@ -115,22 +86,12 @@ class ProposalController extends Controller
     public function show(Proposal $proposal)
     {
         try {
-            $this->authorize('view', $proposal);
             $proposal->load('intakeResponse');
-            Log::info('Proposal viewed', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id
-            ]);
             return response()->json([
                 'status' => 'success',
                 'data' => $proposal
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to view proposal', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to view proposal'
@@ -142,20 +103,11 @@ class ProposalController extends Controller
     {
         try {
             $this->authorize('update', $proposal);
-            Log::info('Proposal edit form accessed', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id
-            ]);
             return response()->json([
                 'status' => 'success',
                 'data' => $proposal->load('intakeResponse')
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to access proposal edit form', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to access proposal edit form'
@@ -169,6 +121,7 @@ class ProposalController extends Controller
             $this->authorize('update', $proposal);
 
             $validated = $request->validate([
+                'title' => 'required|string|max:255',
                 'scope' => 'required|string',
                 'deliverables' => 'required|array',
                 'deliverables.*' => 'required|string',
@@ -179,21 +132,15 @@ class ProposalController extends Controller
                 'status' => 'required|in:draft,sent,accepted,rejected'
             ]);
 
-            // Calculate total price from timeline items
             $totalPrice = collect($validated['timeline'])->sum('price');
 
             $proposal->update([
+                'title' => $validated['title'],
                 'scope' => $validated['scope'],
                 'deliverables' => $validated['deliverables'],
                 'timeline' => $validated['timeline'],
                 'price' => $totalPrice,
                 'status' => $validated['status']
-            ]);
-
-            Log::info('Proposal updated successfully', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'total_price' => $totalPrice
             ]);
 
             return response()->json([
@@ -202,11 +149,6 @@ class ProposalController extends Controller
                 'data' => $proposal->fresh()->load('intakeResponse')
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to update proposal', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update proposal',
@@ -219,24 +161,13 @@ class ProposalController extends Controller
     {
         try {
             $this->authorize('delete', $proposal);
-            $proposalId = $proposal->id;
             $proposal->delete();
-
-            Log::info('Proposal deleted successfully', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposalId
-            ]);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Proposal deleted successfully'
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to delete proposal', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to delete proposal'
@@ -252,22 +183,12 @@ class ProposalController extends Controller
             // Mock sending functionality
             $proposal->update(['status' => 'sent']);
 
-            Log::info('Proposal sent successfully', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id
-            ]);
-
             return response()->json([
                 'status' => 'success',
                 'message' => 'Proposal sent successfully',
                 'data' => $proposal->fresh()
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send proposal', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to send proposal'
@@ -282,22 +203,12 @@ class ProposalController extends Controller
 
             $proposal->update(['status' => 'draft']);
 
-            Log::info('Proposal saved as draft', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id
-            ]);
-
             return response()->json([
                 'status' => 'success',
                 'message' => 'Proposal saved as draft',
                 'data' => $proposal->fresh()
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to save proposal as draft', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to save proposal as draft'
@@ -311,21 +222,11 @@ class ProposalController extends Controller
             $this->authorize('view', $proposal);
             $proposal->load('intakeResponse');
 
-            Log::info('Proposal preview accessed', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id
-            ]);
-
             return response()->json([
                 'status' => 'success',
                 'data' => $proposal
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to preview proposal', [
-                'user_id' => auth()->id(),
-                'proposal_id' => $proposal->id,
-                'error' => $e->getMessage()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to preview proposal'

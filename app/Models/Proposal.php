@@ -11,6 +11,7 @@ class Proposal extends Model
 
     protected $fillable = [
         'intake_response_id',
+        'title',
         'scope',
         'deliverables',
         'timeline',
