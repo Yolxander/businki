@@ -8,6 +8,7 @@ use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\SubtaskController;
+use App\Http\Controllers\ToolController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,7 +21,7 @@ Route::options('/register', function () {
 });
 
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -76,6 +77,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{subtask}', [SubtaskController::class, 'update']);
         Route::delete('/{subtask}', [SubtaskController::class, 'destroy']);
         Route::patch('/{subtask}/status', [SubtaskController::class, 'updateStatus']);
+    });
+
+    // Tool routes
+    Route::prefix('tools')->group(function () {
+        // Basic CRUD
+        Route::get('/', [ToolController::class, 'index']);
+        Route::post('/', [ToolController::class, 'store']);
+        Route::get('/{tool}', [ToolController::class, 'show']);
+        Route::put('/{tool}', [ToolController::class, 'update']);
+        Route::delete('/{tool}', [ToolController::class, 'destroy']);
+
+        // Additional routes
+        Route::get('/user/{userId}', [ToolController::class, 'getByUser']);
+        Route::get('/status/{status}', [ToolController::class, 'getByStatus']);
     });
 
     // Additional proposal routes
