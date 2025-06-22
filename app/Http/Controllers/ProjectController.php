@@ -15,7 +15,7 @@ class ProjectController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $projects = Project::with('proposal')->get();
+            $projects = Project::with('proposal','tasks.subtasks')->get();
             Log::info('Projects retrieved successfully', [
                 'user_id' => auth()->id(),
                 'count' => $projects->count()

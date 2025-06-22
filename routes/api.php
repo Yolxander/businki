@@ -6,6 +6,8 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\SubtaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +46,37 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Project routes
     Route::apiResource('projects', ProjectController::class);
+
+    // Task routes
+    Route::prefix('tasks')->group(function () {
+        // Basic CRUD
+        Route::get('/', [TaskController::class, 'index']);
+        Route::post('/', [TaskController::class, 'store']);
+        Route::get('/{task}', [TaskController::class, 'show']);
+        Route::put('/{task}', [TaskController::class, 'update']);
+        Route::delete('/{task}', [TaskController::class, 'destroy']);
+
+        // Project and Phase related routes
+        Route::get('/project/{projectId}', [TaskController::class, 'getByProject']);
+        Route::get('/phase/{phaseId}', [TaskController::class, 'getByPhase']);
+
+        // Proposal Timeline related routes
+        Route::get('/project/{projectId}/timeline', [TaskController::class, 'getProjectTimeline']);
+        Route::post('/{task}/connect-timeline', [TaskController::class, 'connectToTimeline']);
+        Route::delete('/{task}/disconnect-timeline', [TaskController::class, 'disconnectFromTimeline']);
+
+        // Subtask routes (nested under tasks)
+        Route::get('/{task}/subtasks', [SubtaskController::class, 'index']);
+        Route::post('/{task}/subtasks', [SubtaskController::class, 'store']);
+    });
+
+    // Subtask routes (direct access)
+    Route::prefix('subtasks')->group(function () {
+        Route::get('/{subtask}', [SubtaskController::class, 'show']);
+        Route::put('/{subtask}', [SubtaskController::class, 'update']);
+        Route::delete('/{subtask}', [SubtaskController::class, 'destroy']);
+        Route::patch('/{subtask}/status', [SubtaskController::class, 'updateStatus']);
+    });
 
     // Additional proposal routes
     Route::post('proposals/{proposal}/send', [ProposalController::class, 'send'])->name('proposals.send');
