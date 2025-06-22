@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Subtask;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -38,7 +39,9 @@ class TaskController extends Controller
             'description' => 'nullable|string',
             'priority' => 'nullable|in:low,medium,high',
             'tags' => 'nullable|array',
-            'estimated_hours' => 'nullable|numeric|min:0|max:999.99'
+            'estimated_hours' => 'nullable|numeric|min:0|max:999.99',
+            'subtasks' => 'nullable|array',
+            'subtasks.*' => 'string|max:255'
         ]);
 
         if ($validator->fails()) {
@@ -60,9 +63,32 @@ class TaskController extends Controller
         }
 
         try {
-        $task = Task::create($request->all());
+            // Create the task first
+            $taskData = $request->except(['subtasks']);
+            $task = Task::create($taskData);
             Log::info('Task created successfully', ['task_id' => $task->id]);
-        return response()->json($task, 201);
+
+            // Create subtasks if they exist in the request
+            if ($request->has('subtasks') && is_array($request->subtasks)) {
+                $subtasks = [];
+                foreach ($request->subtasks as $subtaskDescription) {
+                    if (!empty($subtaskDescription)) {
+                        $subtask = Subtask::create([
+                            'task_id' => $task->id,
+                            'description' => $subtaskDescription,
+                            'status' => 'todo'
+                        ]);
+                        $subtasks[] = $subtask;
+                    }
+                }
+                Log::info('Subtasks created successfully', [
+                    'task_id' => $task->id,
+                    'subtask_count' => count($subtasks)
+                ]);
+            }
+
+            // Return the task with its subtasks
+            return response()->json($task->load(['subtasks', 'project', 'assignedUser']), 201);
         } catch (\Exception $e) {
             Log::error('Failed to create task', [
                 'error' => $e->getMessage(),
