@@ -102,7 +102,7 @@ class ProposalController extends Controller
     public function edit(Proposal $proposal)
     {
         try {
-            $this->authorize('update', $proposal);
+
             return response()->json([
                 'status' => 'success',
                 'data' => $proposal->load('intakeResponse')
@@ -118,7 +118,7 @@ class ProposalController extends Controller
     public function update(Request $request, Proposal $proposal)
     {
         try {
-            $this->authorize('update', $proposal);
+
 
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
@@ -160,7 +160,6 @@ class ProposalController extends Controller
     public function destroy(Proposal $proposal)
     {
         try {
-            $this->authorize('delete', $proposal);
             $proposal->delete();
 
             return response()->json([
@@ -178,7 +177,7 @@ class ProposalController extends Controller
     public function send(Proposal $proposal)
     {
         try {
-            $this->authorize('update', $proposal);
+
 
             // Mock sending functionality
             $proposal->update(['status' => 'sent']);
@@ -199,7 +198,7 @@ class ProposalController extends Controller
     public function saveDraft(Proposal $proposal)
     {
         try {
-            $this->authorize('update', $proposal);
+
 
             $proposal->update(['status' => 'draft']);
 
@@ -219,7 +218,6 @@ class ProposalController extends Controller
     public function preview(Proposal $proposal)
     {
         try {
-            $this->authorize('view', $proposal);
             $proposal->load('intakeResponse');
 
             return response()->json([
