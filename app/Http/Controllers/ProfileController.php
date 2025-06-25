@@ -83,13 +83,16 @@ class ProfileController extends Controller
 
     public function show(Profile $profile)
     {
+        $profile->load(['contactInfo', 'notificationPreferences']);
         return response()->json($profile);
     }
 
     public function showBySlug($slug)
     {
         try {
-            $profile = Profile::where('slug', $slug)->firstOrFail();
+            $profile = Profile::where('slug', $slug)
+                ->with(['contactInfo', 'notificationPreferences'])
+                ->firstOrFail();
             return response()->json($profile);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Profile not found'], 404);
