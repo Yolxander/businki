@@ -9,6 +9,9 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\ToolController;
+use App\Http\Controllers\Api\ServiceController;
+use App\Http\Controllers\Api\PackageController;
+use App\Http\Controllers\Api\ListingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -92,6 +95,37 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user/{userId}', [ToolController::class, 'getByUser']);
         Route::get('/status/{status}', [ToolController::class, 'getByStatus']);
     });
+
+    // Service routes
+    Route::prefix('services')->group(function () {
+        // Basic CRUD
+        Route::get('/', [ServiceController::class, 'index']);
+        Route::post('/', [ServiceController::class, 'store']);
+        Route::get('/{id}', [ServiceController::class, 'show']);
+        Route::put('/{id}', [ServiceController::class, 'update']);
+        Route::delete('/{id}', [ServiceController::class, 'destroy']);
+
+        // Additional routes
+        Route::get('/category/{category}', [ServiceController::class, 'getByCategory']);
+        Route::get('/pricing-type/{pricingType}', [ServiceController::class, 'getByPricingType']);
+    });
+
+    // Package routes
+    Route::prefix('packages')->group(function () {
+        // Basic CRUD
+        Route::get('/', [PackageController::class, 'index']);
+        Route::post('/', [PackageController::class, 'store']);
+        Route::get('/{id}', [PackageController::class, 'show']);
+        Route::put('/{id}', [PackageController::class, 'update']);
+        Route::delete('/{id}', [PackageController::class, 'destroy']);
+
+        // Additional routes
+        Route::get('/type/{type}', [PackageController::class, 'getByType']);
+        Route::get('/billing-cycle/{billingCycle}', [PackageController::class, 'getByBillingCycle']);
+    });
+
+    // Listing routes
+    Route::apiResource('listings', ListingController::class);
 
     // Additional proposal routes
     Route::post('proposals/{proposal}/send', [ProposalController::class, 'send'])->name('proposals.send');
