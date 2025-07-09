@@ -1,6 +1,6 @@
 <x-filament-panels::page>
-    <x-filament::card>
-        <div class="prose max-w-none">
+    <x-filament::card class="dark:bg-gray-900 dark:text-gray-100">
+        <div class="prose max-w-none dark:prose-invert">
             <h2 class="text-xl font-semibold mb-4">AI Generation Documentation</h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
