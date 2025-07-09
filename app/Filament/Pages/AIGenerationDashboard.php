@@ -60,13 +60,20 @@ class AIGenerationDashboard extends Page
                                     ->options(AIGenerationSetting::where('is_active', true)->pluck('description', 'name'))
                                     ->reactive()
                                     ->afterStateUpdated(function (
-                                        $state, callable $set) {
+                                        $state, callable $set, callable $get) {
                                         if ($state) {
                                             $setting = AIGenerationSetting::where('name', $state)->first();
                                             if ($setting) {
                                                 $set('model', $setting->model);
                                                 $set('temperature', $setting->temperature);
                                                 $set('max_tokens', $setting->max_tokens);
+                                                // Also update prompt if a template exists for the type
+                                                $type = $get('generation_type');
+                                                $template = \App\Models\PromptTemplate::where('type', $type)->where('is_active', true)->first();
+                                                if ($template) {
+                                                    $set('prompt_template_id', $template->id);
+                                                    $set('prompt', $template->template);
+                                                }
                                             }
                                         }
                                     }),
@@ -82,6 +89,15 @@ class AIGenerationDashboard extends Page
                                         'package' => 'Package',
                                         'custom' => 'Custom',
                                     ])
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        // When generation type changes, update prompt template dropdown
+                                        $template = \App\Models\PromptTemplate::where('type', $state)->where('is_active', true)->first();
+                                        if ($template) {
+                                            $set('prompt_template_id', $template->id);
+                                            $set('prompt', $template->template);
+                                        }
+                                    })
                                     ->required(),
 
                                 Select::make('model')
@@ -110,8 +126,32 @@ class AIGenerationDashboard extends Page
                             ])
                             ->columns(2),
                     ]),
-
-
+                Section::make('Prompt')
+                    ->description('Enter the prompt to send to OpenAI')
+                    ->schema([
+                        Select::make('prompt_template_id')
+                            ->label('Prompt Template')
+                            ->options(function (callable $get) {
+                                $type = $get('generation_type');
+                                return \App\Models\PromptTemplate::where('type', $type)
+                                    ->where('is_active', true)
+                                    ->pluck('name', 'id');
+                            })
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    $template = \App\Models\PromptTemplate::find($state);
+                                    if ($template) {
+                                        $set('prompt', $template->template);
+                                    }
+                                }
+                            }),
+                        Textarea::make('prompt')
+                            ->label('Prompt')
+                            ->rows(6)
+                            ->required()
+                            ->default('Write a short introduction about AI for business.'),
+                    ]),
             ]);
     }
 
