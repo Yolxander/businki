@@ -18,12 +18,10 @@ class AIGenerationLogResource extends Resource
     protected static ?string $model = AIGenerationLog::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
     protected static ?string $navigationLabel = 'AI Generation Logs';
-
     protected static ?string $modelLabel = 'AI Generation Log';
-
     protected static ?string $pluralModelLabel = 'AI Generation Logs';
+    protected static ?string $navigationGroup = 'AI Generation';
 
     public static function form(Form $form): Form
     {

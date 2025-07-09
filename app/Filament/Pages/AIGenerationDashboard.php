@@ -25,6 +25,8 @@ class AIGenerationDashboard extends Page
 
     protected static ?string $navigationLabel = 'AI Generation';
 
+    protected static ?string $navigationGroup = 'AI Generation';
+
     protected static ?string $slug = 'ai-generation';
 
     protected static ?int $navigationSort = 1;
@@ -57,7 +59,8 @@ class AIGenerationDashboard extends Page
                                     ->label('Preset Settings')
                                     ->options(AIGenerationSetting::where('is_active', true)->pluck('description', 'name'))
                                     ->reactive()
-                                    ->afterStateUpdated(function ($state, callable $set) {
+                                    ->afterStateUpdated(function (
+                                        $state, callable $set) {
                                         if ($state) {
                                             $setting = AIGenerationSetting::where('name', $state)->first();
                                             if ($setting) {
@@ -106,46 +109,9 @@ class AIGenerationDashboard extends Page
                                     ->required(),
                             ])
                             ->columns(2),
-
-                        Section::make('Quick Actions')
-                            ->description('Common generation tasks')
-                            ->schema([
-                                Action::make('generateProposal')
-                                    ->label('Generate Proposal')
-                                    ->action('generateProposal')
-                                    ->color('primary')
-                                    ->icon('heroicon-o-document-text'),
-
-                                Action::make('generateProject')
-                                    ->label('Generate Project Plan')
-                                    ->action('generateProject')
-                                    ->color('success')
-                                    ->icon('heroicon-o-calendar'),
-
-                                Action::make('generateTask')
-                                    ->label('Generate Task')
-                                    ->action('generateTask')
-                                    ->color('warning')
-                                    ->icon('heroicon-o-check-circle'),
-
-                                Action::make('generateService')
-                                    ->label('Generate Service')
-                                    ->action('generateService')
-                                    ->color('info')
-                                    ->icon('heroicon-o-cog'),
-                            ])
-                            ->columns(2),
                     ]),
 
-                Section::make('Manual Generation')
-                    ->description('Test and trigger AI content generation manually')
-                    ->schema([
-                        Textarea::make('prompt')
-                            ->label('Prompt')
-                            ->placeholder('Enter your prompt here...')
-                            ->rows(6)
-                            ->required(),
-                    ]),
+
             ]);
     }
 

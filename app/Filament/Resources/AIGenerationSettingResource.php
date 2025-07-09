@@ -18,12 +18,10 @@ class AIGenerationSettingResource extends Resource
     protected static ?string $model = AIGenerationSetting::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
-
     protected static ?string $navigationLabel = 'AI Generation Settings';
-
     protected static ?string $modelLabel = 'AI Generation Setting';
-
     protected static ?string $pluralModelLabel = 'AI Generation Settings';
+    protected static ?string $navigationGroup = 'AI Generation';
 
     public static function form(Form $form): Form
     {
