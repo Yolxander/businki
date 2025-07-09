@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
-            // First drop the existing column
-            $table->dropColumn('proposal_id');
-
-            // Add the new foreign key column
-            $table->foreignId('proposal_id')->after('id')->constrained('proposals')->onDelete('cascade');
-        });
+//        Schema::table('projects', function (Blueprint $table) {
+//            // First drop the existing column
+//            $table->dropColumn('proposal_id');
+//
+//            // Add the new foreign key column
+//            $table->foreignId('proposal_id')->after('id')->constrained('proposals')->onDelete('cascade');
+//        });
     }
 
     /**
@@ -25,15 +25,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
-            // Remove the foreign key constraint
-            $table->dropForeign(['proposal_id']);
-
-            // Drop the column
-            $table->dropColumn('proposal_id');
-
-            // Add back the original string column
-            $table->string('proposal_id')->after('id');
-        });
+//        Schema::table('projects', function (Blueprint $table) {
+//            // Remove the foreign key constraint
+//            $table->dropForeign(['proposal_id']);
+//
+//            // Drop the column
+//            $table->dropColumn('proposal_id');
+//
+//            // Add back the original string column
+//            $table->string('proposal_id')->after('id');
+//        });
     }
 };
