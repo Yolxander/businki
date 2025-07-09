@@ -30,4 +30,9 @@ class IntakeResponse extends Model
     {
         return $this->belongsTo(Intake::class);
     }
+
+    public function proposal()
+    {
+        return $this->hasOne(Proposal::class);
+    }
 }

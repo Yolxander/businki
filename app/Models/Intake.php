@@ -36,6 +36,11 @@ class Intake extends Model
         return $this->hasOne(IntakeResponse::class);
     }
 
+    public function responses()
+    {
+        return $this->hasMany(IntakeResponse::class);
+    }
+
     public function forms()
     {
         return $this->hasMany(IntakeForm::class);

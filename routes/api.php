@@ -12,6 +12,7 @@ use App\Http\Controllers\ToolController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\ListingController;
+use App\Http\Controllers\Api\AIGenerationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -131,6 +132,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('proposals/{proposal}/send', [ProposalController::class, 'send'])->name('proposals.send');
     Route::post('proposals/{proposal}/save-draft', [ProposalController::class, 'saveDraft'])->name('proposals.save-draft');
     Route::get('proposals/{proposal}/preview', [ProposalController::class, 'preview'])->name('proposals.preview');
+
+    // AI Generation routes
+    Route::post('intake-responses/{id}/generate-proposal', [AIGenerationController::class, 'generateProposal']);
+    Route::post('proposals/{id}/generate-project', [AIGenerationController::class, 'generateProject']);
+    Route::post('projects/generate-personal-ai-project', [AIGenerationController::class, 'generatePersonalProject']);
+    Route::post('projects/{id}/generate-tasks', [AIGenerationController::class, 'generateTasks']);
+    Route::post('projects/generate-personal-tasks', [AIGenerationController::class, 'generatePersonalTasks']);
 });
 
 // Public routes
