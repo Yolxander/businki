@@ -70,6 +70,12 @@ class OpenAIManagement extends Page implements HasTable
     public ?string $settingDescription = null;
     public ?bool $settingIsActive = true;
 
+    // Modal properties
+    public ?bool $showTemplateModal = false;
+    public ?string $selectedTemplate = null;
+    public ?string $templateDescription = null;
+    public ?bool $showResponseModal = false;
+
     public function mount(): void
     {
         $this->apiKey = config('services.openai.api_key');
@@ -359,12 +365,18 @@ class OpenAIManagement extends Page implements HasTable
                 // Log the successful request
                 $this->logApiRequest($data, $executionTime);
 
+                // Show response modal
+                $this->showResponseModal = true;
+
                 Notification::make()
                     ->title('API Request Successful')
                     ->success()
                     ->send();
             } else {
                 $this->errorMessage = "❌ API Request Failed: " . $response->status() . " - " . $response->body();
+
+                // Show response modal for errors too
+                $this->showResponseModal = true;
 
                 Notification::make()
                     ->title('API Request Failed')
@@ -374,6 +386,9 @@ class OpenAIManagement extends Page implements HasTable
             }
         } catch (\Exception $e) {
             $this->errorMessage = "❌ Request Error: " . $e->getMessage();
+
+            // Show response modal for errors too
+            $this->showResponseModal = true;
 
             Notification::make()
                 ->title('Request Error')
@@ -654,6 +669,115 @@ class OpenAIManagement extends Page implements HasTable
         ];
     }
 
+    // Template confirmation methods
+    public function confirmTemplate(string $template): void
+    {
+        $templates = [
+            'proposal' => [
+                'name' => 'Proposal Generation',
+                'description' => 'This will load a professional business proposal template with optimized settings for creating compelling client proposals. The template includes business consultant system prompts and a sample e-commerce project brief.',
+                'model' => 'gpt-4o-mini',
+                'temperature' => 0.7,
+                'maxTokens' => 2000,
+            ],
+            'tasks' => [
+                'name' => 'Task Generation',
+                'description' => 'This will load a project management template designed for creating detailed task breakdowns. The template uses function calling to generate structured task lists with priorities and estimates.',
+                'model' => 'gpt-4o-mini',
+                'temperature' => 0.5,
+                'maxTokens' => 1500,
+            ],
+            'creative' => [
+                'name' => 'Creative Writing',
+                'description' => 'This will load a creative writing template optimized for storytelling and imaginative content. The template uses higher temperature settings for more creative and engaging outputs.',
+                'model' => 'gpt-4o',
+                'temperature' => 0.9,
+                'maxTokens' => 1000,
+            ],
+            'code' => [
+                'name' => 'Code Generation',
+                'description' => 'This will load a programming template designed for generating clean, well-documented code. The template includes best practices and proper error handling instructions.',
+                'model' => 'gpt-4o',
+                'temperature' => 0.3,
+                'maxTokens' => 2000,
+            ],
+            'analysis' => [
+                'name' => 'Data Analysis',
+                'description' => 'This will load a data analysis template for generating insights and recommendations from data. The template is optimized for clear, actionable business intelligence.',
+                'model' => 'gpt-4o',
+                'temperature' => 0.2,
+                'maxTokens' => 1500,
+            ],
+            'translation' => [
+                'name' => 'Translation',
+                'description' => 'This will load a translation template for accurate and natural language translation. The template is designed for professional translation services.',
+                'model' => 'gpt-4o',
+                'temperature' => 0.3,
+                'maxTokens' => 1000,
+            ],
+        ];
+
+        if (isset($templates[$template])) {
+            $this->selectedTemplate = $template;
+            $this->templateDescription = $templates[$template]['description'];
+            $this->showTemplateModal = true;
+        }
+    }
+
+    public function applyTemplate(): void
+    {
+        if (!$this->selectedTemplate) {
+            return;
+        }
+
+        switch ($this->selectedTemplate) {
+            case 'proposal':
+                $this->loadProposalTemplate();
+                break;
+            case 'tasks':
+                $this->loadTaskTemplate();
+                break;
+            case 'creative':
+                $this->loadCreativeTemplate();
+                break;
+            case 'code':
+                $this->loadCodeTemplate();
+                break;
+            case 'analysis':
+                $this->loadAnalysisTemplate();
+                break;
+            case 'translation':
+                $this->loadTranslationTemplate();
+                break;
+        }
+
+        $this->showTemplateModal = false;
+        $this->selectedTemplate = null;
+        $this->templateDescription = null;
+
+        Notification::make()
+            ->title('Template Applied Successfully')
+            ->success()
+            ->send();
+    }
+
+    public function cancelTemplate(): void
+    {
+        $this->showTemplateModal = false;
+        $this->selectedTemplate = null;
+        $this->templateDescription = null;
+    }
+
+    public function showResponseModal(): void
+    {
+        $this->showResponseModal = true;
+    }
+
+    public function closeResponseModal(): void
+    {
+        $this->showResponseModal = false;
+    }
+
     // Template loading methods
     public function loadProposalTemplate(): void
     {
@@ -663,26 +787,16 @@ class OpenAIManagement extends Page implements HasTable
         $this->maxTokens = 2000;
         $this->systemPrompt = 'You are a professional business consultant specializing in creating compelling proposals.';
         $this->userPrompt = 'Create a professional proposal for a web development project. The client needs a modern e-commerce website with payment processing, inventory management, and customer analytics. Budget is $15,000-$25,000. Timeline is 8-12 weeks.';
-
-        Notification::make()
-            ->title('Proposal Template Loaded')
-            ->success()
-            ->send();
     }
 
     public function loadTaskTemplate(): void
     {
-        $this->testType = 'function_call';
+        $this->testType = 'function';
         $this->model = 'gpt-4o-mini';
         $this->temperature = 0.5;
         $this->maxTokens = 1500;
-        $this->systemPrompt = 'You are a project manager. Create detailed tasks for web development projects.';
-        $this->userPrompt = 'Create a task breakdown for developing a responsive website with the following features: homepage, about page, contact form, blog section, and admin dashboard.';
-
-        Notification::make()
-            ->title('Task Template Loaded')
-            ->success()
-            ->send();
+        $this->systemPrompt = 'You are a project management expert. Generate detailed task breakdowns with priorities and time estimates.';
+        $this->userPrompt = 'Create a task breakdown for developing a customer relationship management (CRM) system. Include frontend, backend, database, and testing phases.';
     }
 
     public function loadCreativeTemplate(): void
@@ -692,12 +806,7 @@ class OpenAIManagement extends Page implements HasTable
         $this->temperature = 0.9;
         $this->maxTokens = 1000;
         $this->systemPrompt = 'You are a creative writer with a vivid imagination and engaging storytelling abilities.';
-        $this->userPrompt = 'Write a short story about a time traveler who discovers they can only travel to moments when they were happy.';
-
-        Notification::make()
-            ->title('Creative Template Loaded')
-            ->success()
-            ->send();
+        $this->userPrompt = 'Write a short story about a time traveler who discovers they can only travel to moments of great technological advancement throughout history.';
     }
 
     public function loadCodeTemplate(): void
@@ -706,13 +815,8 @@ class OpenAIManagement extends Page implements HasTable
         $this->model = 'gpt-4o';
         $this->temperature = 0.3;
         $this->maxTokens = 2000;
-        $this->systemPrompt = 'You are an expert software developer. Write clean, well-documented code with best practices.';
-        $this->userPrompt = 'Write a Python function that implements a binary search algorithm. Include proper error handling and documentation.';
-
-        Notification::make()
-            ->title('Code Template Loaded')
-            ->success()
-            ->send();
+        $this->systemPrompt = 'You are an expert software developer. Write clean, well-documented code with proper error handling and best practices.';
+        $this->userPrompt = 'Create a Python function that implements a binary search algorithm with proper error handling and documentation.';
     }
 
     public function loadAnalysisTemplate(): void
@@ -721,13 +825,8 @@ class OpenAIManagement extends Page implements HasTable
         $this->model = 'gpt-4o';
         $this->temperature = 0.2;
         $this->maxTokens = 1500;
-        $this->systemPrompt = 'You are a data analyst. Provide clear, actionable insights from data.';
-        $this->userPrompt = 'Analyze this sales data and provide insights: Q1: $50K, Q2: $65K, Q3: $45K, Q4: $80K. What trends do you see and what recommendations would you make?';
-
-        Notification::make()
-            ->title('Analysis Template Loaded')
-            ->success()
-            ->send();
+        $this->systemPrompt = 'You are a data analyst specializing in business intelligence and actionable insights.';
+        $this->userPrompt = 'Analyze the following sales data and provide insights: Q1: $50K, Q2: $65K, Q3: $45K, Q4: $80K. What trends do you see and what recommendations would you make?';
     }
 
     public function loadTranslationTemplate(): void
@@ -736,12 +835,9 @@ class OpenAIManagement extends Page implements HasTable
         $this->model = 'gpt-4o';
         $this->temperature = 0.3;
         $this->maxTokens = 1000;
-        $this->systemPrompt = 'You are a professional translator. Provide accurate and natural translations.';
-        $this->userPrompt = 'Translate this English text to Spanish: "Welcome to our website! We are excited to help you find the perfect solution for your business needs."';
-
-        Notification::make()
-            ->title('Translation Template Loaded')
-            ->success()
-            ->send();
+        $this->systemPrompt = 'You are a professional translator. Provide accurate and natural translations while preserving the original meaning and tone.';
+        $this->userPrompt = 'Translate the following business email to Spanish: "Thank you for your interest in our services. We would be happy to schedule a meeting to discuss your requirements in detail."';
     }
+
+
 }
