@@ -44,6 +44,7 @@ class AIGenerationDashboard extends Page
     public ?int $max_tokens = null;
     public ?int $prompt_template_id = null;
     public ?string $prompt = null;
+    public ?string $previewPrompt = null;
 
     public function mount(): void
     {
@@ -194,39 +195,71 @@ class AIGenerationDashboard extends Page
     {
         $prompt = $this->prompt ?? '';
 
-        // Check if there's a prompt template selected
-        if (!empty($this->prompt_template_id)) {
-            $template = \App\Models\PromptTemplate::find($this->prompt_template_id);
-            if ($template) {
-                // Show a modal to collect sample data for template variables
-                $this->dispatch('open-modal', id: 'preview-prompt-modal');
-                return;
+        // Check if the prompt contains variables
+        $variables = $this->extractVariablesFromPrompt($prompt);
+
+        if (!empty($variables)) {
+            // Show a modal to collect sample data for template variables
+            $this->dispatch('open-modal', id: 'preview-prompt-modal');
+            return;
+        }
+
+        // If no variables, show the prompt as-is
+        $this->showPromptPreview($prompt);
+    }
+
+    protected function extractVariablesFromPrompt(string $prompt): array
+    {
+        $variables = [];
+        preg_match_all('/{(\w+)}/', $prompt, $matches);
+
+        if (!empty($matches[1])) {
+            foreach ($matches[1] as $variable) {
+                $variables[$variable] = '';
             }
         }
 
-        // If no template or simple prompt, show the prompt as-is
-        $this->showPromptPreview($prompt);
+        return $variables;
     }
 
     public function previewWithTemplate(array $sampleData): void
     {
-        if (!empty($this->prompt_template_id)) {
-            $template = \App\Models\PromptTemplate::find($this->prompt_template_id);
-            if ($template) {
-                $renderedPrompt = $template->renderPrompt($sampleData);
-                $this->showPromptPreview($renderedPrompt);
+        $prompt = $this->prompt ?? '';
+
+        if (!empty($sampleData)) {
+            // Replace variables in the prompt with sample data
+            $renderedPrompt = $prompt;
+            foreach ($sampleData as $variable => $value) {
+                $renderedPrompt = str_replace('{' . $variable . '}', $value, $renderedPrompt);
             }
+            $this->showPromptPreview($renderedPrompt);
+        } else {
+            $this->showPromptPreview($prompt);
         }
     }
 
-    protected function showPromptPreview(string $prompt): void
+        protected function showPromptPreview(string $prompt): void
     {
-        Notification::make()
-            ->title('Prompt Preview')
-            ->body('<div class="bg-gray-100 p-4 rounded-lg"><pre class="whitespace-pre-wrap text-sm">' . e($prompt) . '</pre></div>')
-            ->success()
-            ->persistent()
-            ->send();
+        // Store the preview prompt for potential generation
+        $this->previewPrompt = $prompt;
+
+        // Show a modal instead of a notification for better UX
+        $this->dispatch('open-modal', id: 'prompt-preview-modal');
+    }
+
+    public function generateFromPreview(): void
+    {
+        if ($this->previewPrompt) {
+            // Temporarily set the prompt to the preview version
+            $originalPrompt = $this->prompt;
+            $this->prompt = $this->previewPrompt;
+
+            // Generate content
+            $this->generate();
+
+            // Restore the original prompt
+            $this->prompt = $originalPrompt;
+        }
     }
 
     public function generate(): void
@@ -341,7 +374,11 @@ class AIGenerationDashboard extends Page
                 ->form([
                     KeyValue::make('sample_data')
                         ->label('Sample Data')
-                        ->helperText('Enter variable values to preview the rendered prompt.'),
+                        ->helperText('Enter variable values to preview the rendered prompt.')
+                        ->default(function () {
+                            $prompt = $this->prompt ?? '';
+                            return $this->extractVariablesFromPrompt($prompt);
+                        }),
                 ])
                 ->action(function (array $data) {
                     $this->previewWithTemplate($data['sample_data'] ?? []);
