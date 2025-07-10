@@ -36,15 +36,23 @@ class AIGenerationDashboard extends Page
     public ?string $generatedContent = null;
     public ?array $generationStats = null;
 
+    // Form properties
+    public ?string $setting_name = null;
+    public ?string $generation_type = null;
+    public ?string $model = null;
+    public ?float $temperature = null;
+    public ?int $max_tokens = null;
+    public ?int $prompt_template_id = null;
+    public ?string $prompt = null;
+
     public function mount(): void
     {
-        $this->form->fill([
-            'generation_type' => 'proposal',
-            'setting_name' => 'default',
-            'model' => 'gpt-4',
-            'temperature' => 0.7,
-            'max_tokens' => 4000,
-        ]);
+        $this->generation_type = 'proposal';
+        $this->setting_name = 'default';
+        $this->model = 'gpt-4';
+        $this->temperature = 0.7;
+        $this->max_tokens = 4000;
+        $this->prompt = 'Write a short introduction about AI for business.';
     }
 
     public function form(Form $form): Form
@@ -136,32 +144,59 @@ class AIGenerationDashboard extends Page
                                 return \App\Models\PromptTemplate::where('is_active', true)
                                     ->pluck('name', 'id');
                             })
-                            ->reactive()
+                            ->live()
                             ->afterStateUpdated(function ($state, callable $set) {
                                 if ($state) {
                                     $template = \App\Models\PromptTemplate::find($state);
                                     if ($template) {
                                         $set('prompt', $template->template);
+                                        // Add a notification to confirm the template was loaded
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Template Loaded')
+                                            ->body('Template "' . $template->name . '" has been loaded.')
+                                            ->success()
+                                            ->send();
                                     }
+                                } else {
+                                    // Clear the prompt if no template is selected
+                                    $set('prompt', '');
                                 }
-                            }),
+                            })
+                            ->placeholder('Select a prompt template...'),
                         Textarea::make('prompt')
                             ->label('Prompt')
-                            ->rows(6)
+                            ->rows(8)
                             ->required()
-                            ->default('Write a short introduction about AI for business.'),
+                            ->placeholder('Enter your prompt or select a template above...')
+                            ->helperText('You can edit this prompt directly or select a template from the dropdown above.')
+                            ->default('Write a short introduction about AI for business.')
+                            ->live(),
                     ]),
             ]);
     }
 
+    public function loadTemplate($templateId): void
+    {
+        if ($templateId) {
+            $template = \App\Models\PromptTemplate::find($templateId);
+            if ($template) {
+                $this->prompt = $template->template;
+                \Filament\Notifications\Notification::make()
+                    ->title('Template Loaded')
+                    ->body('Template "' . $template->name . '" has been loaded.')
+                    ->success()
+                    ->send();
+            }
+        }
+    }
+
     public function preview(): void
     {
-        $data = $this->form->getState();
-        $prompt = $data['prompt'] ?? '';
+        $prompt = $this->prompt ?? '';
 
         // Check if there's a prompt template selected
-        if (!empty($data['prompt_template_id'])) {
-            $template = \App\Models\PromptTemplate::find($data['prompt_template_id']);
+        if (!empty($this->prompt_template_id)) {
+            $template = \App\Models\PromptTemplate::find($this->prompt_template_id);
             if ($template) {
                 // Show a modal to collect sample data for template variables
                 $this->dispatch('open-modal', id: 'preview-prompt-modal');
@@ -175,10 +210,8 @@ class AIGenerationDashboard extends Page
 
     public function previewWithTemplate(array $sampleData): void
     {
-        $data = $this->form->getState();
-
-        if (!empty($data['prompt_template_id'])) {
-            $template = \App\Models\PromptTemplate::find($data['prompt_template_id']);
+        if (!empty($this->prompt_template_id)) {
+            $template = \App\Models\PromptTemplate::find($this->prompt_template_id);
             if ($template) {
                 $renderedPrompt = $template->renderPrompt($sampleData);
                 $this->showPromptPreview($renderedPrompt);
@@ -198,18 +231,16 @@ class AIGenerationDashboard extends Page
 
     public function generate(): void
     {
-        $data = $this->form->getState();
-
         try {
             $openaiService = app(OpenAIService::class);
 
             $startTime = microtime(true);
 
             $response = $openaiService->generateContent(
-                $data['prompt'],
-                $data['model'],
-                $data['temperature'],
-                $data['max_tokens']
+                $this->prompt,
+                $this->model,
+                $this->temperature,
+                $this->max_tokens
             );
 
             $executionTime = (microtime(true) - $startTime) * 1000;
@@ -218,12 +249,18 @@ class AIGenerationDashboard extends Page
             $this->generationStats = [
                 'execution_time' => round($executionTime, 2),
                 'response_length' => strlen($response),
-                'model' => $data['model'],
-                'temperature' => $data['temperature'],
+                'model' => $this->model,
+                'temperature' => $this->temperature,
             ];
 
             // Log the generation
-            $this->logGeneration($data, $response, $executionTime);
+            $this->logGeneration([
+                'prompt' => $this->prompt,
+                'model' => $this->model,
+                'temperature' => $this->temperature,
+                'max_tokens' => $this->max_tokens,
+                'generation_type' => $this->generation_type,
+            ], $response, $executionTime);
 
             Notification::make()
                 ->title('Generation Successful')
@@ -233,7 +270,8 @@ class AIGenerationDashboard extends Page
         } catch (\Exception $e) {
             Log::error('AI Generation failed', [
                 'error' => $e->getMessage(),
-                'data' => $data
+                'prompt' => $this->prompt,
+                'model' => $this->model,
             ]);
 
             Notification::make()
@@ -246,44 +284,36 @@ class AIGenerationDashboard extends Page
 
     public function generateProposal(): void
     {
-        $this->form->fill([
-            'generation_type' => 'proposal',
-            'setting_name' => 'proposal',
-            'prompt' => 'Generate a professional business proposal for a web development project. Include project scope, timeline, deliverables, and pricing.',
-        ]);
+        $this->generation_type = 'proposal';
+        $this->setting_name = 'proposal';
+        $this->prompt = 'Generate a professional business proposal for a web development project. Include project scope, timeline, deliverables, and pricing.';
 
         $this->generate();
     }
 
     public function generateProject(): void
     {
-        $this->form->fill([
-            'generation_type' => 'project',
-            'setting_name' => 'project',
-            'prompt' => 'Create a comprehensive project plan for a mobile app development project. Include phases, tasks, milestones, and resource requirements.',
-        ]);
+        $this->generation_type = 'project';
+        $this->setting_name = 'project';
+        $this->prompt = 'Create a comprehensive project plan for a mobile app development project. Include phases, tasks, milestones, and resource requirements.';
 
         $this->generate();
     }
 
     public function generateTask(): void
     {
-        $this->form->fill([
-            'generation_type' => 'task',
-            'setting_name' => 'task',
-            'prompt' => 'Create a detailed task description for implementing user authentication in a web application. Include requirements, acceptance criteria, and estimated effort.',
-        ]);
+        $this->generation_type = 'task';
+        $this->setting_name = 'task';
+        $this->prompt = 'Create a detailed task description for implementing user authentication in a web application. Include requirements, acceptance criteria, and estimated effort.';
 
         $this->generate();
     }
 
     public function generateService(): void
     {
-        $this->form->fill([
-            'generation_type' => 'service',
-            'setting_name' => 'default',
-            'prompt' => 'Create a service description for a digital marketing agency offering SEO, social media management, and content creation services.',
-        ]);
+        $this->generation_type = 'service';
+        $this->setting_name = 'default';
+        $this->prompt = 'Create a service description for a digital marketing agency offering SEO, social media management, and content creation services.';
 
         $this->generate();
     }
