@@ -129,6 +129,43 @@ class PromptTemplateResource extends Resource
                             ->modalHeading('Generate Template')
                             ->modalDescription('This will generate a new template with variables included, based only on the Name, Type, and Description you provide. Are you sure you want to continue?')
                             ->modalSubmitActionLabel('Generate'),
+                        \Filament\Forms\Components\Actions\Action::make('previewPrompt')
+                            ->label('Prompt Preview')
+                            ->icon('heroicon-o-eye')
+                            ->color('secondary')
+                            ->size('sm')
+                            ->form(function ($get) {
+                                $template = $get('template');
+                                preg_match_all('/{(\w+)}/', $template, $matches);
+                                $variables = $matches[1] ?? [];
+                                $defaultSample = [];
+                                foreach ($variables as $var) {
+                                    $defaultSample[$var] = ucfirst(str_replace('_', ' ', $var));
+                                }
+                                return [
+                                    \Filament\Forms\Components\KeyValue::make('sample_data')
+                                        ->label('Sample Data')
+                                        ->helperText('Enter variable values to preview the rendered prompt.')
+                                        ->default($defaultSample),
+                                ];
+                            })
+                            ->action(function (array $data, $get) {
+                                $template = $get('template');
+                                $sampleData = $data['sample_data'] ?? [];
+                                // Replace variables with sample data
+                                $rendered = $template;
+                                foreach ($sampleData as $var => $val) {
+                                    $rendered = str_replace('{' . $var . '}', $val, $rendered);
+                                }
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Prompt Preview')
+                                    ->body('<pre style="white-space: pre-wrap;">' . e($rendered) . '</pre>')
+                                    ->success()
+                                    ->send();
+                            })
+                            ->modalHeading('Prompt Preview')
+                            ->modalSubmitActionLabel('Preview')
+                            ->modalCancelActionLabel('Cancel'),
                     ]),
                 Forms\Components\Toggle::make('is_active')
                     ->default(true),
