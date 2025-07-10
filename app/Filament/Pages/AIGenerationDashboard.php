@@ -9,6 +9,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Form;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
@@ -131,10 +132,8 @@ class AIGenerationDashboard extends Page
                     ->schema([
                         Select::make('prompt_template_id')
                             ->label('Prompt Template')
-                            ->options(function (callable $get) {
-                                $type = $get('generation_type');
-                                return \App\Models\PromptTemplate::where('type', $type)
-                                    ->where('is_active', true)
+                            ->options(function () {
+                                return \App\Models\PromptTemplate::where('is_active', true)
                                     ->pluck('name', 'id');
                             })
                             ->reactive()
@@ -153,6 +152,48 @@ class AIGenerationDashboard extends Page
                             ->default('Write a short introduction about AI for business.'),
                     ]),
             ]);
+    }
+
+    public function preview(): void
+    {
+        $data = $this->form->getState();
+        $prompt = $data['prompt'] ?? '';
+
+        // Check if there's a prompt template selected
+        if (!empty($data['prompt_template_id'])) {
+            $template = \App\Models\PromptTemplate::find($data['prompt_template_id']);
+            if ($template) {
+                // Show a modal to collect sample data for template variables
+                $this->dispatch('open-modal', id: 'preview-prompt-modal');
+                return;
+            }
+        }
+
+        // If no template or simple prompt, show the prompt as-is
+        $this->showPromptPreview($prompt);
+    }
+
+    public function previewWithTemplate(array $sampleData): void
+    {
+        $data = $this->form->getState();
+
+        if (!empty($data['prompt_template_id'])) {
+            $template = \App\Models\PromptTemplate::find($data['prompt_template_id']);
+            if ($template) {
+                $renderedPrompt = $template->renderPrompt($sampleData);
+                $this->showPromptPreview($renderedPrompt);
+            }
+        }
+    }
+
+    protected function showPromptPreview(string $prompt): void
+    {
+        Notification::make()
+            ->title('Prompt Preview')
+            ->body('<div class="bg-gray-100 p-4 rounded-lg"><pre class="whitespace-pre-wrap text-sm">' . e($prompt) . '</pre></div>')
+            ->success()
+            ->persistent()
+            ->send();
     }
 
     public function generate(): void
@@ -262,6 +303,21 @@ class AIGenerationDashboard extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('preview')
+                ->label('Preview Prompt')
+                ->icon('heroicon-o-eye')
+                ->action('preview')
+                ->color('gray')
+                ->form([
+                    KeyValue::make('sample_data')
+                        ->label('Sample Data')
+                        ->helperText('Enter variable values to preview the rendered prompt.'),
+                ])
+                ->action(function (array $data) {
+                    $this->previewWithTemplate($data['sample_data'] ?? []);
+                })
+                ->modalSubmitActionLabel('Preview')
+                ->modalWidth('lg'),
             Action::make('generate')
                 ->label('Generate Content')
                 ->action('generate')

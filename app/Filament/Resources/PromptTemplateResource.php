@@ -12,6 +12,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Actions\Action;
+use Filament\Notifications\Notification;
 
 class PromptTemplateResource extends Resource
 {
@@ -33,6 +35,8 @@ class PromptTemplateResource extends Resource
                         'subtask' => 'Subtask',
                         'service' => 'Service',
                         'package' => 'Package',
+                        'personal_project' => 'Personal Project',
+                        'personal_task' => 'Personal Task',
                         'custom' => 'Custom',
                     ])
                     ->required(),
@@ -64,6 +68,8 @@ class PromptTemplateResource extends Resource
                         'subtask' => 'Subtask',
                         'service' => 'Service',
                         'package' => 'Package',
+                        'personal_project' => 'Personal Project',
+                        'personal_task' => 'Personal Task',
                         'custom' => 'Custom',
                     ]),
                 Tables\Filters\TernaryFilter::make('is_active')->label('Active'),
@@ -71,6 +77,24 @@ class PromptTemplateResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Action::make('preview')
+                    ->label('Preview')
+                    ->icon('heroicon-o-eye')
+                    ->form([
+                        Forms\Components\KeyValue::make('sample_data')
+                            ->label('Sample Data')
+                            ->helperText('Enter variable values to preview the rendered prompt.'),
+                    ])
+                    ->action(function (array $data, PromptTemplate $record) {
+                        $rendered = $record->renderPrompt($data['sample_data'] ?? []);
+                        Notification::make()
+                            ->title('Prompt Preview')
+                            ->body('<pre style="white-space: pre-wrap;">' . e($rendered) . '</pre>')
+                            ->success()
+                            ->send();
+                    })
+                    ->modalSubmitActionLabel('Preview')
+                    ->modalWidth('xl'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
