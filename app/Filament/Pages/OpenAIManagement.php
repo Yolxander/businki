@@ -10,6 +10,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Card;
 use Filament\Forms\Form;
@@ -79,14 +80,13 @@ class OpenAIManagement extends Page implements HasTable
         $this->userPrompt = 'Hello! Can you help me with a simple question?';
     }
 
-    public function form(Form $form): Form
+        public function form(Form $form): Form
     {
         return $form
             ->schema([
-                Grid::make(2)
-                    ->schema([
-                        // API Configuration Section
-                        Section::make('API Configuration')
+                Tabs::make('OpenAI Management')
+                    ->tabs([
+                        Tabs\Tab::make('API Configuration')
                             ->schema([
                                 TextInput::make('apiKey')
                                     ->label('API Key')
@@ -160,10 +160,17 @@ class OpenAIManagement extends Page implements HasTable
                                     ->label('Stream Response')
                                     ->default(false)
                                     ->helperText('Enable streaming for real-time responses'),
+
+                                \Filament\Forms\Components\Actions::make([
+                                    \Filament\Forms\Components\Actions\Action::make('testConnection')
+                                        ->label('Test Connection')
+                                        ->icon('heroicon-o-signal')
+                                        ->color('success')
+                                        ->action('testApiConnection'),
+                                ]),
                             ]),
 
-                        // Test Configuration Section
-                        Section::make('Test Configuration')
+                        Tabs\Tab::make('Test Configuration')
                             ->schema([
                                 Select::make('testType')
                                     ->label('Test Type')
@@ -197,35 +204,41 @@ class OpenAIManagement extends Page implements HasTable
                                     ->valueLabel('Type/Description')
                                     ->addActionLabel('Add Property')
                                     ->helperText('Define function parameters for function calling'),
+
+                                Section::make('Save Current Settings')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                TextInput::make('settingName')
+                                                    ->label('Setting Name')
+                                                    ->placeholder('e.g., proposal_generation'),
+
+                                                TextInput::make('settingDescription')
+                                                    ->label('Description')
+                                                    ->placeholder('Brief description of this setting'),
+                                            ]),
+
+                                        \Filament\Forms\Components\Actions::make([
+                                            \Filament\Forms\Components\Actions\Action::make('sendRequest')
+                                                ->label('Send Request')
+                                                ->icon('heroicon-o-paper-airplane')
+                                                ->color('primary')
+                                                ->action('sendApiRequest'),
+
+                                            \Filament\Forms\Components\Actions\Action::make('saveSetting')
+                                                ->label('Save Setting')
+                                                ->icon('heroicon-o-bookmark')
+                                                ->color('success')
+                                                ->action('saveAsSetting'),
+                                        ]),
+                                    ])
+                                    ->collapsible()
+                                    ->collapsed(),
                             ]),
-                    ]),
 
-                // Action Buttons
-                Section::make('Actions')
-                    ->schema([
-                        Grid::make(3)
-                            ->schema([
-                                \Filament\Forms\Components\Actions::make([
-                                    \Filament\Forms\Components\Actions\Action::make('testConnection')
-                                        ->label('Test Connection')
-                                        ->icon('heroicon-o-signal')
-                                        ->color('success')
-                                        ->action('testApiConnection'),
 
-                                    \Filament\Forms\Components\Actions\Action::make('sendRequest')
-                                        ->label('Send Request')
-                                        ->icon('heroicon-o-paper-airplane')
-                                        ->color('primary')
-                                        ->action('sendApiRequest'),
-
-                                    \Filament\Forms\Components\Actions\Action::make('saveSetting')
-                                        ->label('Save as Setting')
-                                        ->icon('heroicon-o-bookmark')
-                                        ->color('warning')
-                                        ->action('saveAsSetting'),
-                                ]),
-                            ]),
-                    ]),
+                    ])
+                    ->columnSpan('full'),
             ]);
     }
 
