@@ -86,7 +86,8 @@ class AIGenerationSettingResource extends Resource
 
                 Forms\Components\KeyValue::make('additional_parameters')
                     ->label('Additional Parameters')
-                    ->placeholder('Any other OpenAI API parameters'),
+                    ->keyLabel('Parameter Name')
+                    ->valueLabel('Parameter Value'),
 
                 Forms\Components\Toggle::make('is_active')
                     ->default(true)
