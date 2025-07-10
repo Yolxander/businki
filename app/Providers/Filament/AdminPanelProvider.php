@@ -3,9 +3,11 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\AIGenerationDashboard;
+use App\Filament\Pages\OpenAIManagement;
 use App\Filament\Widgets\AIGenerationQuickActions;
 use App\Filament\Widgets\AIGenerationStats;
 use App\Filament\Widgets\RecentAIGenerations;
+use App\Filament\Widgets\OpenAIUsageStats;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -41,10 +43,12 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 \App\Filament\Pages\Dashboard::class,
                 AIGenerationDashboard::class,
+                OpenAIManagement::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
+                OpenAIUsageStats::class,
                 // Widgets\FilamentInfoWidget::class, // Removed version widget
             ])
             ->middleware([
