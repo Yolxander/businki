@@ -449,4 +449,89 @@ class OpenAIService
 
         return $prompt;
     }
+
+    /**
+     * Regenerate a prompt template while preserving variables
+     */
+    public function regenerateTemplate(string $currentTemplate, string $templateType, string $templateName): string
+    {
+        // Extract variables from the current template
+        $variables = $this->extractVariablesFromTemplate($currentTemplate);
+
+        $prompt = "You are a professional prompt template designer. I need you to regenerate a prompt template while preserving all the variables.\n\n";
+        $prompt .= "Current Template Type: {$templateType}\n";
+        $prompt .= "Template Name: {$templateName}\n";
+        $prompt .= "Current Template:\n{$currentTemplate}\n\n";
+
+        if (!empty($variables)) {
+            $prompt .= "Variables to preserve: " . implode(', ', $variables) . "\n\n";
+        }
+
+        $prompt .= "Requirements:\n";
+        $prompt .= "- Keep all existing variables exactly as they are (e.g., {full_name}, {company_name})\n";
+        $prompt .= "- Improve the template structure and wording\n";
+        $prompt .= "- Make it more professional and effective\n";
+        $prompt .= "- Maintain the same general purpose and flow\n";
+        $prompt .= "- Return only the template text, no explanations\n";
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $this->model,
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'You are a professional prompt template designer. Generate improved templates while preserving all variables exactly as they appear.'
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ],
+                'max_tokens' => $this->maxTokens,
+                'temperature' => 0.7,
+            ]);
+
+            if (!$response->successful()) {
+                Log::error('OpenAI API error during template regeneration', [
+                    'status' => $response->status(),
+                    'response' => $response->json()
+                ]);
+                throw new Exception('OpenAI API request failed: ' . $response->status());
+            }
+
+            $data = $response->json();
+            $generatedTemplate = $data['choices'][0]['message']['content'] ?? '';
+
+            if (empty($generatedTemplate)) {
+                throw new Exception('No content returned from OpenAI');
+            }
+
+            return trim($generatedTemplate);
+
+        } catch (Exception $e) {
+            Log::error('OpenAI service error during template regeneration', [
+                'error' => $e->getMessage(),
+                'template' => $currentTemplate
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Extract variables from a template string
+     */
+    private function extractVariablesFromTemplate(string $template): array
+    {
+        $variables = [];
+        preg_match_all('/{(\w+)}/', $template, $matches);
+
+        if (!empty($matches[1])) {
+            $variables = array_unique($matches[1]);
+        }
+
+        return $variables;
+    }
 }

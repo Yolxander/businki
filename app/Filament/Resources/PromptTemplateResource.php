@@ -41,9 +41,53 @@ class PromptTemplateResource extends Resource
                     ])
                     ->required(),
                 Forms\Components\TextInput::make('description'),
-                Forms\Components\Textarea::make('template')
-                    ->rows(8)
-                    ->required(),
+                                Forms\Components\Section::make('Template')
+                    ->schema([
+                        Forms\Components\Textarea::make('template')
+                            ->label(false)
+                            ->rows(8)
+                            ->columnSpanFull(),
+                    ])
+                    ->headerActions([
+                        \Filament\Forms\Components\Actions\Action::make('generateNew')
+                            ->label('Generate New')
+                            ->icon('heroicon-o-sparkles')
+                            ->color('primary')
+                            ->size('sm')
+                            ->action(function ($record, $get, $set) {
+                                try {
+                                    $openaiService = new \App\Services\OpenAIService();
+                                    $currentTemplate = $get('template');
+                                    $templateType = $get('type');
+                                    $templateName = $get('name');
+
+                                    $newTemplate = $openaiService->regenerateTemplate(
+                                        $currentTemplate,
+                                        $templateType,
+                                        $templateName
+                                    );
+
+                                    $set('template', $newTemplate);
+
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Template Regenerated')
+                                        ->body('The template has been successfully regenerated while preserving all variables.')
+                                        ->success()
+                                        ->send();
+
+                                } catch (\Exception $e) {
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Generation Failed')
+                                        ->body('Failed to regenerate template: ' . $e->getMessage())
+                                        ->danger()
+                                        ->send();
+                                }
+                            })
+                            ->requiresConfirmation()
+                            ->modalHeading('Regenerate Template')
+                            ->modalDescription('This will generate a new version of the template while preserving all variables. Are you sure you want to continue?')
+                            ->modalSubmitActionLabel('Generate New Template')
+                    ]),
                 Forms\Components\Toggle::make('is_active')
                     ->default(true),
             ]);

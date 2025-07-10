@@ -10,6 +10,13 @@ class EditPromptTemplate extends EditRecord
 {
     protected static string $resource = PromptTemplateResource::class;
 
+    public static function rules(): array
+    {
+        return [
+            'template' => ['required', 'string'],
+        ];
+    }
+
     protected function getHeaderActions(): array
     {
         return [
