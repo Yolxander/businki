@@ -50,43 +50,85 @@ class PromptTemplateResource extends Resource
                     ])
                     ->headerActions([
                         \Filament\Forms\Components\Actions\Action::make('generateNew')
-                            ->label('Generate New')
+                            ->label('Generate')
                             ->icon('heroicon-o-sparkles')
                             ->color('primary')
                             ->size('sm')
                             ->action(function ($record, $get, $set) {
                                 try {
                                     $openaiService = new \App\Services\OpenAIService();
-                                    $currentTemplate = $get('template');
                                     $templateType = $get('type');
                                     $templateName = $get('name');
+                                    $templateDescription = $get('description');
+                                    if (!$record) { // CREATE PAGE
+                                        // Compose a prompt for OpenAI to generate a new template with variables for the selected type
+                                        $prompt = "You are a professional prompt template designer. Generate a new prompt template for the following type. Include variables as curly-brace placeholders (e.g., {full_name}, {company_name}) that are typical for this type. Do not include explanations, only the template text.\n\n";
+                                        $prompt .= "Template Type: {$templateType}\n";
+                                        $prompt .= "Template Name: {$templateName}\n";
+                                        if ($templateDescription) {
+                                            $prompt .= "Description: {$templateDescription}\n";
+                                        }
+                                        $prompt .= "\nRequirements:\n- Use variables relevant to the template type.\n- Use curly braces for variables.\n- Make the template professional and ready to use.\n- Do not include explanations or extra text.";
 
-                                    $newTemplate = $openaiService->regenerateTemplate(
-                                        $currentTemplate,
-                                        $templateType,
-                                        $templateName
-                                    );
+                                        $response = \Illuminate\Support\Facades\Http::withHeaders([
+                                            'Authorization' => 'Bearer ' . config('services.openai.api_key'),
+                                            'Content-Type' => 'application/json',
+                                        ])->post('https://api.openai.com/v1/chat/completions', [
+                                            'model' => config('services.openai.model'),
+                                            'messages' => [
+                                                [
+                                                    'role' => 'system',
+                                                    'content' => 'You are a professional prompt template designer.'
+                                                ],
+                                                [
+                                                    'role' => 'user',
+                                                    'content' => $prompt
+                                                ]
+                                            ],
+                                            'max_tokens' => 600,
+                                            'temperature' => 0.7,
+                                        ]);
 
-                                    $set('template', $newTemplate);
-
-                                    \Filament\Notifications\Notification::make()
-                                        ->title('Template Regenerated')
-                                        ->body('The template has been successfully regenerated while preserving all variables.')
-                                        ->success()
-                                        ->send();
-
+                                        if (!$response->successful()) {
+                                            throw new \Exception('OpenAI API request failed: ' . $response->status());
+                                        }
+                                        $data = $response->json();
+                                        $generatedTemplate = $data['choices'][0]['message']['content'] ?? '';
+                                        if (empty($generatedTemplate)) {
+                                            throw new \Exception('No content returned from OpenAI');
+                                        }
+                                        $set('template', trim($generatedTemplate));
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Template Generated')
+                                            ->body('A new template has been generated with variables included.')
+                                            ->success()
+                                            ->send();
+                                    } else { // EDIT PAGE
+                                        $currentTemplate = $get('template');
+                                        $newTemplate = $openaiService->regenerateTemplate(
+                                            $currentTemplate,
+                                            $templateType,
+                                            $templateName
+                                        );
+                                        $set('template', $newTemplate);
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Template Regenerated')
+                                            ->body('The template has been successfully regenerated while preserving all variables.')
+                                            ->success()
+                                            ->send();
+                                    }
                                 } catch (\Exception $e) {
                                     \Filament\Notifications\Notification::make()
                                         ->title('Generation Failed')
-                                        ->body('Failed to regenerate template: ' . $e->getMessage())
+                                        ->body('Failed to generate template: ' . $e->getMessage())
                                         ->danger()
                                         ->send();
                                 }
                             })
                             ->requiresConfirmation()
-                            ->modalHeading('Regenerate Template')
-                            ->modalDescription('This will generate a new version of the template while preserving all variables. Are you sure you want to continue?')
-                            ->modalSubmitActionLabel('Generate New Template')
+                            ->modalHeading('Generate Template')
+                            ->modalDescription('This will generate a new template with variables included, based only on the Name, Type, and Description you provide. Are you sure you want to continue?')
+                            ->modalSubmitActionLabel('Generate'),
                     ]),
                 Forms\Components\Toggle::make('is_active')
                     ->default(true),
