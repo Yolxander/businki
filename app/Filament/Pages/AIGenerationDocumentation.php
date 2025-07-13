@@ -11,4 +11,13 @@ class AIGenerationDocumentation extends Page
     protected static ?string $title = 'AI Generation Documentation';
     protected static ?string $slug = 'ai-generation/documentation';
     protected static ?string $navigationGroup = 'AI Generation';
+
+    public string $activeTab = 'overview';
+
+    public function getViewData(): array
+    {
+        return [
+            'activeTab' => $this->activeTab,
+        ];
+    }
 }

@@ -1,55 +1,76 @@
 <x-filament-panels::page>
-    <x-filament::card class="dark:bg-gray-900 dark:text-gray-100">
-        <div class="prose max-w-none dark:prose-invert">
-            <h2 class="text-xl font-semibold mb-4">AI Generation Documentation</h2>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                    <h3 class="text-lg font-medium mb-2">How It Works</h3>
-                    <p class="mb-4">
-                        The AI generation system uses OpenAI's GPT models to automatically create content for proposals,
-                        projects, tasks, and other business documents. The system processes your prompts and generates
-                        contextually relevant content based on the selected parameters.
-                    </p>
+    <div x-data="{ activeTab: 'overview' }">
+        <!-- Tab Navigation -->
+        <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+            <nav class="-mb-px flex space-x-24" aria-label="Tabs">
+                <button
+                    @click="activeTab = 'overview'"
+                    :class="{ 'border-primary-500 text-primary-600 dark:text-primary-400': activeTab === 'overview', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300': activeTab !== 'overview' }"
+                    class="whitespace-nowrap py-2 px-6 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors duration-200"
+                >
+                    <x-heroicon-o-information-circle class="w-4 h-4" />
+                    Overview
+                </button>
 
-                    <h3 class="text-lg font-medium mb-2">Generation Types</h3>
-                    <ul class="list-disc pl-6 mb-4">
-                        <li><strong>Proposal:</strong> Creates detailed project proposals with scope, timeline, and pricing</li>
-                        <li><strong>Project:</strong> Generates project plans with tasks, milestones, and deliverables</li>
-                        <li><strong>Task:</strong> Creates individual task descriptions with requirements and acceptance criteria</li>
-                        <li><strong>Subtask:</strong> Breaks down complex tasks into smaller, manageable components</li>
-                        <li><strong>Service:</strong> Generates service descriptions and feature lists</li>
-                        <li><strong>Package:</strong> Creates package offerings with pricing tiers and features</li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="text-lg font-medium mb-2">Parameters Explained</h3>
-                    <ul class="list-disc pl-6 mb-4">
-                        <li><strong>Model:</strong> Choose between GPT-4 (most capable), GPT-4 Turbo (faster), or GPT-3.5 Turbo (most economical)</li>
-                        <li><strong>Temperature:</strong> Controls randomness (0 = deterministic, 2 = very creative)</li>
-                        <li><strong>Max Tokens:</strong> Maximum length of the generated response</li>
-                    </ul>
+                <button
+                    @click="activeTab = 'api-endpoints'"
+                    :class="{ 'border-primary-500 text-primary-600 dark:text-primary-400': activeTab === 'api-endpoints', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300': activeTab !== 'api-endpoints' }"
+                    class="whitespace-nowrap py-2 px-6 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors duration-200"
+                >
+                    <x-heroicon-o-code-bracket class="w-4 h-4" />
+                    API Endpoints
+                </button>
 
-                    <h3 class="text-lg font-medium mb-2">Best Practices</h3>
-                    <ul class="list-disc pl-6 mb-4">
-                        <li>Be specific in your prompts for better results</li>
-                        <li>Use lower temperature (0.3-0.7) for factual content</li>
-                        <li>Use higher temperature (0.8-1.2) for creative content</li>
-                        <li>Monitor token usage to control costs</li>
-                        <li>Review and refine generated content before using</li>
-                    </ul>
+                <button
+                    @click="activeTab = 'request-examples'"
+                    :class="{ 'border-primary-500 text-primary-600 dark:text-primary-400': activeTab === 'request-examples', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300': activeTab !== 'request-examples' }"
+                    class="whitespace-nowrap py-2 px-6 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors duration-200"
+                >
+                    <x-heroicon-o-arrow-up-tray class="w-4 h-4" />
+                    Request Examples
+                </button>
 
-                    <h3 class="text-lg font-medium mb-2">Current Use Cases</h3>
-                    <p class="mb-2">
-                        The AI generation system is currently integrated across the following areas:
-                    </p>
-                    <ul class="list-disc pl-6">
-                        <li>Automatic proposal generation from client intake forms</li>
-                        <li>Project planning and task breakdown</li>
-                        <li>Service and package description creation</li>
-                        <li>Content optimization and enhancement</li>
-                    </ul>
-                </div>
+                <button
+                    @click="activeTab = 'response-examples'"
+                    :class="{ 'border-primary-500 text-primary-600 dark:text-primary-400': activeTab === 'response-examples', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300': activeTab !== 'response-examples' }"
+                    class="whitespace-nowrap py-2 px-6 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors duration-200"
+                >
+                    <x-heroicon-o-arrow-down-tray class="w-4 h-4" />
+                    Response Examples
+                </button>
+
+                <button
+                    @click="activeTab = 'best-practices'"
+                    :class="{ 'border-primary-500 text-primary-600 dark:text-primary-400': activeTab === 'best-practices', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300': activeTab !== 'best-practices' }"
+                    class="whitespace-nowrap py-2 px-6 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors duration-200"
+                >
+                    <x-heroicon-o-light-bulb class="w-4 h-4" />
+                    Best Practices
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div>
+            <div x-show="activeTab === 'overview'" x-transition>
+                @include('filament.pages.documentation.overview')
+            </div>
+
+            <div x-show="activeTab === 'api-endpoints'" x-transition style="display: none;">
+                @include('filament.pages.documentation.api-endpoints')
+            </div>
+
+            <div x-show="activeTab === 'request-examples'" x-transition style="display: none;">
+                @include('filament.pages.documentation.request-examples')
+            </div>
+
+            <div x-show="activeTab === 'response-examples'" x-transition style="display: none;">
+                @include('filament.pages.documentation.response-examples')
+            </div>
+
+            <div x-show="activeTab === 'best-practices'" x-transition style="display: none;">
+                @include('filament.pages.documentation.best-practices')
             </div>
         </div>
-    </x-filament::card>
+    </div>
 </x-filament-panels::page>
