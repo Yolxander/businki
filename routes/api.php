@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Project routes
     Route::apiResource('projects', ProjectController::class);
+    Route::post('/projects/new-client-project', [ProjectController::class, 'newClientProject']);
 
     // Task routes
     Route::prefix('tasks')->group(function () {
