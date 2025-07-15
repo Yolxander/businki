@@ -59,4 +59,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(Proposal::class);
     }
+
+    /**
+     * Get the clients associated with the user.
+     */
+    public function clients()
+    {
+        return $this->belongsToMany(Client::class, 'user_client')
+                    ->withTimestamps();
+    }
 }

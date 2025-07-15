@@ -29,4 +29,13 @@ class Client extends Model
     {
         return "{$this->first_name} {$this->last_name}";
     }
+
+    /**
+     * Get the users associated with the client.
+     */
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'user_client')
+                    ->withTimestamps();
+    }
 }

@@ -332,6 +332,33 @@ class ProjectController extends Controller
                     'timestamp' => now()->toISOString()
                 ]);
 
+                // Connect the logged-in user to the client via pivot table
+                $userId = auth()->id();
+                Log::debug("[$requestId] Connecting user to client", [
+                    'step' => 'user_client_connection',
+                    'user_id' => $userId,
+                    'client_id' => $client->id,
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                // Check if the relationship already exists
+                $existingRelationship = $client->users()->where('user_id', $userId)->exists();
+
+                if (!$existingRelationship) {
+                    $client->users()->attach($userId);
+                    Log::info("[$requestId] User connected to client successfully", [
+                        'user_id' => $userId,
+                        'client_id' => $client->id,
+                        'timestamp' => now()->toISOString()
+                    ]);
+                } else {
+                    Log::info("[$requestId] User-client relationship already exists, skipping", [
+                        'user_id' => $userId,
+                        'client_id' => $client->id,
+                        'timestamp' => now()->toISOString()
+                    ]);
+                }
+
                 // Update intake with client_id
                 Log::debug("[$requestId] Updating intake with client_id", [
                     'step' => 'intake_client_update',
@@ -461,8 +488,11 @@ class ProjectController extends Controller
                     'timestamp' => now()->toISOString()
                 ]);
 
+                // Load client with users relationship for response
+                $clientWithUsers = $client->load('users');
+
                 return [
-                    'client' => $client,
+                    'client' => $clientWithUsers,
                     'intake_response' => $intakeResponse,
                     'proposal' => $proposal,
                     'project' => $projectWithRelations
@@ -534,6 +564,101 @@ class ProjectController extends Controller
 
             return response()->json([
                 'error' => 'Failed to create new client project',
+                'message' => 'An unexpected error occurred',
+                'request_id' => $requestId
+            ], 500);
+        }
+    }
+
+    /**
+     * Connect an existing client to the logged-in user for project creation.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function connectClientForProject(Request $request): JsonResponse
+    {
+        $requestId = uniqid('connect_client_project_');
+
+        try {
+            Log::info("[$requestId] Connecting client for project creation", [
+                'user_id' => auth()->id(),
+                'user_email' => auth()->user()?->email,
+                'request_data' => $request->all(),
+                'timestamp' => now()->toISOString()
+            ]);
+
+            $validated = $request->validate([
+                'client_id' => 'required|exists:clients,id',
+            ]);
+
+            $client = Client::findOrFail($validated['client_id']);
+            $userId = auth()->id();
+
+            Log::debug("[$requestId] Checking existing user-client relationship", [
+                'user_id' => $userId,
+                'client_id' => $client->id,
+                'timestamp' => now()->toISOString()
+            ]);
+
+            // Check if the relationship already exists
+            $existingRelationship = $client->users()->where('user_id', $userId)->exists();
+
+            if (!$existingRelationship) {
+                $client->users()->attach($userId);
+                Log::info("[$requestId] User connected to client successfully", [
+                    'user_id' => $userId,
+                    'client_id' => $client->id,
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                $message = 'Client connected successfully for project creation';
+            } else {
+                Log::info("[$requestId] User-client relationship already exists", [
+                    'user_id' => $userId,
+                    'client_id' => $client->id,
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                $message = 'Client already connected for project creation';
+            }
+
+            // Load client with users relationship
+            $clientWithUsers = $client->load('users');
+
+            return response()->json([
+                'message' => $message,
+                'client' => $clientWithUsers,
+                'request_id' => $requestId
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error("[$requestId] Validation failed for client connection", [
+                'user_id' => auth()->id(),
+                'validation_errors' => $e->errors(),
+                'response_status' => 422,
+                'timestamp' => now()->toISOString()
+            ]);
+
+            return response()->json([
+                'error' => 'Validation failed',
+                'errors' => $e->errors(),
+                'request_id' => $requestId
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error("[$requestId] Failed to connect client for project", [
+                'user_id' => auth()->id(),
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'response_status' => 500,
+                'timestamp' => now()->toISOString()
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to connect client for project',
                 'message' => 'An unexpected error occurred',
                 'request_id' => $requestId
             ], 500);

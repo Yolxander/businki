@@ -25,6 +25,87 @@ class ClientController extends Controller
         }
     }
 
+    /**
+     * Connect a client to the logged-in user.
+     */
+    public function connectClient($clientId)
+    {
+        try {
+            $userId = Auth::id();
+            $client = Client::findOrFail($clientId);
+
+            Log::info('Connecting user to existing client', [
+                'user_id' => $userId,
+                'client_id' => $clientId
+            ]);
+
+            // Check if the relationship already exists
+            $existingRelationship = $client->users()->where('user_id', $userId)->exists();
+
+            if (!$existingRelationship) {
+                $client->users()->attach($userId);
+                Log::info('User connected to existing client successfully', [
+                    'user_id' => $userId,
+                    'client_id' => $clientId
+                ]);
+                return response()->json([
+                    'message' => 'Client connected successfully',
+                    'client' => $client->load('users')
+                ]);
+            } else {
+                Log::info('User-client relationship already exists', [
+                    'user_id' => $userId,
+                    'client_id' => $clientId
+                ]);
+                return response()->json([
+                    'message' => 'Client already connected',
+                    'client' => $client->load('users')
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error connecting client to user', [
+                'user_id' => $userId ?? null,
+                'client_id' => $clientId,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json(['message' => 'Error connecting client'], 500);
+        }
+    }
+
+    /**
+     * Disconnect a client from the logged-in user.
+     */
+    public function disconnectClient($clientId)
+    {
+        try {
+            $userId = Auth::id();
+            $client = Client::findOrFail($clientId);
+
+            Log::info('Disconnecting user from client', [
+                'user_id' => $userId,
+                'client_id' => $clientId
+            ]);
+
+            $client->users()->detach($userId);
+
+            Log::info('User disconnected from client successfully', [
+                'user_id' => $userId,
+                'client_id' => $clientId
+            ]);
+
+            return response()->json([
+                'message' => 'Client disconnected successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error disconnecting client from user', [
+                'user_id' => $userId ?? null,
+                'client_id' => $clientId,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json(['message' => 'Error disconnecting client'], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         try {
@@ -48,6 +129,33 @@ class ClientController extends Controller
             }
 
             $client = Client::create($request->all());
+
+            // Connect the logged-in user to the client via pivot table
+            $userId = Auth::id();
+            Log::info('Connecting user to client', [
+                'user_id' => $userId,
+                'client_id' => $client->id
+            ]);
+
+            // Check if the relationship already exists
+            $existingRelationship = $client->users()->where('user_id', $userId)->exists();
+
+            if (!$existingRelationship) {
+                $client->users()->attach($userId);
+                Log::info('User connected to client successfully', [
+                    'user_id' => $userId,
+                    'client_id' => $client->id
+                ]);
+            } else {
+                Log::info('User-client relationship already exists, skipping', [
+                    'user_id' => $userId,
+                    'client_id' => $client->id
+                ]);
+            }
+
+            // Load the users relationship for the response
+            $client->load('users');
+
             Log::info('Client created successfully', ['client_id' => $client->id]);
             return response()->json($client, 201);
         } catch (\Exception $e) {
@@ -132,15 +240,14 @@ class ClientController extends Controller
             $userId = Auth::id();
             Log::info('Fetching clients for user', ['user_id' => $userId]);
 
-            $clients = Client::whereHas('intakes', function ($query) use ($userId) {
-                $query->where('user_id', $userId)
-                    ->whereHas('response');
+            // Get clients directly connected to the user via pivot table
+            $clients = Client::whereHas('users', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
             })
-            ->with(['intakes' => function ($query) use ($userId) {
+            ->with(['users', 'intakes' => function ($query) use ($userId) {
                 $query->where('user_id', $userId)
                     ->with('response');
             }])
-            ->distinct()
             ->get();
 
             Log::info('Successfully fetched clients for user', [

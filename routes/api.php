@@ -40,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/clients/{id}', [ClientController::class, 'update']);
     Route::delete('/clients/{id}', [ClientController::class, 'destroy']);
     Route::get('/clients/user/me', [ClientController::class, 'getClientsByUser']);
+    Route::post('/clients/{id}/connect', [ClientController::class, 'connectClient']);
+    Route::delete('/clients/{id}/disconnect', [ClientController::class, 'disconnectClient']);
 
     Route::apiResource('intakes', IntakeController::class);
     Route::post('intakes/{intake}/forms', [IntakeController::class, 'storeForm']);
@@ -52,6 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Project routes
     Route::apiResource('projects', ProjectController::class);
     Route::post('/projects/new-client-project', [ProjectController::class, 'newClientProject']);
+    Route::post('/projects/connect-client', [ProjectController::class, 'connectClientForProject']);
 
     // Task routes
     Route::prefix('tasks')->group(function () {
