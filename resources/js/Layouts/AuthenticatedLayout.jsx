@@ -14,7 +14,10 @@ import {
     HelpCircle,
     Search,
     MoreVertical,
-    Plus
+    Plus,
+    Brain,
+    Server,
+    Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -22,24 +25,15 @@ export default function AuthenticatedLayout({ user, header, children }) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
     const navigation = [
-        { name: 'Dashboard', href: '/dashboard', icon: Home },
-        { name: 'Lifecycle', href: '/lifecycle', icon: Calendar },
+        { name: 'API Dashboard', href: '/dashboard', icon: Server },
+        { name: 'User Management', href: '/user-management', icon: Users },
         { name: 'Analytics', href: '/analytics', icon: BarChart3 },
         { name: 'Projects', href: '/projects', icon: FileText },
-        { name: 'Team', href: '/team', icon: Users },
     ];
 
-    const documents = [
-        { name: 'Data Library', href: '/data-library', icon: Database },
-        { name: 'Reports', href: '/reports', icon: FileText },
-        { name: 'Word Assistant', href: '/word-assistant', icon: FileText },
-        { name: 'More', href: '/more', icon: MoreVertical },
-    ];
-
-    const bottomNav = [
-        { name: 'Settings', href: '/settings', icon: Settings },
-        { name: 'Get Help', href: '/help', icon: HelpCircle },
-        { name: 'Search', href: '/search', icon: Search },
+    const aiNavigation = [
+        { name: 'AI Settings', href: '/ai-settings', icon: Brain },
+        { name: 'Playground', href: '/playground', icon: Play },
     ];
 
     return (
@@ -83,10 +77,10 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
                             <div>
                                 <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider mb-2">
-                                    Documents
+                                    AI
                                 </h3>
                                 <div className="space-y-1">
-                                    {documents.map((item) => (
+                                    {aiNavigation.map((item) => (
                                         <Link
                                             key={item.name}
                                             href={item.href}
@@ -97,19 +91,6 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                         </Link>
                                     ))}
                                 </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                {bottomNav.map((item) => (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                                    >
-                                        <item.icon className="mr-3 h-5 w-5" />
-                                        {item.name}
-                                    </Link>
-                                ))}
                             </div>
                         </nav>
                     </div>
@@ -166,10 +147,10 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
                             <div>
                                 <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider mb-2">
-                                    Documents
+                                    AI
                                 </h3>
                                 <div className="space-y-1">
-                                    {documents.map((item) => (
+                                    {aiNavigation.map((item) => (
                                         <Link
                                             key={item.name}
                                             href={item.href}
@@ -180,19 +161,6 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                         </Link>
                                     ))}
                                 </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                {bottomNav.map((item) => (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                                    >
-                                        <item.icon className="mr-3 h-5 w-5" />
-                                        {item.name}
-                                    </Link>
-                                ))}
                             </div>
                         </nav>
                     </div>

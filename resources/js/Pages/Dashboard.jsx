@@ -5,97 +5,140 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+    Activity,
+    Server,
     Users,
-    FileText,
-    Calendar,
-    TrendingUp,
-    DollarSign,
+    Zap,
     CheckCircle,
-    Clock,
     AlertCircle,
+    Clock,
     ArrowUp,
     ArrowDown,
     BarChart3,
-    Plus
+    Plus,
+    Settings,
+    Globe,
+    Database
 } from 'lucide-react';
 
 export default function Dashboard({ auth, stats }) {
     const defaultStats = {
-        totalClients: 0,
-        totalProposals: 0,
-        totalProjects: 0,
-        totalTasks: 0,
-        recentProposals: [],
-        recentTasks: [],
-        revenue: 0,
-        pendingTasks: 0
+        totalEndpoints: 0,
+        activeEndpoints: 0,
+        totalRequests: 0,
+        errorRate: 0,
+        recentRequests: [],
+        endpointStatus: []
     };
 
     const statsData = stats || defaultStats;
 
-    const metricCards = [
+    const apiMetrics = [
         {
-            title: 'Total Revenue',
-            value: '$1,250.00',
-            trend: '+12.5%',
+            title: 'Total Endpoints',
+            value: '24',
+            trend: '+2',
             trendDirection: 'up',
-            description: 'Trending up this month',
-            subtitle: 'Visitors for the last 6 months',
-            icon: DollarSign
+            description: 'Active API endpoints',
+            subtitle: '3 new endpoints this month',
+            icon: Server,
+            status: 'success'
         },
         {
-            title: 'New Customers',
-            value: '1,234',
-            trend: '-20%',
+            title: 'Request Volume',
+            value: '2.4M',
+            trend: '+12.5%',
+            trendDirection: 'up',
+            description: 'Requests this month',
+            subtitle: 'Average 80K daily requests',
+            icon: Activity,
+            status: 'success'
+        },
+        {
+            title: 'Error Rate',
+            value: '0.8%',
+            trend: '-0.2%',
             trendDirection: 'down',
-            description: 'Down 20% this period',
-            subtitle: 'Acquisition needs attention',
-            icon: Users
+            description: 'Down from last month',
+            subtitle: 'Excellent uptime maintained',
+            icon: AlertCircle,
+            status: 'warning'
         },
         {
-            title: 'Active Accounts',
-            value: '45,678',
-            trend: '+12.5%',
-            trendDirection: 'up',
-            description: 'Strong user retention',
-            subtitle: 'Engagement exceed targets',
-            icon: CheckCircle
-        },
-        {
-            title: 'Growth Rate',
-            value: '4.5%',
-            trend: '+4.5%',
-            trendDirection: 'up',
-            description: 'Steady performance',
-            subtitle: 'Meets growth projections',
-            icon: TrendingUp
+            title: 'Response Time',
+            value: '145ms',
+            trend: '-12ms',
+            trendDirection: 'down',
+            description: 'Average response time',
+            subtitle: 'Performance improved',
+            icon: Clock,
+            status: 'success'
         }
     ];
 
+    const endpointStatus = [
+        { name: 'GET /api/users', status: 'active', requests: '45.2K', errors: '12', uptime: '99.9%' },
+        { name: 'POST /api/auth/login', status: 'active', requests: '23.1K', errors: '8', uptime: '99.8%' },
+        { name: 'GET /api/proposals', status: 'active', requests: '18.7K', errors: '5', uptime: '99.9%' },
+        { name: 'POST /api/ai/generate', status: 'warning', requests: '12.3K', errors: '45', uptime: '98.5%' },
+        { name: 'GET /api/clients', status: 'active', requests: '8.9K', errors: '3', uptime: '99.9%' },
+        { name: 'DELETE /api/tasks/{id}', status: 'error', requests: '2.1K', errors: '156', uptime: '92.1%' }
+    ];
+
+    const recentActivity = [
+        { endpoint: 'POST /api/ai/generate', user: 'john.doe@example.com', status: 'success', time: '2 min ago' },
+        { endpoint: 'GET /api/users', user: 'jane.smith@example.com', status: 'success', time: '5 min ago' },
+        { endpoint: 'POST /api/auth/login', user: 'admin@businki.com', status: 'success', time: '8 min ago' },
+        { endpoint: 'DELETE /api/tasks/123', user: 'freelancer@example.com', status: 'error', time: '12 min ago' },
+        { endpoint: 'GET /api/proposals', user: 'client@example.com', status: 'success', time: '15 min ago' }
+    ];
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'active': return 'bg-green-500';
+            case 'warning': return 'bg-yellow-500';
+            case 'error': return 'bg-red-500';
+            default: return 'bg-gray-500';
+        }
+    };
+
+    const getStatusText = (status) => {
+        switch (status) {
+            case 'active': return 'Active';
+            case 'warning': return 'Warning';
+            case 'error': return 'Error';
+            default: return 'Unknown';
+        }
+    };
+
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Dashboard" />
+            <Head title="API Dashboard" />
 
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground">Documents</h1>
-                        <p className="text-muted-foreground">Manage your business documents and analytics</p>
+                        <h1 className="text-2xl font-bold text-foreground">API Dashboard</h1>
+                        <p className="text-muted-foreground">Monitor and manage your API endpoints</p>
                     </div>
                     <div className="flex items-center space-x-2">
                         <Button variant="outline" size="icon">
-                            <FileText className="w-4 h-4" />
+                            <Settings className="w-4 h-4" />
                         </Button>
                         <Button variant="outline" size="icon">
                             <BarChart3 className="w-4 h-4" />
                         </Button>
+                        <Button>
+                            <Plus className="w-4 h-4 mr-2" />
+                            New Endpoint
+                        </Button>
                     </div>
                 </div>
 
-                {/* Metrics Grid */}
+                {/* API Metrics Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {metricCards.map((metric, index) => (
+                    {apiMetrics.map((metric, index) => (
                         <Card key={index} className="bg-card border-border">
                             <CardHeader className="pb-2">
                                 <div className="flex items-center justify-between">
@@ -126,13 +169,13 @@ export default function Dashboard({ auth, stats }) {
                     ))}
                 </div>
 
-                {/* Total Visitors Chart */}
+                {/* API Performance Chart */}
                 <Card className="bg-card border-border">
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle className="text-foreground">Total Visitors</CardTitle>
-                                <CardDescription className="text-muted-foreground">Total for the last 3 months</CardDescription>
+                                <CardTitle className="text-foreground">API Performance</CardTitle>
+                                <CardDescription className="text-muted-foreground">Response times and request volume over time</CardDescription>
                             </div>
                             <div className="flex space-x-2">
                                 <Button variant="outline" size="sm" className="bg-muted text-muted-foreground">
@@ -142,7 +185,7 @@ export default function Dashboard({ auth, stats }) {
                                     Last 30 days
                                 </Button>
                                 <Button variant="default" size="sm" className="bg-primary text-primary-foreground">
-                                    Last 3 months
+                                    Last 24 hours
                                 </Button>
                             </div>
                         </div>
@@ -151,40 +194,29 @@ export default function Dashboard({ auth, stats }) {
                         <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
                             <div className="text-center">
                                 <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                <p className="text-muted-foreground">Chart visualization would go here</p>
-                                <p className="text-sm text-muted-foreground">Showing visitor data over time</p>
+                                <p className="text-muted-foreground">API performance chart would go here</p>
+                                <p className="text-sm text-muted-foreground">Showing response times and request volume</p>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Documents Table */}
+                {/* Endpoint Status Table */}
                 <Card className="bg-card border-border">
                     <CardHeader>
                         <div className="flex items-center justify-between">
-                            <div className="flex space-x-4">
-                                <Button variant="default" className="bg-primary text-primary-foreground">
-                                    Outline
-                                </Button>
-                                <Button variant="outline" className="bg-muted text-muted-foreground">
-                                    Past Performance
-                                    <Badge variant="secondary" className="ml-2">3</Badge>
-                                </Button>
-                                <Button variant="outline" className="bg-muted text-muted-foreground">
-                                    Key Personnel
-                                    <Badge variant="secondary" className="ml-2">2</Badge>
-                                </Button>
-                                <Button variant="outline" className="bg-muted text-muted-foreground">
-                                    Focus Documents
-                                </Button>
+                            <div>
+                                <CardTitle className="text-foreground">Endpoint Status</CardTitle>
+                                <CardDescription className="text-muted-foreground">Real-time status of all API endpoints</CardDescription>
                             </div>
                             <div className="flex space-x-2">
                                 <Button variant="outline" size="sm">
-                                    Customize Columns
+                                    <Globe className="w-4 h-4 mr-2" />
+                                    Health Check
                                 </Button>
                                 <Button variant="outline" size="sm">
                                     <Plus className="w-4 h-4 mr-2" />
-                                    Add Section
+                                    Add Endpoint
                                 </Button>
                             </div>
                         </div>
@@ -194,30 +226,62 @@ export default function Dashboard({ auth, stats }) {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-border">
-                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Header</th>
-                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Section Type</th>
-                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Target</th>
-                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Limit</th>
-                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Reviewer</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Endpoint</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Requests (24h)</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Errors (24h)</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Uptime</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr className="border-b border-border">
-                                        <td className="py-3 px-4 text-sm text-foreground">Executive Summary</td>
-                                        <td className="py-3 px-4 text-sm text-muted-foreground">Overview</td>
-                                        <td className="py-3 px-4 text-sm text-foreground">Q4 2024</td>
-                                        <td className="py-3 px-4 text-sm text-muted-foreground">2 pages</td>
-                                        <td className="py-3 px-4 text-sm text-foreground">John Doe</td>
-                                    </tr>
-                                    <tr className="border-b border-border">
-                                        <td className="py-3 px-4 text-sm text-foreground">Market Analysis</td>
-                                        <td className="py-3 px-4 text-sm text-muted-foreground">Research</td>
-                                        <td className="py-3 px-4 text-sm text-foreground">Q4 2024</td>
-                                        <td className="py-3 px-4 text-sm text-muted-foreground">5 pages</td>
-                                        <td className="py-3 px-4 text-sm text-foreground">Jane Smith</td>
-                                    </tr>
+                                    {endpointStatus.map((endpoint, index) => (
+                                        <tr key={index} className="border-b border-border">
+                                            <td className="py-3 px-4 text-sm text-foreground font-mono">{endpoint.name}</td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center">
+                                                    <div className={`w-2 h-2 rounded-full ${getStatusColor(endpoint.status)} mr-2`}></div>
+                                                    <span className="text-sm">{getStatusText(endpoint.status)}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-foreground">{endpoint.requests}</td>
+                                            <td className="py-3 px-4 text-sm text-foreground">{endpoint.errors}</td>
+                                            <td className="py-3 px-4 text-sm text-foreground">{endpoint.uptime}</td>
+                                            <td className="py-3 px-4">
+                                                <Button variant="ghost" size="sm">
+                                                    <Settings className="w-4 h-4" />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Recent Activity */}
+                <Card className="bg-card border-border">
+                    <CardHeader>
+                        <CardTitle className="text-foreground">Recent API Activity</CardTitle>
+                        <CardDescription className="text-muted-foreground">Latest API requests and responses</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {recentActivity.map((activity, index) => (
+                                <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                    <div className="flex-1">
+                                        <p className="font-medium text-foreground font-mono">{activity.endpoint}</p>
+                                        <p className="text-sm text-muted-foreground">{activity.user}</p>
+                                    </div>
+                                    <div className="flex items-center space-x-4">
+                                        <Badge variant={activity.status === 'success' ? 'default' : 'destructive'}>
+                                            {activity.status}
+                                        </Badge>
+                                        <span className="text-sm text-muted-foreground">{activity.time}</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>
