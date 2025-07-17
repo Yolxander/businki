@@ -1,5 +1,5 @@
-import React from 'react';
-import { Head } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,112 +30,147 @@ import {
 } from 'lucide-react';
 
 export default function AISettings({ auth }) {
-    const aiModels = [
-        {
-            id: 1,
-            name: 'GPT-4',
-            provider: 'OpenAI',
-            status: 'active',
-            apiKey: 'sk-...1234',
-            usage: '85%',
-            cost: '$1,234.56',
-            lastUsed: '2 hours ago',
-            requests: '45,234'
-        },
-        {
-            id: 2,
-            name: 'Claude-3',
-            provider: 'Anthropic',
-            status: 'active',
-            apiKey: 'sk-ant-...5678',
-            usage: '62%',
-            cost: '$856.78',
-            lastUsed: '1 day ago',
-            requests: '23,456'
-        },
-        {
-            id: 3,
-            name: 'Gemini Pro',
-            provider: 'Google',
-            status: 'inactive',
-            apiKey: 'AIza...9012',
-            usage: '0%',
-            cost: '$0.00',
-            lastUsed: '1 week ago',
-            requests: '1,234'
-        }
-    ];
+    const [aiModels, setAiModels] = useState([]);
+    const [aiConfigurations, setAiConfigurations] = useState([]);
+    const [stats, setStats] = useState({});
+    const [isLoading, setIsLoading] = useState(true);
+    const [testResult, setTestResult] = useState(null);
 
-    const promptTemplates = [
-        {
-            id: 1,
-            name: 'Proposal Generator',
-            description: 'Generate professional business proposals',
-            category: 'Business',
-            status: 'active',
-            usage: '1,234 times',
-            lastUpdated: '3 days ago'
-        },
-        {
-            id: 2,
-            name: 'Content Writer',
-            description: 'Create engaging blog posts and articles',
-            category: 'Content',
-            status: 'active',
-            usage: '856 times',
-            lastUpdated: '1 week ago'
-        },
-        {
-            id: 3,
-            name: 'Code Assistant',
-            description: 'Help with programming and debugging',
-            category: 'Development',
-            status: 'draft',
-            usage: '0 times',
-            lastUpdated: '2 days ago'
-        }
-    ];
+    useEffect(() => {
+        loadData();
+    }, []);
 
-    const aiConfigurations = [
-        {
-            id: 1,
-            name: 'Temperature',
-            value: '0.7',
-            description: 'Controls randomness in AI responses',
-            type: 'slider',
-            min: 0,
-            max: 1,
-            step: 0.1
-        },
-        {
-            id: 2,
-            name: 'Max Tokens',
-            value: '2048',
-            description: 'Maximum length of AI responses',
-            type: 'input',
-            unit: 'tokens'
-        },
-        {
-            id: 3,
-            name: 'Top P',
-            value: '0.9',
-            description: 'Controls response diversity',
-            type: 'slider',
-            min: 0,
-            max: 1,
-            step: 0.1
-        },
-        {
-            id: 4,
-            name: 'Frequency Penalty',
-            value: '0.0',
-            description: 'Reduces repetition in responses',
-            type: 'slider',
-            min: 0,
-            max: 2,
-            step: 0.1
+
+
+            const loadData = async () => {
+        try {
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            };
+
+            const [modelsResponse, configResponse, statsResponse] = await Promise.all([
+                fetch('/api/ai-settings/models', {
+                    method: 'GET',
+                    headers,
+                    credentials: 'same-origin'
+                }),
+                fetch('/api/ai-settings/configuration', {
+                    method: 'GET',
+                    headers,
+                    credentials: 'same-origin'
+                }),
+                fetch('/api/ai-settings/stats', {
+                    method: 'GET',
+                    headers,
+                    credentials: 'same-origin'
+                })
+            ]);
+
+            const modelsData = await modelsResponse.json();
+            const configData = await configResponse.json();
+            const statsData = await statsResponse.json();
+
+            console.log('API Responses:', {
+                models: modelsData,
+                config: configData,
+                stats: statsData
+            });
+
+            if (modelsData.status === 'success' && Array.isArray(modelsData.data)) {
+                setAiModels(modelsData.data);
+                console.log('Successfully set AI models:', modelsData.data.length, 'models');
+            } else {
+                console.error('Models API failed or invalid data:', modelsData);
+            }
+
+            if (configData.status === 'success') {
+                setAiConfigurations(configData.data);
+            }
+
+            if (statsData.status === 'success') {
+                setStats(statsData.data);
+            }
+        } catch (error) {
+            console.error('Failed to load data:', error);
+        } finally {
+            setIsLoading(false);
         }
-    ];
+    };
+
+    const handleTestConnection = async () => {
+        try {
+            const response = await fetch('/api/ai-settings/test-aimlapi-connection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+
+            const data = await response.json();
+            setTestResult(data);
+
+            if (data.status === 'success') {
+                alert('Connection test successful!');
+            } else {
+                alert('Connection test failed: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Failed to test connection:', error);
+            alert('Failed to test connection');
+        }
+    };
+
+    const handleSaveChanges = async () => {
+        try {
+            const configData = {};
+            aiConfigurations.forEach(config => {
+                const key = config.name.toLowerCase().replace(/\s+/g, '_');
+                configData[key] = parseFloat(config.value);
+            });
+
+            const response = await fetch('/api/ai-settings/configuration', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(configData)
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                alert('Changes saved successfully!');
+            } else {
+                alert('Failed to save changes: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Failed to save changes:', error);
+            alert('Failed to save changes');
+        }
+    };
+
+    const handleModelAction = (modelId, action) => {
+        switch (action) {
+            case 'view':
+                router.visit(`/ai-settings/models/${modelId}`);
+                break;
+            case 'edit':
+                router.visit(`/ai-settings/models/${modelId}/edit`);
+                break;
+            case 'test':
+                // Test specific model
+                break;
+            default:
+                break;
+        }
+    };
+
+    const handleAddModel = () => {
+        router.visit('/ai-settings/models/new');
+    };
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -169,11 +204,11 @@ export default function AISettings({ auth }) {
                         <p className="text-muted-foreground">Configure and manage your AI integrations</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Button variant="outline">
+                        <Button variant="outline" onClick={handleTestConnection}>
                             <TestTube className="w-4 h-4 mr-2" />
                             Test Connection
                         </Button>
-                        <Button>
+                        <Button onClick={handleSaveChanges}>
                             <Save className="w-4 h-4 mr-2" />
                             Save Changes
                         </Button>
@@ -181,14 +216,34 @@ export default function AISettings({ auth }) {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <Card className="bg-card border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Models</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-foreground">{stats.total_models || 0}</div>
+                            <p className="text-xs text-muted-foreground">All AI Models</p>
+                        </CardContent>
+                    </Card>
+
                     <Card className="bg-card border-border">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Active Models</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-foreground">2</div>
-                            <p className="text-xs text-muted-foreground">GPT-4, Claude-3</p>
+                            <div className="text-2xl font-bold text-foreground">{stats.active_models || 0}</div>
+                            <p className="text-xs text-muted-foreground">Currently Active</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-card border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-foreground">{stats.total_users || 0}</div>
+                            <p className="text-xs text-muted-foreground">Model Creators</p>
                         </CardContent>
                     </Card>
 
@@ -197,18 +252,8 @@ export default function AISettings({ auth }) {
                             <CardTitle className="text-sm font-medium text-muted-foreground">Total Requests</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-foreground">69,924</div>
-                            <p className="text-xs text-muted-foreground">This month</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-card border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-foreground">$2,091.34</div>
-                            <p className="text-xs text-muted-foreground">This month</p>
+                            <div className="text-2xl font-bold text-foreground">{stats.total_requests || '0'}</div>
+                            <p className="text-xs text-muted-foreground">API Calls</p>
                         </CardContent>
                     </Card>
 
@@ -217,8 +262,8 @@ export default function AISettings({ auth }) {
                             <CardTitle className="text-sm font-medium text-muted-foreground">Success Rate</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-foreground">98.7%</div>
-                            <p className="text-xs text-muted-foreground">+0.3% from last month</p>
+                            <div className="text-2xl font-bold text-foreground">{stats.success_rate || '0%'}</div>
+                            <p className="text-xs text-muted-foreground">Last 24h</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -231,7 +276,7 @@ export default function AISettings({ auth }) {
                                 <CardTitle className="text-foreground">AI Models</CardTitle>
                                 <CardDescription className="text-muted-foreground">Configure your AI model integrations</CardDescription>
                             </div>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" onClick={handleAddModel}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Model
                             </Button>
@@ -239,19 +284,41 @@ export default function AISettings({ auth }) {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {aiModels.map((model) => (
-                                <div key={model.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                            {isLoading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                                    <span className="ml-2 text-muted-foreground">Loading models...</span>
+                                </div>
+                            ) : aiModels.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <p className="text-muted-foreground">No AI models configured</p>
+                                    <Button variant="outline" size="sm" className="mt-2" onClick={handleAddModel}>
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add Your First Model
+                                    </Button>
+                                </div>
+                            ) : (
+                                aiModels.map((model) => (
+                                <div
+                                    key={model.id}
+                                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                                    onClick={() => handleModelAction(model.id, 'view')}
+                                >
                                     <div className="flex items-center space-x-4">
                                         <div className="flex items-center">
                                             <Brain className="w-5 h-5 mr-2 text-primary" />
                                             <div>
                                                 <h3 className="font-medium text-foreground">{model.name}</h3>
-                                                <p className="text-sm text-muted-foreground">{model.provider}</p>
+                                                <p className="text-sm text-muted-foreground">{model.provider} • {model.model}</p>
+                                                <p className="text-xs text-muted-foreground">Added by {model.user?.name || 'Unknown'}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center">
                                             <div className={`w-2 h-2 rounded-full ${getStatusColor(model.status)} mr-2`}></div>
                                             <span className="text-sm">{getStatusText(model.status)}</span>
+                                            {model.is_default && (
+                                                <Badge variant="secondary" className="ml-2 text-xs">Default</Badge>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-6">
@@ -259,14 +326,26 @@ export default function AISettings({ auth }) {
                                             <p className="text-sm text-foreground">Usage: {model.usage}</p>
                                             <p className="text-sm text-muted-foreground">Cost: {model.cost}</p>
                                         </div>
-                                        <div className="flex space-x-2">
-                                            <Button variant="ghost" size="sm">
+                                        <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleModelAction(model.id, 'view')}
+                                            >
                                                 <Eye className="w-4 h-4" />
                                             </Button>
-                                            <Button variant="ghost" size="sm">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleModelAction(model.id, 'edit')}
+                                            >
                                                 <Edit className="w-4 h-4" />
                                             </Button>
-                                            <Button variant="ghost" size="sm">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleModelAction(model.id, 'test')}
+                                            >
                                                 <TestTube className="w-4 h-4" />
                                             </Button>
                                             <Button variant="ghost" size="sm">
@@ -275,71 +354,13 @@ export default function AISettings({ auth }) {
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            ))
+                            )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* AI Configuration Parameters */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card className="bg-card border-border">
-                        <CardHeader>
-                            <CardTitle className="text-foreground">Model Parameters</CardTitle>
-                            <CardDescription className="text-muted-foreground">Fine-tune AI response behavior</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {aiConfigurations.map((config) => (
-                                <div key={config.id} className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <label className="text-sm font-medium text-foreground">{config.name}</label>
-                                        <span className="text-sm text-muted-foreground">{config.value}{config.unit && ` ${config.unit}`}</span>
-                                    </div>
-                                    <div className="w-full bg-muted rounded-full h-2">
-                                        <div
-                                            className="bg-primary h-2 rounded-full"
-                                            style={{ width: `${(config.value / config.max) * 100}%` }}
-                                        ></div>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">{config.description}</p>
-                                </div>
-                            ))}
-                        </CardContent>
-                    </Card>
 
-                    <Card className="bg-card border-border">
-                        <CardHeader>
-                            <CardTitle className="text-foreground">Prompt Templates</CardTitle>
-                            <CardDescription className="text-muted-foreground">Manage your AI prompt templates</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {promptTemplates.map((template) => (
-                                    <div key={template.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                                        <div className="flex-1">
-                                            <div className="flex items-center space-x-2">
-                                                <h3 className="font-medium text-foreground">{template.name}</h3>
-                                                <Badge variant="secondary" className="text-xs">
-                                                    {template.category}
-                                                </Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">{template.description}</p>
-                                            <p className="text-xs text-muted-foreground">Used {template.usage} • Updated {template.lastUpdated}</p>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <div className={`w-2 h-2 rounded-full ${getStatusColor(template.status)}`}></div>
-                                            <Button variant="ghost" size="sm">
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm">
-                                                <Copy className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
 
                 {/* Security & Monitoring */}
                 <Card className="bg-card border-border">

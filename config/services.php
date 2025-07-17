@@ -42,4 +42,15 @@ return [
         'temperature' => env('OPENAI_TEMPERATURE', 0.7),
     ],
 
+    'aimlapi' => [
+        'api_key' => env('AIMLAPI_API_KEY'),
+        'base_url' => env('AIMLAPI_BASE_URL', 'https://api.aimlapi.com/v1'),
+        'model' => env('AIMLAPI_MODEL', 'gpt-4o'),
+        'max_tokens' => env('AIMLAPI_MAX_TOKENS', 2048),
+        'temperature' => env('AIMLAPI_TEMPERATURE', 0.7),
+        'top_p' => env('AIMLAPI_TOP_P', 0.9),
+        'frequency_penalty' => env('AIMLAPI_FREQUENCY_PENALTY', 0.0),
+        'presence_penalty' => env('AIMLAPI_PRESENCE_PENALTY', 0.0),
+    ],
+
 ];

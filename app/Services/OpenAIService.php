@@ -534,4 +534,55 @@ class OpenAIService
 
         return $variables;
     }
+
+    /**
+     * Generate a simple chat completion for testing
+     */
+    public function generateChatCompletion(string $message, array $options = []): array
+    {
+        try {
+            $model = $options['model'] ?? $this->model;
+            $maxTokens = $options['max_tokens'] ?? $this->maxTokens;
+            $temperature = $options['temperature'] ?? $this->temperature;
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $message]
+                ],
+                'max_tokens' => $maxTokens,
+                'temperature' => $temperature,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return [
+                    'status' => 'success',
+                    'message' => 'Chat completion generated successfully',
+                    'data' => $data,
+                    'content' => $data['choices'][0]['message']['content'] ?? null
+                ];
+            } else {
+                return [
+                    'status' => 'error',
+                    'message' => 'Failed to generate chat completion: ' . $response->body(),
+                    'data' => null
+                ];
+            }
+        } catch (Exception $e) {
+            Log::error('OpenAI chat completion failed', [
+                'error' => $e->getMessage(),
+                'message' => $message
+            ]);
+
+            return [
+                'status' => 'error',
+                'message' => 'Failed to generate chat completion: ' . $e->getMessage(),
+                'data' => null
+            ];
+        }
+    }
 }

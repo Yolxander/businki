@@ -9,13 +9,28 @@
     <style>
         .orbitron { font-family: 'Orbitron', sans-serif; }
     </style>
+    <script>
+        // Debug logging for login buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginButtons = document.querySelectorAll('a[href*="login"], a[href*="dashboard"]');
+            loginButtons.forEach(function(button) {
+                button.addEventListener('click', function(e) {
+                    console.log('Login button clicked:', {
+                        href: this.href,
+                        text: this.textContent.trim(),
+                        timestamp: new Date().toISOString()
+                    });
+                });
+            });
+        });
+    </script>
 </head>
 <body class="bg-black text-gray-100 min-h-screen flex flex-col">
     <!-- Header -->
     <header class="w-full flex justify-center pt-8 pb-4">
         <nav class="w-[95%] max-w-6xl bg-gray-900 rounded-lg flex items-center justify-between px-8 py-4 shadow border border-gray-800">
             <div class="orbitron text-2xl text-amber-400 tracking-widest font-bold">Bobbi <span class="text-white">Admin</span></div>
-            <a href="/admin" class="bg-amber-400 hover:bg-amber-500 text-black font-semibold rounded-lg px-6 py-3 transition">
+            <a href="{{ auth()->check() ? '/dashboard' : '/login' }}" class="bg-amber-400 hover:bg-amber-500 text-black font-semibold rounded-lg px-6 py-3 transition">
                 @if(auth()->check())
                     Go to Dashboard
                 @else
@@ -44,7 +59,7 @@
                         <li>Access detailed reports and dashboards</li>
                     </ul>
                 </div>
-                <a href="/admin" class="bg-amber-400 hover:bg-amber-500 text-black font-semibold rounded-lg px-6 py-3 transition w-full text-center block">
+                <a href="{{ auth()->check() ? '/dashboard' : '/login' }}" class="bg-amber-400 hover:bg-amber-500 text-black font-semibold rounded-lg px-6 py-3 transition w-full text-center block">
                     @if(auth()->check())
                         Go to Dashboard
                     @else

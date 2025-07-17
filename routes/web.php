@@ -42,6 +42,23 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('ai-settings');
+
+    Route::get('/ai-settings/models/{modelId}', function ($modelId) {
+        return Inertia::render('ModelDetails', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'modelId' => $modelId,
+        ]);
+    })->name('ai-settings.model-details');
+
+    Route::get('/ai-settings/models/new', function () {
+        return Inertia::render('AddModel', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('ai-settings.add-model');
     Route::get('/playground', function () {
         return Inertia::render('Playground', [
             'auth' => [
@@ -49,6 +66,17 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('playground');
+
+    // AI Settings API routes (moved from api.php to work with web sessions)
+    Route::post('/api/ai-settings/test-aimlapi-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testAIMLAPIConnection']);
+    Route::post('/api/ai-settings/test-openai-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testOpenAIConnection']);
+    Route::get('/api/ai-settings/models', [App\Http\Controllers\Api\AISettingsController::class, 'getAIModels']);
+    Route::post('/api/ai-settings/models', [App\Http\Controllers\Api\AISettingsController::class, 'saveAIModel']);
+    Route::get('/api/ai-settings/configuration', [App\Http\Controllers\Api\AISettingsController::class, 'getAIConfiguration']);
+    Route::put('/api/ai-settings/configuration', [App\Http\Controllers\Api\AISettingsController::class, 'updateAIConfiguration']);
+    Route::post('/api/ai-settings/test-completion', [App\Http\Controllers\Api\AISettingsController::class, 'generateTestCompletion']);
+    Route::get('/api/ai-settings/stats', [App\Http\Controllers\Api\AISettingsController::class, 'getAIStats']);
+    Route::patch('/api/ai-settings/models/{modelId}/status', [App\Http\Controllers\Api\AISettingsController::class, 'toggleModelStatus']);
 });
 
 // Proposal Routes

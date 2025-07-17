@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\IntakeController;
@@ -13,8 +12,10 @@ use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\ListingController;
 use App\Http\Controllers\Api\AIGenerationController;
+use App\Http\Controllers\Api\AISettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -28,7 +29,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/profiles', [ProfileController::class, 'store']);
     Route::put('/profiles/{profile}', [ProfileController::class, 'update']);
     Route::get('/profiles/{profile}', [ProfileController::class, 'show']);
@@ -143,6 +144,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/generate-personal-ai-project', [AIGenerationController::class, 'generatePersonalProject']);
     Route::post('projects/{id}/generate-tasks', [AIGenerationController::class, 'generateTasks']);
     Route::post('projects/generate-personal-tasks', [AIGenerationController::class, 'generatePersonalTasks']);
+
+
 });
 
 // Public routes

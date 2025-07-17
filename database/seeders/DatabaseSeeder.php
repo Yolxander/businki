@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
 //        ]);
 
         $this->call([
-//            UserSeeder::class,
+            UserSeeder::class,
 //            ProviderTypeSeeder::class,
 //            ProviderSeeder::class,
 //            ClientSeeder::class,
@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             ServiceSeeder::class,
             PackageSeeder::class,
             ListingSeeder::class,
+            AIModelSeeder::class,
         ]);
     }
 }

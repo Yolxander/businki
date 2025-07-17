@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import {
     Home,
     Users,
@@ -23,6 +23,18 @@ import { Button } from '@/components/ui/button';
 
 export default function AuthenticatedLayout({ user, header, children }) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
+    const { post } = useForm();
+
+    const handleLogout = () => {
+        post('/logout', {
+            onSuccess: () => {
+                console.log('Logout successful');
+            },
+            onError: (errors) => {
+                console.error('Logout failed', errors);
+            }
+        });
+    };
 
     const navigation = [
         { name: 'API Dashboard', href: '/dashboard', icon: Server },
@@ -43,7 +55,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
                 <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-sidebar border-r border-sidebar-border">
                     <div className="flex h-16 items-center justify-between px-4">
-                        <h1 className="text-xl font-bold text-sidebar-foreground">Acme Inc.</h1>
+                        <h1 className="text-xl font-bold text-sidebar-foreground orbitron">Bobbi</h1>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -96,7 +108,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     </div>
 
                     <div className="border-t border-sidebar-border p-4">
-                        <div className="flex items-center">
+                        <div className="flex items-center mb-3">
                             <div className="flex-shrink-0">
                                 <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center">
                                     <span className="text-sm font-medium text-sidebar-primary-foreground">
@@ -112,6 +124,15 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleLogout}
+                            className="w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Sign out
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -120,7 +141,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
             <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
                 <div className="flex flex-col flex-grow bg-sidebar border-r border-sidebar-border">
                     <div className="flex h-16 items-center px-4">
-                        <h1 className="text-xl font-bold text-sidebar-foreground">Acme Inc.</h1>
+                        <h1 className="text-xl font-bold text-sidebar-foreground orbitron">Bobbi</h1>
                     </div>
 
                     <div className="flex-1 px-4 py-4">
@@ -166,7 +187,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     </div>
 
                     <div className="border-t border-sidebar-border p-4">
-                        <div className="flex items-center">
+                        <div className="flex items-center mb-3">
                             <div className="flex-shrink-0">
                                 <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center">
                                     <span className="text-sm font-medium text-sidebar-primary-foreground">
@@ -182,6 +203,15 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleLogout}
+                            className="w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Sign out
+                        </Button>
                     </div>
                 </div>
             </div>
