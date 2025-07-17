@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             ServiceSeeder::class,
             PackageSeeder::class,
             ListingSeeder::class,
+            AIProviderSeeder::class,
             AIModelSeeder::class,
         ]);
     }

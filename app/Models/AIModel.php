@@ -13,12 +13,10 @@ class AIModel extends Model
 
     protected $fillable = [
         'name',
-        'provider',
         'model',
-        'api_key',
-        'base_url',
         'status',
         'user_id',
+        'ai_provider_id',
         'is_default',
         'usage_count',
         'last_used_at',
@@ -32,9 +30,7 @@ class AIModel extends Model
         'settings' => 'array'
     ];
 
-    protected $hidden = [
-        'api_key'
-    ];
+
 
     /**
      * Get the user that owns the model
@@ -42,6 +38,14 @@ class AIModel extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the AI provider that this model uses
+     */
+    public function aiProvider()
+    {
+        return $this->belongsTo(AIProvider::class);
     }
 
     /**
@@ -60,22 +64,7 @@ class AIModel extends Model
         return $query->where('is_default', true);
     }
 
-    /**
-     * Get the masked API key for display
-     */
-    public function getMaskedApiKeyAttribute()
-    {
-        if (!$this->api_key) {
-            return null;
-        }
 
-        $length = strlen($this->api_key);
-        if ($length <= 8) {
-            return str_repeat('*', $length);
-        }
-
-        return substr($this->api_key, 0, 4) . str_repeat('*', $length - 8) . substr($this->api_key, -4);
-    }
 
     /**
      * Increment usage count

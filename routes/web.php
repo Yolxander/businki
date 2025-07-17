@@ -43,6 +43,22 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('ai-settings');
 
+    Route::get('/ai-settings/models/new', function () {
+        return Inertia::render('AddModel', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('ai-settings.add-model');
+
+    Route::get('/ai-settings/providers/new', function () {
+        return Inertia::render('AddProvider', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('ai-settings.add-provider');
+
     Route::get('/ai-settings/models/{modelId}', function ($modelId) {
         return Inertia::render('ModelDetails', [
             'auth' => [
@@ -51,14 +67,6 @@ Route::middleware(['auth'])->group(function () {
             'modelId' => $modelId,
         ]);
     })->name('ai-settings.model-details');
-
-    Route::get('/ai-settings/models/new', function () {
-        return Inertia::render('AddModel', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-        ]);
-    })->name('ai-settings.add-model');
     Route::get('/playground', function () {
         return Inertia::render('Playground', [
             'auth' => [
@@ -70,6 +78,8 @@ Route::middleware(['auth'])->group(function () {
     // AI Settings API routes (moved from api.php to work with web sessions)
     Route::post('/api/ai-settings/test-aimlapi-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testAIMLAPIConnection']);
     Route::post('/api/ai-settings/test-openai-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testOpenAIConnection']);
+    Route::get('/api/ai-settings/providers', [App\Http\Controllers\Api\AISettingsController::class, 'getAIProviders']);
+    Route::post('/api/ai-settings/providers', [App\Http\Controllers\Api\AISettingsController::class, 'saveAIProvider']);
     Route::get('/api/ai-settings/models', [App\Http\Controllers\Api\AISettingsController::class, 'getAIModels']);
     Route::post('/api/ai-settings/models', [App\Http\Controllers\Api\AISettingsController::class, 'saveAIModel']);
     Route::get('/api/ai-settings/configuration', [App\Http\Controllers\Api\AISettingsController::class, 'getAIConfiguration']);

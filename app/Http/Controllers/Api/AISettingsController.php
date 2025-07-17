@@ -7,6 +7,7 @@ use App\Services\AIMLAPIService;
 use App\Services\OpenAIService;
 use App\Models\AIGenerationSetting;
 use App\Models\AIModel;
+use App\Models\AIProvider;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Http;
@@ -130,13 +131,13 @@ class AISettingsController extends Controller
     /**
      * Get AI models configuration
      */
-        public function getAIModels(): JsonResponse
+            public function getAIModels(): JsonResponse
     {
         try {
             Log::info('getAIModels called', ['user_id' => auth()->id()]);
 
             // Get all models regardless of user
-            $models = AIModel::with('user')
+            $models = AIModel::with(['user', 'aiProvider'])
                 ->orderBy('is_default', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -147,10 +148,11 @@ class AISettingsController extends Controller
                 return [
                     'id' => $model->id,
                     'name' => $model->name,
-                    'provider' => $model->provider,
+                    'provider' => $model->aiProvider->provider_type,
+                    'provider_name' => $model->aiProvider->name,
                     'model' => $model->model,
                     'status' => $model->status,
-                    'apiKey' => $model->masked_api_key,
+                    'apiKey' => $model->aiProvider->masked_api_key,
                     'usage' => $model->usage_count > 0 ? number_format($model->usage_count) : '0',
                     'cost' => '$0.00', // TODO: Implement cost tracking
                     'lastUsed' => $model->last_used_at ? $model->last_used_at->diffForHumans() : 'Never',
@@ -160,6 +162,13 @@ class AISettingsController extends Controller
                         'id' => $model->user->id,
                         'name' => $model->user->name,
                         'email' => $model->user->email
+                    ],
+                    'ai_provider' => [
+                        'id' => $model->aiProvider->id,
+                        'name' => $model->aiProvider->name,
+                        'provider_type' => $model->aiProvider->provider_type,
+                        'base_url' => $model->aiProvider->base_url,
+                        'status' => $model->aiProvider->status
                     ],
                     'created_at' => $model->created_at,
                     'last_used_at' => $model->last_used_at,
@@ -183,6 +192,111 @@ class AISettingsController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to get AI models: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get AI providers
+     */
+    public function getAIProviders(): JsonResponse
+    {
+        try {
+            Log::info('getAIProviders called', ['user_id' => auth()->id()]);
+
+            // Get all providers regardless of user
+            $providers = AIProvider::with('user')
+                ->orderBy('status', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            Log::info('Providers found', ['count' => $providers->count(), 'user_id' => auth()->id()]);
+
+            $mappedProviders = $providers->map(function ($provider) {
+                return [
+                    'id' => $provider->id,
+                    'name' => $provider->name,
+                    'provider_type' => $provider->provider_type,
+                    'base_url' => $provider->base_url,
+                    'status' => $provider->status,
+                    'masked_api_key' => $provider->masked_api_key,
+                    'user' => [
+                        'id' => $provider->user->id,
+                        'name' => $provider->user->name,
+                        'email' => $provider->user->email
+                    ],
+                    'created_at' => $provider->created_at,
+                    'settings' => $provider->settings
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $mappedProviders
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get AI providers', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get AI providers: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Save AI provider
+     */
+    public function saveAIProvider(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
+                'provider_type' => 'required|string|max:255',
+                'api_key' => 'required|string',
+                'base_url' => 'required|url',
+                'status' => 'required|in:active,inactive'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $provider = AIProvider::create([
+                'user_id' => auth()->id(),
+                'name' => $request->name,
+                'provider_type' => $request->provider_type,
+                'api_key' => $request->api_key,
+                'base_url' => $request->base_url,
+                'status' => $request->status,
+                'settings' => $request->settings ?? []
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Provider saved successfully',
+                'data' => [
+                    'id' => $provider->id,
+                    'name' => $provider->name,
+                    'provider_type' => $provider->provider_type
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to save AI provider', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to save provider: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -369,11 +483,15 @@ class AISettingsController extends Controller
             $activeModels = AIModel::where('status', 'active')->count();
             $totalRequests = AIModel::sum('usage_count');
             $uniqueUsers = AIModel::distinct('user_id')->count();
+            $totalProviders = AIProvider::count();
+            $activeProviders = AIProvider::where('status', 'active')->count();
 
             $stats = [
                 'active_models' => $activeModels,
                 'total_models' => $totalModels,
                 'total_users' => $uniqueUsers,
+                'total_providers' => $totalProviders,
+                'active_providers' => $activeProviders,
                 'total_requests' => number_format($totalRequests),
                 'total_cost' => '$0.00', // TODO: Implement cost tracking
                 'success_rate' => '98.7%', // TODO: Implement success rate tracking
@@ -406,10 +524,8 @@ class AISettingsController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
-                'provider' => 'required|string|in:AIMLAPI,OpenAI,Anthropic,Google',
+                'ai_provider_id' => 'required|exists:ai_providers,id',
                 'model' => 'required|string|max:255',
-                'api_key' => 'required|string',
-                'base_url' => 'nullable|url',
                 'status' => 'required|in:active,inactive',
                 'is_default' => 'boolean'
             ]);
@@ -431,14 +547,13 @@ class AISettingsController extends Controller
 
             $model = AIModel::create([
                 'name' => $request->name,
-                'provider' => $request->provider,
+                'ai_provider_id' => $request->ai_provider_id,
                 'model' => $request->model,
-                'api_key' => $request->api_key, // TODO: Encrypt this
-                'base_url' => $request->get('base_url', 'https://api.aimlapi.com/v1'),
                 'status' => $request->status,
                 'user_id' => auth()->id(),
                 'is_default' => $request->get('is_default', false),
-                'settings' => []
+                'usage_count' => 0,
+                'settings' => $request->settings ?? []
             ]);
 
             return response()->json([
@@ -447,7 +562,7 @@ class AISettingsController extends Controller
                 'data' => [
                     'id' => $model->id,
                     'name' => $model->name,
-                    'provider' => $model->provider,
+                    'provider' => $model->aiProvider->provider_type,
                     'status' => $model->status
                 ]
             ], 201);

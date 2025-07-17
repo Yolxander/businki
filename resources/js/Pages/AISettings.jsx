@@ -31,6 +31,7 @@ import {
 
 export default function AISettings({ auth }) {
     const [aiModels, setAiModels] = useState([]);
+    const [aiProviders, setAiProviders] = useState([]);
     const [aiConfigurations, setAiConfigurations] = useState([]);
     const [stats, setStats] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -50,8 +51,13 @@ export default function AISettings({ auth }) {
                 'Accept': 'application/json'
             };
 
-            const [modelsResponse, configResponse, statsResponse] = await Promise.all([
+            const [modelsResponse, providersResponse, configResponse, statsResponse] = await Promise.all([
                 fetch('/api/ai-settings/models', {
+                    method: 'GET',
+                    headers,
+                    credentials: 'same-origin'
+                }),
+                fetch('/api/ai-settings/providers', {
                     method: 'GET',
                     headers,
                     credentials: 'same-origin'
@@ -69,6 +75,7 @@ export default function AISettings({ auth }) {
             ]);
 
             const modelsData = await modelsResponse.json();
+            const providersData = await providersResponse.json();
             const configData = await configResponse.json();
             const statsData = await statsResponse.json();
 
@@ -83,6 +90,13 @@ export default function AISettings({ auth }) {
                 console.log('Successfully set AI models:', modelsData.data.length, 'models');
             } else {
                 console.error('Models API failed or invalid data:', modelsData);
+            }
+
+            if (providersData.status === 'success' && Array.isArray(providersData.data)) {
+                setAiProviders(providersData.data);
+                console.log('Successfully set AI providers:', providersData.data.length, 'providers');
+            } else {
+                console.error('Providers API failed or invalid data:', providersData);
             }
 
             if (configData.status === 'success') {
@@ -168,8 +182,28 @@ export default function AISettings({ auth }) {
         }
     };
 
+    const handleProviderAction = (providerId, action) => {
+        switch (action) {
+            case 'view':
+                router.visit(`/ai-settings/providers/${providerId}`);
+                break;
+            case 'edit':
+                router.visit(`/ai-settings/providers/${providerId}/edit`);
+                break;
+            case 'test':
+                // Test specific provider
+                break;
+            default:
+                break;
+        }
+    };
+
     const handleAddModel = () => {
         router.visit('/ai-settings/models/new');
+    };
+
+    const handleAddProvider = () => {
+        router.visit('/ai-settings/providers/new');
     };
 
     const getStatusColor = (status) => {
@@ -216,7 +250,7 @@ export default function AISettings({ auth }) {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
                     <Card className="bg-card border-border">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Total Models</CardTitle>
@@ -266,6 +300,16 @@ export default function AISettings({ auth }) {
                             <p className="text-xs text-muted-foreground">Last 24h</p>
                         </CardContent>
                     </Card>
+
+                    <Card className="bg-card border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Active Providers</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-foreground">{stats.active_providers || 0}</div>
+                            <p className="text-xs text-muted-foreground">of {stats.total_providers || 0} total</p>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* AI Models Configuration */}
@@ -310,7 +354,9 @@ export default function AISettings({ auth }) {
                                             <div>
                                                 <h3 className="font-medium text-foreground">{model.name}</h3>
                                                 <p className="text-sm text-muted-foreground">{model.provider} • {model.model}</p>
-                                                <p className="text-xs text-muted-foreground">Added by {model.user?.name || 'Unknown'}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Provider: {model.provider_name} • Added by {model.user?.name || 'Unknown'}
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="flex items-center">
@@ -360,7 +406,95 @@ export default function AISettings({ auth }) {
                     </CardContent>
                 </Card>
 
-
+                {/* AI Providers Configuration */}
+                <Card className="bg-card border-border">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="text-foreground">AI Providers</CardTitle>
+                                <CardDescription className="text-muted-foreground">Manage your AI service provider accounts</CardDescription>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={handleAddProvider}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Provider
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {isLoading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                                    <span className="ml-2 text-muted-foreground">Loading providers...</span>
+                                </div>
+                            ) : aiProviders.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <p className="text-muted-foreground">No AI providers configured</p>
+                                    <Button variant="outline" size="sm" className="mt-2" onClick={handleAddProvider}>
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add Your First Provider
+                                    </Button>
+                                </div>
+                            ) : (
+                                aiProviders.map((provider) => (
+                                <div
+                                    key={provider.id}
+                                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                                >
+                                    <div className="flex items-center space-x-4">
+                                        <div className="flex items-center">
+                                            <Key className="w-5 h-5 mr-2 text-primary" />
+                                            <div>
+                                                <h3 className="font-medium text-foreground">{provider.name}</h3>
+                                                <p className="text-sm text-muted-foreground">{provider.provider_type} • {provider.base_url}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    API Key: {provider.masked_api_key} • Added by {provider.user?.name || 'Unknown'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <div className={`w-2 h-2 rounded-full ${getStatusColor(provider.status)} mr-2`}></div>
+                                            <span className="text-sm">{getStatusText(provider.status)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center space-x-6">
+                                        <div className="text-right">
+                                            <p className="text-sm text-foreground">Type: {provider.provider_type}</p>
+                                            <p className="text-sm text-muted-foreground">Created: {new Date(provider.created_at).toLocaleDateString()}</p>
+                                        </div>
+                                        <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleProviderAction(provider.id, 'view')}
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleProviderAction(provider.id, 'edit')}
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleProviderAction(provider.id, 'test')}
+                                            >
+                                                <TestTube className="w-4 h-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm">
+                                                <MoreVertical className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Security & Monitoring */}
                 <Card className="bg-card border-border">

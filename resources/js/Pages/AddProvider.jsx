@@ -1,31 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-    Brain,
+    Key,
     Save,
     ArrowLeft,
     Plus,
     TestTube,
     CheckCircle,
     AlertTriangle,
-    Key,
     Globe,
-    Settings
+    Settings,
+    Shield
 } from 'lucide-react';
 
-export default function AddModel({ auth }) {
+export default function AddProvider({ auth }) {
     const [formData, setFormData] = useState({
         name: '',
         provider_type: 'AIMLAPI',
-        model: 'gpt-4o',
-        provider_id: null,
+        api_key: '',
+        base_url: 'https://api.aimlapi.com/v1',
         status: 'active'
     });
-    const [providers, setProviders] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [testResult, setTestResult] = useState(null);
 
@@ -36,53 +35,12 @@ export default function AddModel({ auth }) {
         { value: 'Google', label: 'Google', description: 'Gemini API' }
     ];
 
-    const models = {
-        'AIMLAPI': [
-            { value: 'gpt-4o', label: 'GPT-4o' },
-            { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-            { value: 'claude-3-opus', label: 'Claude-3 Opus' },
-            { value: 'claude-3-sonnet', label: 'Claude-3 Sonnet' },
-            { value: 'gemini-pro', label: 'Gemini Pro' }
-        ],
-        'OpenAI': [
-            { value: 'gpt-4o', label: 'GPT-4o' },
-            { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-            { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' }
-        ],
-        'Anthropic': [
-            { value: 'claude-3-opus', label: 'Claude-3 Opus' },
-            { value: 'claude-3-sonnet', label: 'Claude-3 Sonnet' },
-            { value: 'claude-3-haiku', label: 'Claude-3 Haiku' }
-        ],
-        'Google': [
-            { value: 'gemini-pro', label: 'Gemini Pro' },
-            { value: 'gemini-pro-vision', label: 'Gemini Pro Vision' }
-        ]
+    const defaultUrls = {
+        'AIMLAPI': 'https://api.aimlapi.com/v1',
+        'OpenAI': 'https://api.openai.com/v1',
+        'Anthropic': 'https://api.anthropic.com',
+        'Google': 'https://generativelanguage.googleapis.com'
     };
-
-    // Load providers on component mount
-    useEffect(() => {
-        const loadProviders = async () => {
-            try {
-                const response = await fetch('/ai-settings/providers', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setProviders(data.data || []);
-                }
-            } catch (error) {
-                console.error('Failed to load providers:', error);
-            }
-        };
-
-        loadProviders();
-    }, []);
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
@@ -90,24 +48,18 @@ export default function AddModel({ auth }) {
             [field]: value
         }));
 
-        // Reset model when provider changes
-        if (field === 'provider_id') {
-            const selectedProvider = providers.find(p => p.id == value);
-            if (selectedProvider) {
-                const availableModels = models[selectedProvider.provider_type];
-                if (availableModels && availableModels.length > 0) {
-                    setFormData(prev => ({
-                        ...prev,
-                        provider_id: value,
-                        model: availableModels[0].value
-                    }));
-                }
-            }
+        // Update base URL when provider type changes
+        if (field === 'provider_type') {
+            setFormData(prev => ({
+                ...prev,
+                provider_type: value,
+                base_url: defaultUrls[value] || prev.base_url
+            }));
         }
     };
 
     const handleTestConnection = async () => {
-        if (!formData.apiKey.trim()) {
+        if (!formData.api_key.trim()) {
             alert('Please enter an API key first');
             return;
         }
@@ -123,9 +75,9 @@ export default function AddModel({ auth }) {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({
-                    api_key: formData.apiKey,
-                    base_url: formData.baseUrl,
-                    model: formData.model
+                    api_key: formData.api_key,
+                    base_url: formData.base_url,
+                    model: 'gpt-4o'
                 })
             });
 
@@ -142,46 +94,35 @@ export default function AddModel({ auth }) {
         }
     };
 
-    const handleSaveModel = async () => {
-        if (!formData.name.trim()) {
-            alert('Please enter a model name');
-            return;
-        }
-
-        if (!formData.provider_id) {
-            alert('Please select a provider');
+    const handleSaveProvider = async () => {
+        if (!formData.name.trim() || !formData.api_key.trim()) {
+            alert('Please fill in all required fields');
             return;
         }
 
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/ai-settings/models', {
+            const response = await fetch('/api/ai-settings/providers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
-                body: JSON.stringify({
-                    name: formData.name,
-                    ai_provider_id: formData.provider_id,
-                    model: formData.model,
-                    status: formData.status,
-                    is_default: false
-                })
+                body: JSON.stringify(formData)
             });
 
             const data = await response.json();
 
             if (data.status === 'success') {
-                alert('Model saved successfully!');
+                alert('Provider saved successfully!');
                 router.visit('/ai-settings');
             } else {
-                alert('Failed to save model: ' + data.message);
+                alert('Failed to save provider: ' + data.message);
             }
         } catch (error) {
-            console.error('Failed to save model:', error);
-            alert('Failed to save model: ' + error.message);
+            console.error('Failed to save provider:', error);
+            alert('Failed to save provider');
         } finally {
             setIsLoading(false);
         }
@@ -189,7 +130,7 @@ export default function AddModel({ auth }) {
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Add New AI Model" />
+            <Head title="Add New AI Provider" />
 
             <div className="space-y-6">
                 {/* Header */}
@@ -204,8 +145,8 @@ export default function AddModel({ auth }) {
                             Back to AI Settings
                         </Button>
                         <div>
-                            <h1 className="text-2xl font-bold text-foreground">Add New AI Model</h1>
-                            <p className="text-muted-foreground">Configure a new AI model integration</p>
+                            <h1 className="text-2xl font-bold text-foreground">Add New AI Provider</h1>
+                            <p className="text-muted-foreground">Configure a new AI service provider account</p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -213,14 +154,14 @@ export default function AddModel({ auth }) {
                             <TestTube className="w-4 h-4 mr-2" />
                             Test Connection
                         </Button>
-                        <Button onClick={handleSaveModel} disabled={isLoading}>
+                        <Button onClick={handleSaveProvider} disabled={isLoading}>
                             <Save className="w-4 h-4 mr-2" />
-                            {isLoading ? 'Saving...' : 'Save Model'}
+                            {isLoading ? 'Saving...' : 'Save Provider'}
                         </Button>
                     </div>
                 </div>
 
-                {/* Model Configuration Form */}
+                {/* Provider Configuration Form */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Basic Configuration */}
                     <Card className="bg-card border-border">
@@ -230,59 +171,33 @@ export default function AddModel({ auth }) {
                                 <CardTitle className="text-foreground">Basic Configuration</CardTitle>
                             </div>
                             <CardDescription className="text-muted-foreground">
-                                Set up the basic model information
+                                Set up the basic provider information
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-foreground">Model Name *</label>
+                                <label className="text-sm font-medium text-foreground">Provider Name *</label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => handleInputChange('name', e.target.value)}
-                                    placeholder="e.g., My GPT-4 Model"
+                                    placeholder="e.g., My OpenAI Account"
                                     className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-foreground">Provider *</label>
+                                <label className="text-sm font-medium text-foreground">Provider Type *</label>
                                 <select
-                                    value={formData.provider_id || ''}
-                                    onChange={(e) => handleInputChange('provider_id', e.target.value)}
+                                    value={formData.provider_type}
+                                    onChange={(e) => handleInputChange('provider_type', e.target.value)}
                                     className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                                 >
-                                    <option value="">Select existing provider...</option>
-                                    {providers.map(provider => (
-                                        <option key={provider.id} value={provider.id}>
-                                            {provider.name} ({provider.provider_type})
+                                    {providerTypes.map(provider => (
+                                        <option key={provider.value} value={provider.value}>
+                                            {provider.label} - {provider.description}
                                         </option>
                                     ))}
-                                </select>
-                                {providers.length === 0 && (
-                                    <p className="text-xs text-muted-foreground">
-                                        No providers available. <a href="/ai-settings/providers/new" className="text-primary hover:underline">Create a provider first</a>.
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-foreground">Model *</label>
-                                <select
-                                    value={formData.model}
-                                    onChange={(e) => handleInputChange('model', e.target.value)}
-                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                                    disabled={!formData.provider_id}
-                                >
-                                    {(() => {
-                                        const selectedProvider = providers.find(p => p.id == formData.provider_id);
-                                        const providerType = selectedProvider?.provider_type;
-                                        return models[providerType]?.map(model => (
-                                            <option key={model.value} value={model.value}>
-                                                {model.label}
-                                            </option>
-                                        )) || [];
-                                    })()}
                                 </select>
                             </div>
 
@@ -300,40 +215,45 @@ export default function AddModel({ auth }) {
                         </CardContent>
                     </Card>
 
-                    {/* Provider Information */}
+                    {/* API Configuration */}
                     <Card className="bg-card border-border">
                         <CardHeader>
                             <div className="flex items-center space-x-2">
                                 <Key className="w-5 h-5 text-primary" />
-                                <CardTitle className="text-foreground">Provider Information</CardTitle>
+                                <CardTitle className="text-foreground">API Configuration</CardTitle>
                             </div>
                             <CardDescription className="text-muted-foreground">
-                                Select an existing provider for this model
+                                Configure API credentials and endpoints
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {formData.provider_id && (() => {
-                                const selectedProvider = providers.find(p => p.id == formData.provider_id);
-                                return selectedProvider ? (
-                                    <div className="p-4 border border-border rounded-lg bg-muted/50">
-                                        <h4 className="font-medium mb-2">{selectedProvider.name}</h4>
-                                        <p className="text-sm text-muted-foreground">
-                                            Type: {selectedProvider.provider_type}<br/>
-                                            Base URL: {selectedProvider.base_url}<br/>
-                                            Status: {selectedProvider.status}<br/>
-                                            Added by: {selectedProvider.user?.name}
-                                        </p>
-                                    </div>
-                                ) : null;
-                            })()}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">API Key *</label>
+                                <input
+                                    type="password"
+                                    value={formData.api_key}
+                                    onChange={(e) => handleInputChange('api_key', e.target.value)}
+                                    placeholder="sk-..."
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Your API key will be encrypted and stored securely
+                                </p>
+                            </div>
 
-                            {!formData.provider_id && (
-                                <div className="p-4 border border-border rounded-lg bg-muted/50">
-                                    <p className="text-sm text-muted-foreground">
-                                        Please select a provider above to see its details here.
-                                    </p>
-                                </div>
-                            )}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Base URL</label>
+                                <input
+                                    type="url"
+                                    value={formData.base_url}
+                                    onChange={(e) => handleInputChange('base_url', e.target.value)}
+                                    placeholder="https://api.aimlapi.com/v1"
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Leave default for standard providers
+                                </p>
+                            </div>
 
                             {/* Test Result */}
                             {testResult && (
@@ -360,32 +280,28 @@ export default function AddModel({ auth }) {
                     </Card>
                 </div>
 
-                {/* Model Preview */}
+                {/* Provider Preview */}
                 <Card className="bg-card border-border">
                     <CardHeader>
                         <div className="flex items-center space-x-2">
-                            <Brain className="w-5 h-5 text-primary" />
-                            <CardTitle className="text-foreground">Model Preview</CardTitle>
+                            <Key className="w-5 h-5 text-primary" />
+                            <CardTitle className="text-foreground">Provider Preview</CardTitle>
                         </div>
                         <CardDescription className="text-muted-foreground">
-                            Preview of how your model will appear
+                            Preview of how your provider will appear
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-center justify-between p-4 border border-border rounded-lg">
                             <div className="flex items-center space-x-4">
                                 <div className="flex items-center">
-                                    <Brain className="w-5 h-5 mr-2 text-primary" />
+                                    <Key className="w-5 h-5 mr-2 text-primary" />
                                     <div>
                                         <h3 className="font-medium text-foreground">
-                                            {formData.name || 'Model Name'}
+                                            {formData.name || 'Provider Name'}
                                         </h3>
                                         <p className="text-sm text-muted-foreground">
-                                            {(() => {
-                                                const selectedProvider = providers.find(p => p.id == formData.provider_id);
-                                                const providerType = selectedProvider?.provider_type;
-                                                return providerType ? `${providerType} • ${formData.model}` : 'Select a provider first';
-                                            })()}
+                                            {formData.provider_type} • {formData.base_url}
                                         </p>
                                     </div>
                                 </div>
@@ -397,15 +313,8 @@ export default function AddModel({ auth }) {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-sm text-foreground">
-                                    Provider: {(() => {
-                                        const selectedProvider = providers.find(p => p.id == formData.provider_id);
-                                        return selectedProvider ? selectedProvider.name : 'Not selected';
-                                    })()}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    Status: {formData.status}
-                                </p>
+                                <p className="text-sm text-foreground">API Key: {formData.api_key ? '••••••••' : 'Not set'}</p>
+                                <p className="text-sm text-muted-foreground">Type: {formData.provider_type}</p>
                             </div>
                         </div>
                     </CardContent>

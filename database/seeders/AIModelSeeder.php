@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\AIModel;
+use App\Models\AIProvider;
 use App\Models\User;
 
 class AIModelSeeder extends Seeder
@@ -11,7 +12,7 @@ class AIModelSeeder extends Seeder
     /**
      * Run the database seeds.
      */
-    public function run(): void
+        public function run(): void
     {
         // Get the first user or create one if none exists
         $user = User::first();
@@ -24,6 +25,19 @@ class AIModelSeeder extends Seeder
             ]);
         }
 
+        // Get or create providers first
+        $aimlapiProvider = AIProvider::where('user_id', $user->id)
+            ->where('provider_type', 'AIMLAPI')
+            ->first();
+
+        $openaiProvider = AIProvider::where('user_id', $user->id)
+            ->where('provider_type', 'OpenAI')
+            ->first();
+
+        $anthropicProvider = AIProvider::where('user_id', $user->id)
+            ->where('provider_type', 'Anthropic')
+            ->first();
+
         // Clear existing models for this user
         AIModel::where('user_id', $user->id)->delete();
 
@@ -31,10 +45,8 @@ class AIModelSeeder extends Seeder
         $models = [
             [
                 'name' => 'GPT-4o - Proposal Generator',
-                'provider' => 'AIMLAPI',
+                'provider_id' => $aimlapiProvider->id,
                 'model' => 'gpt-4o',
-                'api_key' => env('AIMLAPI_API_KEY', 'sk-demo-key-for-seeding'),
-                'base_url' => 'https://api.aimlapi.com/v1',
                 'status' => 'active',
                 'is_default' => true,
                 'usage_count' => 1250,
@@ -52,10 +64,8 @@ class AIModelSeeder extends Seeder
             ],
             [
                 'name' => 'Claude-3 Sonnet - Project Planner',
-                'provider' => 'AIMLAPI',
+                'provider_id' => $anthropicProvider->id,
                 'model' => 'claude-3-sonnet',
-                'api_key' => env('AIMLAPI_API_KEY', 'sk-demo-key-for-seeding'),
-                'base_url' => 'https://api.aimlapi.com/v1',
                 'status' => 'active',
                 'is_default' => false,
                 'usage_count' => 890,
@@ -73,10 +83,8 @@ class AIModelSeeder extends Seeder
             ],
             [
                 'name' => 'GPT-4o Mini - Task Generator',
-                'provider' => 'AIMLAPI',
+                'provider_id' => $aimlapiProvider->id,
                 'model' => 'gpt-4o-mini',
-                'api_key' => env('AIMLAPI_API_KEY', 'sk-demo-key-for-seeding'),
-                'base_url' => 'https://api.aimlapi.com/v1',
                 'status' => 'active',
                 'is_default' => false,
                 'usage_count' => 2100,
@@ -94,10 +102,8 @@ class AIModelSeeder extends Seeder
             ],
             [
                 'name' => 'Claude-3 Haiku - Content Writer',
-                'provider' => 'AIMLAPI',
+                'provider_id' => $anthropicProvider->id,
                 'model' => 'claude-3-haiku',
-                'api_key' => env('AIMLAPI_API_KEY', 'sk-demo-key-for-seeding'),
-                'base_url' => 'https://api.aimlapi.com/v1',
                 'status' => 'active',
                 'is_default' => false,
                 'usage_count' => 567,
@@ -114,12 +120,10 @@ class AIModelSeeder extends Seeder
                 ]
             ],
             [
-                'name' => 'Gemini Pro - Code Assistant',
-                'provider' => 'AIMLAPI',
-                'model' => 'gemini-pro',
-                'api_key' => env('AIMLAPI_API_KEY', 'sk-demo-key-for-seeding'),
-                'base_url' => 'https://api.aimlapi.com/v1',
-                'status' => 'inactive',
+                'name' => 'GPT-4 Turbo - Development Assistant',
+                'provider_id' => $openaiProvider->id,
+                'model' => 'gpt-4-turbo',
+                'status' => 'active',
                 'is_default' => false,
                 'usage_count' => 234,
                 'last_used_at' => now()->subDays(3),
@@ -139,11 +143,9 @@ class AIModelSeeder extends Seeder
         foreach ($models as $modelData) {
             AIModel::create([
                 'user_id' => $user->id,
+                'ai_provider_id' => $modelData['provider_id'],
                 'name' => $modelData['name'],
-                'provider' => $modelData['provider'],
                 'model' => $modelData['model'],
-                'api_key' => $modelData['api_key'],
-                'base_url' => $modelData['base_url'],
                 'status' => $modelData['status'],
                 'is_default' => $modelData['is_default'],
                 'usage_count' => $modelData['usage_count'],
