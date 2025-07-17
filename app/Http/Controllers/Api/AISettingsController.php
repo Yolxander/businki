@@ -302,6 +302,248 @@ class AISettingsController extends Controller
     }
 
     /**
+     * Get specific AI provider details
+     */
+    public function getAIProviderDetails($providerId): JsonResponse
+    {
+        try {
+            Log::info('getAIProviderDetails called', ['provider_id' => $providerId, 'user_id' => auth()->id()]);
+
+            $provider = AIProvider::with('user')
+                ->find($providerId);
+
+            if (!$provider) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Provider not found'
+                ], 404);
+            }
+
+            $providerData = [
+                'id' => $provider->id,
+                'name' => $provider->name,
+                'provider_type' => $provider->provider_type,
+                'base_url' => $provider->base_url,
+                'status' => $provider->status,
+                'masked_api_key' => $provider->masked_api_key,
+                'api_key' => $provider->api_key, // Include for testing
+                'user' => [
+                    'id' => $provider->user->id,
+                    'name' => $provider->user->name,
+                    'email' => $provider->user->email
+                ],
+                'created_at' => $provider->created_at,
+                'settings' => $provider->settings,
+                'available_models' => $provider->getAvailableModels()
+            ];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $providerData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get AI provider details', [
+                'error' => $e->getMessage(),
+                'provider_id' => $providerId
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get provider details: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get models for a specific provider
+     */
+    public function getProviderModels($providerId): JsonResponse
+    {
+        try {
+            Log::info('getProviderModels called', ['provider_id' => $providerId, 'user_id' => auth()->id()]);
+
+            $models = AIModel::with('user')
+                ->where('ai_provider_id', $providerId)
+                ->orderBy('is_default', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $mappedModels = $models->map(function ($model) {
+                return [
+                    'id' => $model->id,
+                    'name' => $model->name,
+                    'model' => $model->model,
+                    'status' => $model->status,
+                    'is_default' => $model->is_default,
+                    'usage_count' => $model->usage_count,
+                    'last_used_at' => $model->last_used_at,
+                    'user' => [
+                        'id' => $model->user->id,
+                        'name' => $model->user->name,
+                        'email' => $model->user->email
+                    ],
+                    'created_at' => $model->created_at
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $mappedModels
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get provider models', [
+                'error' => $e->getMessage(),
+                'provider_id' => $providerId
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get provider models: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get stats for a specific provider
+     */
+    public function getProviderStats($providerId): JsonResponse
+    {
+        try {
+            Log::info('getProviderStats called', ['provider_id' => $providerId, 'user_id' => auth()->id()]);
+
+            $totalModels = AIModel::where('ai_provider_id', $providerId)->count();
+            $activeModels = AIModel::where('ai_provider_id', $providerId)->where('status', 'active')->count();
+            $totalRequests = AIModel::where('ai_provider_id', $providerId)->sum('usage_count');
+            $lastUsed = AIModel::where('ai_provider_id', $providerId)
+                ->whereNotNull('last_used_at')
+                ->orderBy('last_used_at', 'desc')
+                ->value('last_used_at');
+
+            $stats = [
+                'total_models' => $totalModels,
+                'active_models' => $activeModels,
+                'total_requests' => number_format($totalRequests),
+                'last_used' => $lastUsed ? $lastUsed->toISOString() : null
+            ];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $stats
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get provider stats', [
+                'error' => $e->getMessage(),
+                'provider_id' => $providerId
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get provider stats: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update AI provider
+     */
+    public function updateAIProvider(Request $request, $providerId): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
+                'provider_type' => 'required|string|max:255',
+                'base_url' => 'required|url',
+                'status' => 'required|in:active,inactive'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $provider = AIProvider::find($providerId);
+            if (!$provider) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Provider not found'
+                ], 404);
+            }
+
+            $provider->update([
+                'name' => $request->name,
+                'provider_type' => $request->provider_type,
+                'base_url' => $request->base_url,
+                'status' => $request->status
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Provider updated successfully',
+                'data' => [
+                    'id' => $provider->id,
+                    'name' => $provider->name,
+                    'provider_type' => $provider->provider_type
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update AI provider', [
+                'error' => $e->getMessage(),
+                'provider_id' => $providerId
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update provider: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete AI provider
+     */
+    public function deleteAIProvider($providerId): JsonResponse
+    {
+        try {
+            $provider = AIProvider::find($providerId);
+            if (!$provider) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Provider not found'
+                ], 404);
+            }
+
+            // Check if provider has associated models
+            $modelCount = AIModel::where('ai_provider_id', $providerId)->count();
+            if ($modelCount > 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cannot delete provider with associated models. Please delete or reassign the models first.'
+                ], 400);
+            }
+
+            $provider->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Provider deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete AI provider', [
+                'error' => $e->getMessage(),
+                'provider_id' => $providerId
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete provider: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get AI configuration parameters
      */
     public function getAIConfiguration(): JsonResponse

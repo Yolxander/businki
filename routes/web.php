@@ -59,6 +59,15 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('ai-settings.add-provider');
 
+    Route::get('/ai-settings/providers/{providerId}', function ($providerId) {
+        return Inertia::render('ProviderDetails', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'providerId' => $providerId,
+        ]);
+    })->name('ai-settings.provider-details');
+
     Route::get('/ai-settings/models/{modelId}', function ($modelId) {
         return Inertia::render('ModelDetails', [
             'auth' => [
@@ -80,6 +89,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/ai-settings/test-openai-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testOpenAIConnection']);
     Route::get('/api/ai-settings/providers', [App\Http\Controllers\Api\AISettingsController::class, 'getAIProviders']);
     Route::post('/api/ai-settings/providers', [App\Http\Controllers\Api\AISettingsController::class, 'saveAIProvider']);
+    Route::get('/api/ai-settings/providers/{providerId}', [App\Http\Controllers\Api\AISettingsController::class, 'getAIProviderDetails']);
+    Route::put('/api/ai-settings/providers/{providerId}', [App\Http\Controllers\Api\AISettingsController::class, 'updateAIProvider']);
+    Route::delete('/api/ai-settings/providers/{providerId}', [App\Http\Controllers\Api\AISettingsController::class, 'deleteAIProvider']);
+    Route::get('/api/ai-settings/providers/{providerId}/models', [App\Http\Controllers\Api\AISettingsController::class, 'getProviderModels']);
+    Route::get('/api/ai-settings/providers/{providerId}/stats', [App\Http\Controllers\Api\AISettingsController::class, 'getProviderStats']);
     Route::get('/api/ai-settings/models', [App\Http\Controllers\Api\AISettingsController::class, 'getAIModels']);
     Route::post('/api/ai-settings/models', [App\Http\Controllers\Api\AISettingsController::class, 'saveAIModel']);
     Route::get('/api/ai-settings/configuration', [App\Http\Controllers\Api\AISettingsController::class, 'getAIConfiguration']);

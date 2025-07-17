@@ -440,6 +440,7 @@ export default function AISettings({ auth }) {
                                 <div
                                     key={provider.id}
                                     className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                                    onClick={() => handleProviderAction(provider.id, 'view')}
                                 >
                                     <div className="flex items-center space-x-4">
                                         <div className="flex items-center">
