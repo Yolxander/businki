@@ -84,6 +84,25 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('playground');
 
+    Route::get('/prompt-engineering', function () {
+        return Inertia::render('PromptEngineering', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('prompt-engineering');
+
+    // Playground API routes
+    Route::get('/api/playground/templates', [App\Http\Controllers\Api\PlaygroundController::class, 'getTemplates']);
+    Route::post('/api/playground/generate', [App\Http\Controllers\Api\PlaygroundController::class, 'generate']);
+    Route::post('/api/playground/test-template', [App\Http\Controllers\Api\PlaygroundController::class, 'testTemplate']);
+
+    // Prompt Engineering API routes
+    Route::get('/api/prompt-engineering/saved-prompts', [App\Http\Controllers\Api\PromptEngineeringController::class, 'getSavedPrompts']);
+    Route::post('/api/prompt-engineering/templates', [App\Http\Controllers\Api\PromptEngineeringController::class, 'createTemplate']);
+    Route::put('/api/prompt-engineering/templates/{id}', [App\Http\Controllers\Api\PromptEngineeringController::class, 'updateTemplate']);
+    Route::delete('/api/prompt-engineering/templates/{id}', [App\Http\Controllers\Api\PromptEngineeringController::class, 'deleteTemplate']);
+
     // AI Settings API routes (moved from api.php to work with web sessions)
     Route::post('/api/ai-settings/test-aimlapi-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testAIMLAPIConnection']);
     Route::post('/api/ai-settings/test-openai-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testOpenAIConnection']);

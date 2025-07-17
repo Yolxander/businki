@@ -132,6 +132,66 @@ class AIMLAPIService
     }
 
     /**
+     * Generate chat completion with specific parameters for playground
+     */
+    public function generateChatCompletionWithParams(string $prompt, string $model, float $temperature = 0.7, int $maxTokens = 2000, float $topP = 1.0): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUrl . '/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'max_tokens' => $maxTokens,
+                'temperature' => $temperature,
+                'top_p' => $topP,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $content = $data['choices'][0]['message']['content'] ?? '';
+                $usage = $data['usage'] ?? [];
+
+                return [
+                    'content' => $content,
+                    'tokens' => $usage['total_tokens'] ?? 0,
+                    'cost' => $this->calculateCost($usage['total_tokens'] ?? 0, $model)
+                ];
+            } else {
+                throw new Exception('AIMLAPI request failed: ' . $response->body());
+            }
+        } catch (Exception $e) {
+            Log::error('AIMLAPI chat completion failed', [
+                'error' => $e->getMessage(),
+                'prompt' => $prompt,
+                'model' => $model
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Calculate cost based on token usage and model
+     */
+    private function calculateCost(int $tokens, string $model): string
+    {
+        // Rough cost estimates per 1K tokens for AIMLAPI
+        $costs = [
+            'gpt-4' => 0.02,
+            'gpt-4o' => 0.015,
+            'gpt-3.5-turbo' => 0.001,
+        ];
+
+        $costPerToken = $costs[$model] ?? 0.01;
+        $cost = ($tokens / 1000) * $costPerToken;
+
+        return '$' . number_format($cost, 4);
+    }
+
+    /**
      * Generate a proposal from intake response data
      */
     public function generateProposal(array $intakeData, array $options = []): array

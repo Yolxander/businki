@@ -9,34 +9,36 @@ class AIGenerationLog extends Model
 {
     protected $table = 'ai_generation_logs';
     protected $fillable = [
-        'generation_type',
+        'user_id',
+        'model_id',
         'prompt',
         'response',
-        'model',
-        'prompt_tokens',
-        'completion_tokens',
-        'total_tokens',
-        'temperature',
-        'max_tokens',
-        'execution_time_ms',
+        'tokens_used',
+        'cost',
+        'template_id',
         'status',
-        'error_message',
+        'execution_time',
         'metadata',
-        'user_id',
     ];
 
     protected $casts = [
         'metadata' => 'array',
-        'temperature' => 'decimal:2',
-        'prompt_tokens' => 'integer',
-        'completion_tokens' => 'integer',
-        'total_tokens' => 'integer',
-        'max_tokens' => 'integer',
-        'execution_time_ms' => 'integer',
+        'tokens_used' => 'integer',
+        'execution_time' => 'integer',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function model(): BelongsTo
+    {
+        return $this->belongsTo(AIModel::class, 'model_id');
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(PromptTemplate::class, 'template_id');
     }
 }
