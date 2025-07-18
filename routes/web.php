@@ -56,6 +56,13 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('projects');
+    Route::get('/calendar', function () {
+        return Inertia::render('Calendar', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('calendar');
     Route::get('/ai-settings', function () {
         return Inertia::render('AISettings', [
             'auth' => [

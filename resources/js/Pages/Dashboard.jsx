@@ -186,10 +186,12 @@ export default function Dashboard({ auth, stats }) {
                         <p className="text-muted-foreground">Welcome back! Here's what's happening with your projects.</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Button variant="outline">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            View Calendar
-                        </Button>
+                        <Link href="/calendar">
+                            <Button variant="outline">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                View Calendar
+                            </Button>
+                        </Link>
                         <Button>
                             <Plus className="w-4 h-4 mr-2" />
                             New Project

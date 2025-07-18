@@ -45,6 +45,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
     const workNavigation = [
         { name: 'Projects', href: '/projects', icon: FileText },
+        { name: 'Calendar', href: '/calendar', icon: Calendar },
     ];
 
     const systemNavigation = [
