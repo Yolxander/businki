@@ -31,7 +31,11 @@ import { BrowserTabs } from '@/components/ui/tabs';
 
 export default function AuthenticatedLayout({ user, header, children }) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => {
+        // Initialize sidebar collapsed state from localStorage
+        const savedSidebarState = localStorage.getItem('bobbi-sidebar-collapsed');
+        return savedSidebarState ? JSON.parse(savedSidebarState) : false;
+    });
     const [tabs, setTabs] = React.useState(() => {
         // Initialize tabs from localStorage
         const savedTabs = localStorage.getItem('bobbi-tabs');
@@ -56,6 +60,11 @@ export default function AuthenticatedLayout({ user, header, children }) {
     React.useEffect(() => {
         localStorage.setItem('bobbi-active-tab', activeTab);
     }, [activeTab]);
+
+    // Save sidebar collapsed state to localStorage whenever it changes
+    React.useEffect(() => {
+        localStorage.setItem('bobbi-sidebar-collapsed', JSON.stringify(sidebarCollapsed));
+    }, [sidebarCollapsed]);
 
     // Update tabs when route changes
     React.useEffect(() => {
@@ -135,6 +144,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
     const handleLogout = () => {
         localStorage.removeItem('bobbi-tabs');
         localStorage.removeItem('bobbi-active-tab');
+        localStorage.removeItem('bobbi-sidebar-collapsed');
         post('/logout', {
             onSuccess: () => {
                 console.log('Logout successful');
