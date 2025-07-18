@@ -42,3 +42,40 @@ const TabsContent = React.forwardRef(({ className, ...props }, ref) => (
 TabsContent.displayName = TabsPrimitive.Content.displayName
 
 export { Tabs, TabsList, TabsTrigger, TabsContent }
+
+// Browser-like tabs component for navigation
+import { X } from 'lucide-react';
+import { Button } from './button';
+
+export function BrowserTabs({ tabs, activeTab, onTabClick, onTabClose }) {
+    return (
+        <div className="flex items-center space-x-1 overflow-x-auto">
+            {tabs.map((tab) => (
+                <div
+                    key={tab.id}
+                    className={`group flex items-center space-x-2 px-3 py-2 rounded-t-lg border-b-2 transition-all duration-200 cursor-pointer min-w-0 flex-shrink-0 ${
+                        activeTab === tab.id
+                            ? 'bg-background border-primary text-foreground'
+                            : 'bg-muted/50 border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                    onClick={() => onTabClick(tab.id)}
+                >
+                    <span className="text-sm font-medium truncate max-w-24">
+                        {tab.name}
+                    </span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 transition-opacity"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onTabClose(tab.id);
+                        }}
+                    >
+                        <X className="h-3 w-3" />
+                    </Button>
+                </div>
+            ))}
+        </div>
+    );
+}

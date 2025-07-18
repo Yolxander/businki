@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useForm } from '@inertiajs/react';
+import { Link, useForm, router } from '@inertiajs/react';
 import {
     Home,
     Users,
@@ -27,13 +27,114 @@ import {
     Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BrowserTabs } from '@/components/ui/tabs';
 
 export default function AuthenticatedLayout({ user, header, children }) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+    const [tabs, setTabs] = React.useState(() => {
+        // Initialize tabs from localStorage
+        const savedTabs = localStorage.getItem('bobbi-tabs');
+        return savedTabs ? JSON.parse(savedTabs) : [];
+    });
+    const [activeTab, setActiveTab] = React.useState(() => {
+        // Initialize active tab from localStorage
+        const savedActiveTab = localStorage.getItem('bobbi-active-tab');
+        return savedActiveTab || window.location.pathname;
+    });
     const { post } = useForm();
 
+    // Get current pathname
+    const currentPath = window.location.pathname;
+
+    // Save tabs to localStorage whenever tabs change
+    React.useEffect(() => {
+        localStorage.setItem('bobbi-tabs', JSON.stringify(tabs));
+    }, [tabs]);
+
+    // Save active tab to localStorage whenever it changes
+    React.useEffect(() => {
+        localStorage.setItem('bobbi-active-tab', activeTab);
+    }, [activeTab]);
+
+    // Update tabs when route changes
+    React.useEffect(() => {
+        const pathToName = {
+            '/dashboard': 'Dashboard',
+            '/projects': 'Projects',
+            '/clients': 'Clients',
+            '/bobbi-flow': 'Bobbi Flow',
+            '/calendar': 'Calendar',
+            '/ai-settings': 'AI Settings',
+            '/playground': 'Playground',
+            '/prompt-engineering': 'Prompt Engineering',
+            '/context-engineering': 'Context Engineering',
+            '/api-dashboard': 'API Dashboard',
+            '/user-management': 'User Management',
+            '/analytics': 'Analytics'
+        };
+
+        // Handle dynamic routes
+        let currentName = pathToName[currentPath];
+        if (!currentName) {
+            if (currentPath.startsWith('/clients/') && currentPath !== '/clients') {
+                currentName = 'Client Details';
+            } else if (currentPath.startsWith('/projects/') && currentPath !== '/projects') {
+                currentName = 'Project Details';
+            } else {
+                currentName = 'Unknown Page';
+            }
+        }
+
+        const tabId = currentPath;
+
+        // Add new tab if it doesn't exist
+        setTabs(prev => {
+            const existingTab = prev.find(tab => tab.id === tabId);
+            if (!existingTab) {
+                const newTabs = [...prev, { id: tabId, name: currentName, path: currentPath }];
+                return newTabs;
+            }
+            return prev;
+        });
+
+        // Set active tab
+        setActiveTab(tabId);
+    }, [currentPath]);
+
+    const handleTabClick = (tabId) => {
+        const tab = tabs.find(t => t.id === tabId);
+        if (tab) {
+            router.visit(tab.path);
+            setActiveTab(tabId);
+        }
+    };
+
+    const handleTabClose = (tabId) => {
+        const tabIndex = tabs.findIndex(t => t.id === tabId);
+        if (tabIndex === -1) return;
+
+        const newTabs = tabs.filter(t => t.id !== tabId);
+        setTabs(newTabs);
+
+        // If closing active tab, switch to another tab
+        if (activeTab === tabId) {
+            const nextTab = newTabs[tabIndex] || newTabs[tabIndex - 1] || newTabs[0];
+            if (nextTab) {
+                router.visit(nextTab.path);
+                setActiveTab(nextTab.id);
+            } else {
+                // If no tabs left, go to dashboard
+                router.visit('/dashboard');
+                setActiveTab('/dashboard');
+            }
+        }
+    };
+
+    // Clear tabs when user logs out
     const handleLogout = () => {
+        localStorage.removeItem('bobbi-tabs');
+        localStorage.removeItem('bobbi-active-tab');
         post('/logout', {
             onSuccess: () => {
                 console.log('Logout successful');
@@ -71,18 +172,30 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 sidebarCollapsed ? 'left-16' : 'left-64'
             }`}>
                 <div className="flex h-16 items-center justify-between px-6 lg:px-8">
-                    <div className="flex items-center">
+                    <div className="flex items-center flex-1 min-w-0">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="lg:hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground mr-3"
+                            className="lg:hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground mr-3 flex-shrink-0"
                             onClick={() => setSidebarOpen(true)}
                         >
                             <Menu className="h-5 w-5" />
                         </Button>
+
+                        {/* Browser Tabs - Left Side */}
+                        {tabs.length > 0 && (
+                            <div className="flex-1 min-w-0 mr-4">
+                                <BrowserTabs
+                                    tabs={tabs}
+                                    activeTab={activeTab}
+                                    onTabClick={handleTabClick}
+                                    onTabClose={handleTabClose}
+                                />
+                            </div>
+                        )}
                     </div>
 
-                    <div className="flex items-center gap-x-6">
+                    <div className="flex items-center gap-x-6 flex-shrink-0">
                         <div className="flex items-center gap-x-4">
                             <div className="flex-shrink-0">
                                 <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center shadow-sm ring-2 ring-primary/20">
