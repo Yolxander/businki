@@ -39,7 +39,22 @@ class AISettingsController extends Controller
 
             if ($apiKey) {
                 // Test with custom credentials
-                $result = $this->testCustomConnection($apiKey, $baseUrl, $model);
+                $providerConfig = [
+                    'api_key' => $apiKey,
+                    'base_url' => $baseUrl ?? 'https://api.aimlapi.com/v1',
+                    'model' => $model ?? 'gpt-4o'
+                ];
+
+                // Validate provider configuration
+                $validationErrors = $this->aimlapiService->validateProviderConfig($providerConfig);
+                if (!empty($validationErrors)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Configuration error: ' . implode(', ', $validationErrors)
+                    ], 400);
+                }
+
+                $result = $this->aimlapiService->testConnection($providerConfig);
             } else {
                 // Test with default configuration
                 $result = $this->aimlapiService->testConnection();
@@ -98,6 +113,45 @@ class AISettingsController extends Controller
                 'message' => 'Connection failed: ' . $e->getMessage(),
                 'data' => null
             ];
+        }
+    }
+
+    /**
+     * Test specific provider connection
+     */
+    public function testProviderConnection(Request $request, $providerId): JsonResponse
+    {
+        try {
+            $provider = AIProvider::findOrFail($providerId);
+
+            $providerConfig = [
+                'api_key' => $provider->api_key,
+                'base_url' => $provider->base_url,
+                'model' => $provider->settings['model'] ?? 'gpt-4o'
+            ];
+
+            // Validate provider configuration
+            $validationErrors = $this->aimlapiService->validateProviderConfig($providerConfig);
+            if (!empty($validationErrors)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Provider configuration error: ' . implode(', ', $validationErrors)
+                ], 400);
+            }
+
+            $result = $this->aimlapiService->testConnection($providerConfig);
+
+            return response()->json($result, $result['status'] === 'success' ? 200 : 400);
+        } catch (\Exception $e) {
+            Log::error('Provider connection test failed', [
+                'provider_id' => $providerId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Connection test failed: ' . $e->getMessage()
+            ], 500);
         }
     }
 

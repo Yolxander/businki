@@ -33,14 +33,27 @@ class AIMLAPIService
     /**
      * Test the AIMLAPI connection
      */
-    public function testConnection(): array
+    public function testConnection(?array $providerConfig = null): array
     {
         try {
+            // Use provider-specific configuration if provided, otherwise fall back to default
+            $apiKey = $providerConfig['api_key'] ?? $this->apiKey;
+            $baseUrl = $providerConfig['base_url'] ?? $this->baseUrl;
+            $model = $providerConfig['model'] ?? $this->model;
+
+            if (empty($apiKey)) {
+                return [
+                    'status' => 'error',
+                    'message' => 'AIMLAPI API key not configured',
+                    'data' => null
+                ];
+            }
+
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Authorization' => 'Bearer ' . $apiKey,
                 'Content-Type' => 'application/json',
-            ])->post($this->baseUrl . '/chat/completions', [
-                'model' => $this->model,
+            ])->post($baseUrl . '/chat/completions', [
+                'model' => $model,
                 'messages' => [
                     ['role' => 'user', 'content' => 'Hello, this is a test message.']
                 ],
@@ -55,15 +68,25 @@ class AIMLAPIService
                     'data' => $response->json()
                 ];
             } else {
+                $errorBody = $response->body();
+                $statusCode = $response->status();
+
+                Log::error('AIMLAPI connection test failed', [
+                    'status_code' => $statusCode,
+                    'response_body' => $errorBody,
+                    'base_url' => $baseUrl
+                ]);
+
                 return [
                     'status' => 'error',
-                    'message' => 'Connection failed: ' . $response->body(),
+                    'message' => 'Connection failed: ' . $errorBody,
                     'data' => null
                 ];
             }
         } catch (Exception $e) {
             Log::error('AIMLAPI connection test failed', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'provider_config' => $providerConfig ? 'provided' : 'default'
             ]);
 
             return [
@@ -134,13 +157,21 @@ class AIMLAPIService
     /**
      * Generate chat completion with specific parameters for playground
      */
-    public function generateChatCompletionWithParams(string $prompt, string $model, float $temperature = 0.7, int $maxTokens = 2000, float $topP = 1.0): array
+    public function generateChatCompletionWithParams(string $prompt, string $model, float $temperature = 0.7, int $maxTokens = 2000, float $topP = 1.0, ?array $providerConfig = null): array
     {
         try {
+            // Use provider-specific configuration if provided, otherwise fall back to default
+            $apiKey = $providerConfig['api_key'] ?? $this->apiKey;
+            $baseUrl = $providerConfig['base_url'] ?? $this->baseUrl;
+
+            if (empty($apiKey)) {
+                throw new Exception('AIMLAPI API key not configured');
+            }
+
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Authorization' => 'Bearer ' . $apiKey,
                 'Content-Type' => 'application/json',
-            ])->post($this->baseUrl . '/chat/completions', [
+            ])->post($baseUrl . '/chat/completions', [
                 'model' => $model,
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt]
@@ -161,13 +192,24 @@ class AIMLAPIService
                     'cost' => $this->calculateCost($usage['total_tokens'] ?? 0, $model)
                 ];
             } else {
-                throw new Exception('AIMLAPI request failed: ' . $response->body());
+                $errorBody = $response->body();
+                $statusCode = $response->status();
+
+                Log::error('AIMLAPI request failed', [
+                    'status_code' => $statusCode,
+                    'response_body' => $errorBody,
+                    'model' => $model,
+                    'base_url' => $baseUrl
+                ]);
+
+                throw new Exception("AIMLAPI request failed: {$errorBody}");
             }
         } catch (Exception $e) {
             Log::error('AIMLAPI chat completion failed', [
                 'error' => $e->getMessage(),
                 'prompt' => $prompt,
-                'model' => $model
+                'model' => $model,
+                'provider_config' => $providerConfig ? 'provided' : 'default'
             ]);
             throw $e;
         }
@@ -189,6 +231,29 @@ class AIMLAPIService
         $cost = ($tokens / 1000) * $costPerToken;
 
         return '$' . number_format($cost, 4);
+    }
+
+    /**
+     * Validate provider configuration
+     */
+    public function validateProviderConfig(?array $providerConfig): array
+    {
+        $errors = [];
+
+        if (empty($providerConfig)) {
+            $errors[] = 'Provider configuration is required';
+            return $errors;
+        }
+
+        if (empty($providerConfig['api_key'])) {
+            $errors[] = 'API key is required';
+        }
+
+        if (empty($providerConfig['base_url'])) {
+            $errors[] = 'Base URL is required';
+        }
+
+        return $errors;
     }
 
     /**

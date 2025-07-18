@@ -106,6 +106,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/playground/generate', [App\Http\Controllers\Api\PlaygroundController::class, 'generate']);
     Route::post('/api/playground/test-template', [App\Http\Controllers\Api\PlaygroundController::class, 'testTemplate']);
 
+    // CSRF token refresh route
+    Route::get('/api/csrf-token', function () {
+        return response()->json(['token' => csrf_token()]);
+    });
+
     // Prompt Engineering API routes
     Route::get('/api/prompt-engineering/saved-prompts', [App\Http\Controllers\Api\PromptEngineeringController::class, 'getSavedPrompts']);
     Route::get('/api/prompt-engineering/prompts/{id}', [App\Http\Controllers\Api\PromptEngineeringController::class, 'getPromptDetails']);
@@ -118,6 +123,7 @@ Route::middleware(['auth'])->group(function () {
     // AI Settings API routes (moved from api.php to work with web sessions)
     Route::post('/api/ai-settings/test-aimlapi-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testAIMLAPIConnection']);
     Route::post('/api/ai-settings/test-openai-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testOpenAIConnection']);
+    Route::post('/api/ai-settings/providers/{providerId}/test-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testProviderConnection']);
     Route::get('/api/ai-settings/providers', [App\Http\Controllers\Api\AISettingsController::class, 'getAIProviders']);
     Route::post('/api/ai-settings/providers', [App\Http\Controllers\Api\AISettingsController::class, 'saveAIProvider']);
     Route::get('/api/ai-settings/providers/{providerId}', [App\Http\Controllers\Api\AISettingsController::class, 'getAIProviderDetails']);

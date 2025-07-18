@@ -81,8 +81,8 @@ class PlaygroundController extends Controller
             $template = $request->template_id ? PromptTemplate::find($request->template_id) : null;
             $parameters = $request->parameters ?? [];
 
-            // Use template if provided
-            $prompt = $template ? $template->template : $request->prompt;
+            // Use the rendered prompt from the request (which includes variable replacements)
+            $prompt = $request->prompt;
 
             // Generate response based on provider type
             $response = $this->generateResponse($model, $prompt, $parameters);
@@ -180,14 +180,28 @@ class PlaygroundController extends Controller
                     $maxTokens,
                     $topP
                 );
-            } else {
+                        } else {
                 // Use AIMLAPI for other providers
+                // Get provider configuration
+                $providerConfig = [
+                    'api_key' => $model->aiProvider->api_key,
+                    'base_url' => $model->aiProvider->base_url,
+                    'settings' => $model->aiProvider->settings ?? []
+                ];
+
+                // Validate provider configuration
+                $validationErrors = $this->aimlapiService->validateProviderConfig($providerConfig);
+                if (!empty($validationErrors)) {
+                    throw new Exception('Provider configuration error: ' . implode(', ', $validationErrors));
+                }
+
                 $result = $this->aimlapiService->generateChatCompletionWithParams(
                     $prompt,
                     $model->model,
                     $temperature,
                     $maxTokens,
-                    $topP
+                    $topP,
+                    $providerConfig
                 );
             }
 
@@ -206,10 +220,23 @@ class PlaygroundController extends Controller
             Log::error('AI generation failed', [
                 'model' => $model->name,
                 'provider' => $providerType,
+                'provider_name' => $model->aiProvider->name,
                 'error' => $e->getMessage()
             ]);
 
-            throw new Exception('AI generation failed: ' . $e->getMessage());
+            // Provide more specific error messages
+            $errorMessage = $e->getMessage();
+            if (str_contains($errorMessage, '401')) {
+                $errorMessage = 'Authentication failed. Please check your API key and try again.';
+            } elseif (str_contains($errorMessage, '403')) {
+                $errorMessage = 'Access denied. Please check your API permissions.';
+            } elseif (str_contains($errorMessage, '429')) {
+                $errorMessage = 'Rate limit exceeded. Please try again later.';
+            } elseif (str_contains($errorMessage, '500')) {
+                $errorMessage = 'Server error. Please try again later.';
+            }
+
+            throw new Exception('AI generation failed: ' . $errorMessage);
         }
     }
 
