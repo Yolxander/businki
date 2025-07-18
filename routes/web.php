@@ -63,6 +63,21 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('calendar');
+    Route::get('/projects/create', function () {
+        return Inertia::render('CreateProject', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('projects.create');
+    Route::get('/projects/{id}', function ($id) {
+        return Inertia::render('ProjectDetails', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'projectId' => $id,
+        ]);
+    })->name('projects.show');
     Route::get('/ai-settings', function () {
         return Inertia::render('AISettings', [
             'auth' => [

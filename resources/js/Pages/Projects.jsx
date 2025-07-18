@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -98,10 +98,12 @@ export default function Projects({ auth }) {
                         <h1 className="text-2xl font-bold text-foreground">Projects</h1>
                         <p className="text-muted-foreground">Manage your client projects and track progress</p>
                     </div>
-                    <Button>
-                        <Plus className="w-4 h-4 mr-2" />
-                        New Project
-                    </Button>
+                    <Link href="/projects/create">
+                        <Button>
+                            <Plus className="w-4 h-4 mr-2" />
+                            New Project
+                        </Button>
+                    </Link>
                 </div>
 
                 {/* Filters */}
@@ -188,9 +190,11 @@ export default function Projects({ auth }) {
 
                                 {/* Actions */}
                                 <div className="flex gap-2 pt-2">
-                                    <Button variant="outline" size="sm" className="flex-1">
-                                        View Details
-                                    </Button>
+                                    <Link href={`/projects/${project.id}`}>
+                                        <Button variant="outline" size="sm" className="flex-1">
+                                            View Details
+                                        </Button>
+                                    </Link>
                                     <Button variant="outline" size="sm">
                                         <CheckCircle className="w-4 h-4" />
                                     </Button>
