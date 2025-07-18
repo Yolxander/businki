@@ -18,7 +18,8 @@ import {
     Brain,
     Server,
     Play,
-    BookOpen
+    BookOpen,
+    Code
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -48,6 +49,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
         { name: 'AI Settings', href: '/ai-settings', icon: Brain },
         { name: 'Playground', href: '/playground', icon: Play },
         { name: 'Prompt Engineering', href: '/prompt-engineering', icon: BookOpen },
+        { name: 'Context Engineering', href: '/context-engineering', icon: Code },
     ];
 
     return (

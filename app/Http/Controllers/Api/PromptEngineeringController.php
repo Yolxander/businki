@@ -207,25 +207,31 @@ class PromptEngineeringController extends Controller
     {
         try {
             $request->validate([
-                'prompt' => 'required|string|max:10000',
-                'optimization_type' => 'required|string|in:clarity,conciseness,effectiveness,creativity'
+                'prompt_id' => 'required',
+                'model_id' => 'required|exists:ai_models,id',
+                'optimization_type' => 'required|string|in:clarity,conciseness,effectiveness,creativity,structure',
+                'prompt_content' => 'required|string|max:10000'
             ]);
 
             // This would integrate with AI to optimize the prompt
             // For now, return a placeholder response
-            $optimizedPrompt = $this->optimizePromptWithAI($request->prompt, $request->optimization_type);
+            $optimizedPrompt = $this->optimizePromptWithAI($request->prompt_content, $request->optimization_type);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Prompt optimized successfully',
                 'data' => [
-                    'original' => $request->prompt,
+                    'original' => $request->prompt_content,
                     'optimized' => $optimizedPrompt,
+                    'optimization_type' => $request->optimization_type,
+                    'model_id' => $request->model_id,
+                    'created_at' => now(),
                     'improvements' => [
-                        'clarity' => 'Improved clarity and structure',
-                        'conciseness' => 'Reduced word count while maintaining meaning',
-                        'effectiveness' => 'Enhanced for better AI responses',
-                        'creativity' => 'Added creative elements and variations'
+                        'clarity' => 'Improved clarity and structure for better understanding',
+                        'conciseness' => 'Reduced word count while maintaining meaning and impact',
+                        'effectiveness' => 'Enhanced for better AI responses and higher success rates',
+                        'creativity' => 'Added creative elements and variations for more engaging content',
+                        'structure' => 'Restructured for better organization and flow'
                     ]
                 ]
             ]);
@@ -238,6 +244,98 @@ class PromptEngineeringController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to optimize prompt: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get prompt details
+     */
+    public function getPromptDetails($id): JsonResponse
+    {
+        try {
+            // Try to find in PromptTemplate first
+            $prompt = PromptTemplate::find($id);
+
+            if (!$prompt) {
+                // Try to find in SavedPrompt
+                $prompt = SavedPrompt::where('id', $id)
+                    ->where('user_id', auth()->id())
+                    ->first();
+            }
+
+            if (!$prompt) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Prompt not found'
+                ], 404);
+            }
+
+            $data = [
+                'id' => $prompt->id,
+                'name' => $prompt->name ?? $prompt->title,
+                'type' => $prompt->type ?? $prompt->category,
+                'description' => $prompt->description ?? '',
+                'content' => $prompt->content ?? null,
+                'template' => $prompt->template ?? null,
+                'is_active' => $prompt->is_active ?? true,
+                'created_at' => $prompt->created_at,
+                'updated_at' => $prompt->updated_at,
+                'usage_count' => $prompt->usage_count ?? 0,
+                'tags' => $prompt->tags ?? []
+            ];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get prompt details', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get prompt details: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Test a prompt with AI model
+     */
+    public function testPrompt(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'prompt_id' => 'required',
+                'model_id' => 'required|exists:ai_models,id',
+                'prompt_content' => 'required|string|max:10000'
+            ]);
+
+            // This would integrate with AI service to test the prompt
+            // For now, return a placeholder response
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Prompt test completed',
+                'data' => [
+                    'response' => 'This is a test response from the AI model.',
+                    'tokens_used' => 150,
+                    'cost' => '$0.003',
+                    'execution_time' => 2.5,
+                    'quality_score' => 8.5
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to test prompt', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to test prompt: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -258,6 +356,8 @@ class PromptEngineeringController extends Controller
                 return "Enhanced: " . $prompt . " (with improved structure)";
             case 'creativity':
                 return "Creative: " . $prompt . " (with creative elements)";
+            case 'structure':
+                return "Restructured: " . $prompt . " (with better organization)";
             default:
                 return $prompt;
         }

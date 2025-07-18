@@ -16,4 +16,18 @@ export default defineConfig({
             '@': path.resolve(__dirname, './resources/js'),
         },
     },
+    define: {
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+    },
+    build: {
+        rollupOptions: {
+            onwarn(warning, warn) {
+                // Ignore "use client" directive warnings from Radix UI
+                if (warning.code === 'MODULE_LEVEL_DIRECTIVE' && warning.message.includes('use client')) {
+                    return;
+                }
+                warn(warning);
+            },
+        },
+    },
 });

@@ -92,6 +92,15 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('prompt-engineering');
 
+    Route::get('/prompt-engineering/prompts/{promptId}', function ($promptId) {
+        return Inertia::render('PromptDetails', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'promptId' => $promptId,
+        ]);
+    })->name('prompt-engineering.details');
+
     // Playground API routes
     Route::get('/api/playground/templates', [App\Http\Controllers\Api\PlaygroundController::class, 'getTemplates']);
     Route::post('/api/playground/generate', [App\Http\Controllers\Api\PlaygroundController::class, 'generate']);
@@ -99,9 +108,12 @@ Route::middleware(['auth'])->group(function () {
 
     // Prompt Engineering API routes
     Route::get('/api/prompt-engineering/saved-prompts', [App\Http\Controllers\Api\PromptEngineeringController::class, 'getSavedPrompts']);
+    Route::get('/api/prompt-engineering/prompts/{id}', [App\Http\Controllers\Api\PromptEngineeringController::class, 'getPromptDetails']);
     Route::post('/api/prompt-engineering/templates', [App\Http\Controllers\Api\PromptEngineeringController::class, 'createTemplate']);
     Route::put('/api/prompt-engineering/templates/{id}', [App\Http\Controllers\Api\PromptEngineeringController::class, 'updateTemplate']);
     Route::delete('/api/prompt-engineering/templates/{id}', [App\Http\Controllers\Api\PromptEngineeringController::class, 'deleteTemplate']);
+    Route::post('/api/prompt-engineering/optimize', [App\Http\Controllers\Api\PromptEngineeringController::class, 'optimizePrompt']);
+    Route::post('/api/prompt-engineering/test', [App\Http\Controllers\Api\PromptEngineeringController::class, 'testPrompt']);
 
     // AI Settings API routes (moved from api.php to work with web sessions)
     Route::post('/api/ai-settings/test-aimlapi-connection', [App\Http\Controllers\Api\AISettingsController::class, 'testAIMLAPIConnection']);
@@ -120,6 +132,33 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/ai-settings/test-completion', [App\Http\Controllers\Api\AISettingsController::class, 'generateTestCompletion']);
     Route::get('/api/ai-settings/stats', [App\Http\Controllers\Api\AISettingsController::class, 'getAIStats']);
     Route::patch('/api/ai-settings/models/{modelId}/status', [App\Http\Controllers\Api\AISettingsController::class, 'toggleModelStatus']);
+
+    // Context Engineering Routes
+    Route::get('/context-engineering', [App\Http\Controllers\ContextEngineeringController::class, 'index'])->name('context-engineering');
+    Route::get('/context-engineering/projects/{project}', [App\Http\Controllers\ContextEngineeringController::class, 'showProject'])->name('context-engineering.project');
+    Route::get('/context-engineering/create', [App\Http\Controllers\ContextEngineeringController::class, 'create'])->name('context-engineering.create');
+    Route::post('/context-engineering/project', [App\Http\Controllers\ContextEngineeringController::class, 'createProject'])->name('context-engineering.create-project');
+    Route::get('/context-engineering/{document}', [App\Http\Controllers\ContextEngineeringController::class, 'show'])->name('context-engineering.show');
+    Route::get('/context-engineering/{document}/edit', [App\Http\Controllers\ContextEngineeringController::class, 'edit'])->name('context-engineering.edit');
+    Route::get('/context-engineering/{document}/download', [App\Http\Controllers\ContextEngineeringController::class, 'download'])->name('context-engineering.download');
+
+    // Context Engineering API routes
+    Route::get('/api/context-engineering/documents', [App\Http\Controllers\Api\ContextEngineeringController::class, 'index']);
+    Route::get('/api/context-engineering/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'show']);
+    Route::post('/api/context-engineering/documents', [App\Http\Controllers\Api\ContextEngineeringController::class, 'store']);
+    Route::put('/api/context-engineering/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'update']);
+    Route::delete('/api/context-engineering/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'destroy']);
+    Route::post('/api/context-engineering/project', [App\Http\Controllers\Api\ContextEngineeringController::class, 'createProject']);
+    Route::post('/api/context-engineering/generate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'generate']);
+    Route::post('/api/context-engineering/upload', [App\Http\Controllers\Api\ContextEngineeringController::class, 'upload']);
+    Route::post('/api/context-engineering/documents/{document}/version', [App\Http\Controllers\Api\ContextEngineeringController::class, 'createVersion']);
+    Route::patch('/api/context-engineering/documents/{document}/activate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'activate']);
+    Route::get('/api/context-engineering/templates', [App\Http\Controllers\Api\ContextEngineeringController::class, 'templates']);
+    Route::get('/api/context-engineering/projects', [App\Http\Controllers\Api\ContextEngineeringController::class, 'projects']);
+    Route::delete('/api/context-engineering/projects/{project}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'deleteProject']);
+    Route::post('/api/context-engineering/documents/{document}/regenerate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'regenerateDocument']);
+    Route::get('/api/context-engineering/types', [App\Http\Controllers\Api\ContextEngineeringController::class, 'types']);
+    Route::get('/api/context-engineering/stats', [App\Http\Controllers\Api\ContextEngineeringController::class, 'stats']);
 });
 
 // Proposal Routes

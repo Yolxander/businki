@@ -390,10 +390,12 @@ export default function PromptEngineering({ auth }) {
                                                 <span>Updated: {new Date(template.updated_at).toLocaleDateString()}</span>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <Button variant="outline" size="sm" className="flex-1">
-                                                    <Eye className="w-4 h-4 mr-1" />
-                                                    Preview
-                                                </Button>
+                                                <Link href={`/prompt-engineering/prompts/${template.id}`}>
+                                                    <Button variant="outline" size="sm" className="flex-1">
+                                                        <Eye className="w-4 h-4 mr-1" />
+                                                        Details
+                                                    </Button>
+                                                </Link>
                                                 <Button variant="outline" size="sm" className="flex-1">
                                                     <Play className="w-4 h-4 mr-1" />
                                                     Test
