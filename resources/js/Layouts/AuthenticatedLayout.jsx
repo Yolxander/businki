@@ -23,7 +23,8 @@ import {
     Briefcase,
     Shield,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -45,6 +46,8 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
     const workNavigation = [
         { name: 'Projects', href: '/projects', icon: FileText },
+        { name: 'Clients', href: '/clients', icon: Users },
+        { name: 'Bobbi Flow', href: '/bobbi-flow', icon: Target },
         { name: 'Calendar', href: '/calendar', icon: Calendar },
     ];
 
@@ -112,7 +115,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
                 <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-sidebar border-r border-sidebar-border">
                     <div className="flex h-16 items-center justify-between px-4">
-                        <h1 className="text-xl font-bold text-sidebar-foreground orbitron">Bobbi</h1>
+                        <h1 className="text-2xl font-bold text-sidebar-foreground orbitron">Bobbi</h1>
                         <Button
                             variant="ghost"
                             size="icon"
