@@ -23,12 +23,12 @@ import axios from 'axios';
 
 export default function Edit({ auth, document, projects, types }) {
     const [form, setForm] = useState({
-        project_id: document.project_id.toString(),
-        name: document.name,
+        project_id: document.dev_project_id?.toString() || '',
+        name: document.name || '',
         description: document.description || '',
-        type: document.type,
-        content: document.content,
-        is_template: document.is_template,
+        type: document.type || '',
+        content: document.content || '',
+        is_template: document.is_template || false,
         variables: document.variables || {}
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,16 +66,22 @@ export default function Edit({ auth, document, projects, types }) {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        if (!dateString) return 'Unknown';
+        try {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            return 'Invalid Date';
+        }
     };
 
     const renderMarkdown = (content) => {
+        if (!content) return '';
         // Simple markdown rendering - in a real app, you'd use a proper markdown library
         return content
             .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2 text-foreground">$1</h3>')
@@ -126,15 +132,15 @@ export default function Edit({ auth, document, projects, types }) {
                             <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                                 <span className="flex items-center">
                                     <User className="h-3 w-3 mr-1" />
-                                    {document.creator?.name}
+                                    {document.creator?.name || 'Unknown'}
                                 </span>
                                 <span className="flex items-center">
                                     <Calendar className="h-3 w-3 mr-1" />
-                                    Created {formatDate(document.created_at)}
+                                    Created {document.created_at ? formatDate(document.created_at) : 'Unknown'}
                                 </span>
                                 <span className="flex items-center">
                                     <Clock className="h-3 w-3 mr-1" />
-                                    Version {document.version}
+                                    Version {document.version || 1}
                                 </span>
                             </div>
                         </div>
@@ -270,7 +276,7 @@ export default function Edit({ auth, document, projects, types }) {
                                     <div
                                         className="prose max-w-none"
                                         dangerouslySetInnerHTML={{
-                                            __html: document.is_markdown ? renderMarkdown(form.content) : `<pre class="whitespace-pre-wrap text-foreground">${form.content}</pre>`
+                                            __html: document.is_markdown ? renderMarkdown(form.content) : `<pre class="whitespace-pre-wrap text-foreground">${form.content || ''}</pre>`
                                         }}
                                     />
                                 </CardContent>
@@ -290,31 +296,31 @@ export default function Edit({ auth, document, projects, types }) {
                             <CardContent className="space-y-4">
                                 <div>
                                     <Label className="text-sm font-medium text-muted-foreground">Current Name</Label>
-                                    <p className="text-sm text-foreground">{document.name}</p>
+                                    <p className="text-sm text-foreground">{document.name || 'Untitled'}</p>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-muted-foreground">Type</Label>
-                                    <p className="text-sm text-foreground">{types[document.type]}</p>
+                                    <p className="text-sm text-foreground">{document.type ? types[document.type] : 'Unknown'}</p>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-muted-foreground">Project</Label>
-                                    <p className="text-sm text-foreground">{document.project?.title}</p>
+                                    <p className="text-sm text-foreground">{document.dev_project?.title || 'Unknown'}</p>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-muted-foreground">Created By</Label>
-                                    <p className="text-sm text-foreground">{document.creator?.name}</p>
+                                    <p className="text-sm text-foreground">{document.creator?.name || 'Unknown'}</p>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
-                                    <p className="text-sm text-foreground">{formatDate(document.created_at)}</p>
+                                    <p className="text-sm text-foreground">{document.created_at ? formatDate(document.created_at) : 'Unknown'}</p>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-muted-foreground">Last Updated</Label>
-                                    <p className="text-sm text-foreground">{formatDate(document.updated_at)}</p>
+                                    <p className="text-sm text-foreground">{document.updated_at ? formatDate(document.updated_at) : 'Unknown'}</p>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-muted-foreground">Version</Label>
-                                    <p className="text-sm text-foreground">{document.version}</p>
+                                    <p className="text-sm text-foreground">{document.version || 1}</p>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-muted-foreground">Status</Label>

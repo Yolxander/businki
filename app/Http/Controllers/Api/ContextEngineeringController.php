@@ -546,6 +546,180 @@ class ContextEngineeringController extends Controller
         };
     }
 
+        /**
+     * Download document(s)
+     */
+    public function download(Request $request, ContextEngineeringDocument $document)
+    {
+        $downloadType = $request->query('type', 'single'); // 'single' or 'project'
+
+        if ($downloadType === 'project') {
+            return $this->downloadProjectDocuments($document->devProject);
+        } else {
+            return $this->downloadSingleDocument($document);
+        }
+    }
+
+    /**
+     * Download all documents for a project
+     */
+    public function downloadProject(DevProject $project)
+    {
+        return $this->downloadProjectDocuments($project);
+    }
+
+    /**
+     * Download a single document
+     */
+    private function downloadSingleDocument(ContextEngineeringDocument $document)
+    {
+        $fileName = $document->generateFileName();
+        $content = $document->content;
+
+        // Add metadata header for markdown files
+        if ($document->isMarkdown()) {
+            $content = $this->addMarkdownMetadata($document) . "\n\n" . $content;
+        }
+
+        return response($content)
+            ->header('Content-Type', $document->mime_type ?? 'text/plain')
+            ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+    }
+
+        /**
+     * Download all documents for a project as ZIP
+     */
+    private function downloadProjectDocuments(DevProject $project)
+    {
+                try {
+            $documents = $project->documents()->orderBy('type')->orderBy('name')->get();
+
+            if ($documents->isEmpty()) {
+                return response()->json([
+                    'error' => 'No documents found for this project'
+                ], 404);
+            }
+
+            \Log::info('Starting project download', [
+                'project_id' => $project->id,
+                'project_title' => $project->title,
+                'document_count' => $documents->count()
+            ]);
+
+            // Create a temporary ZIP file
+            $zipFileName = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $project->title) . '_Documents.zip';
+            $zipPath = storage_path('app/temp/' . $zipFileName);
+
+            // Ensure temp directory exists
+            if (!file_exists(dirname($zipPath))) {
+                mkdir(dirname($zipPath), 0755, true);
+            }
+
+            $zip = new \ZipArchive();
+            $zipResult = $zip->open($zipPath, \ZipArchive::CREATE);
+            if ($zipResult !== TRUE) {
+                return response()->json([
+                    'error' => 'Could not create ZIP file. Error code: ' . $zipResult
+                ], 500);
+            }
+
+            // Add project info file
+            $projectInfo = "# Project: {$project->title}\n\n";
+            $projectInfo .= "Description: {$project->description}\n\n";
+            $projectInfo .= "Documents: {$documents->count()}\n";
+            $projectInfo .= "Created: " . $project->created_at->format('Y-m-d H:i:s') . "\n";
+            $projectInfo .= "Updated: " . $project->updated_at->format('Y-m-d H:i:s') . "\n\n";
+
+            $zip->addFromString('00_Project_Info.md', $projectInfo);
+
+            // Group documents by type
+            $documentsByType = $documents->groupBy('type');
+
+                        foreach ($documentsByType as $type => $typeDocuments) {
+                $typeLabel = ContextEngineeringDocument::getTypes()[$type] ?? $type;
+                $typeFolder = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $typeLabel);
+
+                foreach ($typeDocuments as $document) {
+                    $fileName = $document->generateFileName();
+                    $content = $document->content ?? '';
+
+                    // Add metadata header for markdown files
+                    if ($document->isMarkdown()) {
+                        $content = $this->addMarkdownMetadata($document) . "\n\n" . $content;
+                    }
+
+                    $internalPath = $typeFolder . '/' . $fileName;
+                    $result = $zip->addFromString($internalPath, $content);
+
+                    if ($result === false) {
+                        \Log::error('Failed to add file to ZIP', [
+                            'file' => $internalPath,
+                            'document_id' => $document->id
+                        ]);
+                    }
+                }
+            }
+
+            $zip->close();
+
+            // Verify the ZIP file was created successfully
+            if (!file_exists($zipPath)) {
+                return response()->json([
+                    'error' => 'ZIP file was not created successfully'
+                ], 500);
+            }
+
+            \Log::info('ZIP file created successfully', [
+                'zip_path' => $zipPath,
+                'zip_size' => filesize($zipPath)
+            ]);
+
+            // Return the ZIP file
+            return response()->download($zipPath, $zipFileName, [
+                'Content-Type' => 'application/zip',
+                'Content-Disposition' => 'attachment; filename="' . $zipFileName . '"'
+            ])->deleteFileAfterSend(true);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to download project documents', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to create download: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Add metadata to markdown content
+     */
+    private function addMarkdownMetadata(ContextEngineeringDocument $document): string
+    {
+        $metadata = [
+            'title' => $document->name,
+            'description' => $document->description,
+            'type' => $document->type,
+            'version' => $document->version,
+            'created' => $document->created_at->toISOString(),
+            'updated' => $document->updated_at->toISOString(),
+            'project' => $document->devProject->title,
+            'creator' => $document->creator->name ?? 'Unknown',
+            'is_generated' => $document->is_generated,
+            'is_template' => $document->is_template
+        ];
+
+        $yaml = "---\n";
+        foreach ($metadata as $key => $value) {
+            $yaml .= "{$key}: " . (is_bool($value) ? ($value ? 'true' : 'false') : $value) . "\n";
+        }
+        $yaml .= "---\n";
+
+        return $yaml;
+    }
+
     /**
      * Generate document name based on type and project
      */

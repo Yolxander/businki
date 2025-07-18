@@ -130,6 +130,10 @@ export default function ProjectDetails({ auth, project, types, stats }) {
         window.open(`/api/context-engineering/documents/${document.id}/download`, '_blank');
     };
 
+    const handleDownloadAll = () => {
+        window.open(`/api/context-engineering/projects/${project.id}/download`, '_blank');
+    };
+
     const getTypeIcon = (type) => {
         const iconClass = "h-5 w-5 text-muted-foreground";
         switch (type) {
@@ -172,6 +176,14 @@ export default function ProjectDetails({ auth, project, types, stats }) {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={handleDownloadAll}
+                            disabled={stats.total_documents === 0}
+                        >
+                            <FolderOpen className="h-4 w-4 mr-2" />
+                            Download All
+                        </Button>
                         <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
                             <DialogTrigger asChild>
                                 <Button className="bg-primary hover:bg-primary/90">

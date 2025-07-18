@@ -145,6 +145,28 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('projects/{id}/generate-tasks', [AIGenerationController::class, 'generateTasks']);
     Route::post('projects/generate-personal-tasks', [AIGenerationController::class, 'generatePersonalTasks']);
 
+    // Context Engineering routes
+    Route::prefix('context-engineering')->group(function () {
+        Route::get('/documents', [App\Http\Controllers\Api\ContextEngineeringController::class, 'index']);
+        Route::post('/documents', [App\Http\Controllers\Api\ContextEngineeringController::class, 'store']);
+        Route::get('/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'show']);
+        Route::put('/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'update']);
+        Route::delete('/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'destroy']);
+        Route::get('/documents/{document}/download', [App\Http\Controllers\Api\ContextEngineeringController::class, 'download']);
+        Route::get('/projects/{project}/download', [App\Http\Controllers\Api\ContextEngineeringController::class, 'downloadProject']);
+        Route::post('/documents/{document}/upload', [App\Http\Controllers\Api\ContextEngineeringController::class, 'upload']);
+        Route::post('/documents/{document}/version', [App\Http\Controllers\Api\ContextEngineeringController::class, 'createVersion']);
+        Route::post('/documents/{document}/activate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'activate']);
+        Route::get('/templates', [App\Http\Controllers\Api\ContextEngineeringController::class, 'templates']);
+        Route::get('/projects', [App\Http\Controllers\Api\ContextEngineeringController::class, 'projects']);
+        Route::get('/types', [App\Http\Controllers\Api\ContextEngineeringController::class, 'types']);
+        Route::get('/stats', [App\Http\Controllers\Api\ContextEngineeringController::class, 'stats']);
+        Route::post('/projects', [App\Http\Controllers\Api\ContextEngineeringController::class, 'createProject']);
+        Route::delete('/projects/{project}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'deleteProject']);
+        Route::post('/documents/{document}/regenerate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'regenerateDocument']);
+        Route::post('/generate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'generate']);
+    });
+
 
 });
 
