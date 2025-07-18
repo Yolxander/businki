@@ -19,7 +19,9 @@ import {
     Server,
     Play,
     BookOpen,
-    Code
+    Code,
+    Briefcase,
+    Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -38,11 +40,14 @@ export default function AuthenticatedLayout({ user, header, children }) {
         });
     };
 
-    const navigation = [
-        { name: 'API Dashboard', href: '/dashboard', icon: Server },
+    const workNavigation = [
+        { name: 'Projects', href: '/projects', icon: FileText },
+    ];
+
+    const systemNavigation = [
+        { name: 'API Dashboard', href: '/api-dashboard', icon: Server },
         { name: 'User Management', href: '/user-management', icon: Users },
         { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-        { name: 'Projects', href: '/projects', icon: FileText },
     ];
 
     const aiNavigation = [
@@ -54,6 +59,49 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
     return (
         <div className="min-h-screen bg-background">
+            {/* Top navbar */}
+            <div className="fixed top-0 left-0 right-0 z-50 bg-sidebar border-b border-sidebar-border shadow-sm">
+                <div className="flex h-16 items-center justify-between px-6 lg:px-8">
+                    <div className="flex items-center">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="lg:hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground mr-3"
+                            onClick={() => setSidebarOpen(true)}
+                        >
+                            <Menu className="h-5 w-5" />
+                        </Button>
+                        <h1 className="text-xl font-bold text-sidebar-foreground orbitron tracking-wide">Bobbi</h1>
+                    </div>
+
+                    <div className="flex items-center gap-x-6">
+                        <div className="flex items-center gap-x-4">
+                            <div className="flex-shrink-0">
+                                <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center shadow-sm ring-2 ring-primary/20">
+                                    <span className="text-sm font-semibold text-primary-foreground">
+                                        {user?.name?.charAt(0) || 'U'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="hidden sm:block">
+                                <p className="text-sm font-semibold text-sidebar-foreground leading-tight">{user?.name || 'shadcn'}</p>
+                                <p className="text-xs text-sidebar-foreground/70 leading-tight">{user?.email || 'm@example.com'}</p>
+                            </div>
+                        </div>
+                        <div className="h-6 w-px bg-sidebar-border"></div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleLogout}
+                            className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground px-3 py-2 h-auto"
+                        >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            <span className="hidden sm:inline font-medium">Sign out</span>
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
             {/* Mobile sidebar */}
             <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
                 <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
@@ -70,15 +118,38 @@ export default function AuthenticatedLayout({ user, header, children }) {
                         </Button>
                     </div>
                     <div className="flex-1 px-4 py-4">
-                        <Button className="w-full bg-primary text-primary-foreground mb-6">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Quick Create
-                        </Button>
+                        <Link href="/dashboard">
+                            <Button className="w-full bg-primary text-primary-foreground mb-6">
+                                <Home className="w-4 h-4 mr-2" />
+                                Dashboard
+                            </Button>
+                        </Link>
 
                         <nav className="space-y-6">
                             <div>
+                                <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider mb-2">
+                                    Work
+                                </h3>
                                 <div className="space-y-1">
-                                    {navigation.map((item) => (
+                                    {workNavigation.map((item) => (
+                                        <Link
+                                            key={item.name}
+                                            href={item.href}
+                                            className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                        >
+                                            <item.icon className="mr-3 h-5 w-5" />
+                                            {item.name}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider mb-2">
+                                    System
+                                </h3>
+                                <div className="space-y-1">
+                                    {systemNavigation.map((item) => (
                                         <Link
                                             key={item.name}
                                             href={item.href}
@@ -109,34 +180,6 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                 </div>
                             </div>
                         </nav>
-                    </div>
-
-                    <div className="border-t border-sidebar-border p-4">
-                        <div className="flex items-center mb-3">
-                            <div className="flex-shrink-0">
-                                <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center">
-                                    <span className="text-sm font-medium text-sidebar-primary-foreground">
-                                        {user?.name?.charAt(0) || 'U'}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="ml-3 flex-1">
-                                <p className="text-sm font-medium text-sidebar-foreground">{user?.name || 'shadcn'}</p>
-                                <p className="text-xs text-sidebar-foreground">{user?.email || 'm@example.com'}</p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="text-sidebar-foreground">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleLogout}
-                            className="w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        >
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Sign out
-                        </Button>
                     </div>
                 </div>
             </div>
@@ -149,15 +192,38 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     </div>
 
                     <div className="flex-1 px-4 py-4">
-                        <Button className="w-full bg-primary text-primary-foreground mb-6">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Quick Create
-                        </Button>
+                        <Link href="/dashboard">
+                            <Button className="w-full bg-primary text-primary-foreground mb-6">
+                                <Home className="w-4 h-4 mr-2" />
+                                Dashboard
+                            </Button>
+                        </Link>
 
                         <nav className="space-y-6">
                             <div>
+                                <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider mb-2">
+                                    Work
+                                </h3>
                                 <div className="space-y-1">
-                                    {navigation.map((item) => (
+                                    {workNavigation.map((item) => (
+                                        <Link
+                                            key={item.name}
+                                            href={item.href}
+                                            className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                        >
+                                            <item.icon className="mr-3 h-5 w-5" />
+                                            {item.name}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xs font-semibold text-sidebar-foreground uppercase tracking-wider mb-2">
+                                    System
+                                </h3>
+                                <div className="space-y-1">
+                                    {systemNavigation.map((item) => (
                                         <Link
                                             key={item.name}
                                             href={item.href}
@@ -189,58 +255,11 @@ export default function AuthenticatedLayout({ user, header, children }) {
                             </div>
                         </nav>
                     </div>
-
-                    <div className="border-t border-sidebar-border p-4">
-                        <div className="flex items-center mb-3">
-                            <div className="flex-shrink-0">
-                                <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center">
-                                    <span className="text-sm font-medium text-sidebar-primary-foreground">
-                                        {user?.name?.charAt(0) || 'U'}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="ml-3 flex-1">
-                                <p className="text-sm font-medium text-sidebar-foreground">{user?.name || 'shadcn'}</p>
-                                <p className="text-xs text-sidebar-foreground">{user?.email || 'm@example.com'}</p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="text-sidebar-foreground">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleLogout}
-                            className="w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        >
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Sign out
-                        </Button>
-                    </div>
                 </div>
             </div>
 
             {/* Main content */}
-            <div className="lg:pl-64">
-                {/* Top bar */}
-                <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border bg-background px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="lg:hidden"
-                        onClick={() => setSidebarOpen(true)}
-                    >
-                        <Menu className="h-6 w-6" />
-                    </Button>
-
-                    <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-                        <div className="flex flex-1" />
-                        <div className="flex items-center gap-x-4 lg:gap-x-6">
-                            {/* Add notifications, profile dropdown, etc. here */}
-                        </div>
-                    </div>
-                </div>
-
+            <div className="lg:pl-64 pt-16">
                 {/* Page content */}
                 <main className="py-6">
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

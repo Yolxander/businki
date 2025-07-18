@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 @import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
@@ -169,6 +170,25 @@
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
     }
+}
+
+/* Button font styles */
+button,
+.btn,
+[type="button"],
+[type="submit"],
+[type="reset"] {
+  font-family: 'Orbitron', monospace;
+}
+
+/* Ensure button components use Orbitron font */
+.inline-flex.items-center.justify-center.whitespace-nowrap.rounded-md.text-sm.font-medium {
+  font-family: 'Orbitron', monospace;
+}
+
+/* Orbitron font class for platform name and other elements */
+.orbitron {
+  font-family: 'Orbitron', monospace;
 }
 
 /* Custom slider styles */

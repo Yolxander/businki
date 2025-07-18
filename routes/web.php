@@ -28,6 +28,13 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 // Dashboard Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/api-dashboard', function () {
+        return Inertia::render('ApiDashboard', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('api-dashboard');
     Route::get('/user-management', function () {
         return Inertia::render('UserManagement', [
             'auth' => [
@@ -35,6 +42,20 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('user-management');
+    Route::get('/analytics', function () {
+        return Inertia::render('Analytics', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('analytics');
+    Route::get('/projects', function () {
+        return Inertia::render('Projects', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('projects');
     Route::get('/ai-settings', function () {
         return Inertia::render('AISettings', [
             'auth' => [
