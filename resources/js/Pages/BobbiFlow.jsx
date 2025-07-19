@@ -264,7 +264,7 @@ export default function BobbiFlow({ auth }) {
                                 {/* Tasks Container */}
                                 <div className="flex-1 space-y-4 overflow-y-auto">
                                     {lane.tasks.map((task) => (
-                                        <div key={task.id} className="group cursor-pointer">
+                                        <Link key={task.id} href={`/tasks/${task.id}`} className="group cursor-pointer block">
                                             <Card className="border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-200 bg-background">
                                                 <CardContent className="p-4">
                                                     {/* Task Title & Priority */}
@@ -341,7 +341,7 @@ export default function BobbiFlow({ auth }) {
                                                     </div>
                                                 </CardContent>
                                             </Card>
-                                        </div>
+                                        </Link>
                                     ))}
 
 

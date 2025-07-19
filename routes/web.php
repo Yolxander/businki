@@ -86,12 +86,21 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('bobbi-flow');
     Route::get('/tasks/create', function () {
-        return Inertia::render('CreateTask', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-        ]);
-    })->name('tasks.create');
+    return Inertia::render('CreateTask', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+    ]);
+})->name('tasks.create');
+
+Route::get('/tasks/{id}', function ($id) {
+    return Inertia::render('TaskDetails', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+        'taskId' => $id,
+    ]);
+})->name('tasks.show');
     Route::get('/calendar', function () {
         return Inertia::render('Calendar', [
             'auth' => [
