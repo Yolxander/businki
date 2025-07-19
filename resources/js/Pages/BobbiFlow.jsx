@@ -344,14 +344,7 @@ export default function BobbiFlow({ auth }) {
                                         </div>
                                     ))}
 
-                                    {/* Add Task Button */}
-                                    <Button
-                                        variant="outline"
-                                        className="w-full h-12 border-dashed border-2 border-muted-foreground/30 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 group"
-                                    >
-                                        <Plus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                                        Add Task
-                                    </Button>
+
                                 </div>
                             </div>
                         ))}
@@ -379,6 +372,35 @@ export default function BobbiFlow({ auth }) {
                         </Card>
                     </div>
                 )}
+            </div>
+
+                        {/* Custom Floating Action Button with Menu */}
+            <div className="fixed bottom-6 right-6 z-50 group">
+                <div className="w-12 h-12 bg-primary rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 active:scale-95 relative cursor-pointer">
+                    {/* Horizontal line */}
+                    <div className="absolute top-1/2 left-1/2 w-6 h-0.5 bg-black transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300"></div>
+                    {/* Vertical line */}
+                    <div className="absolute top-1/2 left-1/2 w-0.5 h-6 bg-black transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 group-hover:rotate-90"></div>
+                </div>
+
+                {/* Menu Items */}
+                <ul className="absolute bottom-16 right-0 space-y-2 opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none group-hover:pointer-events-auto">
+                    <li className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-100">
+                        <Link href="/tasks/create" className="block w-10 h-10 bg-[#d1ff75] hover:bg-[#c2f066] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center text-gray-800 hover:scale-110">
+                            <Plus className="w-4 h-4" />
+                        </Link>
+                    </li>
+                    <li className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-200">
+                        <Link href="/clients/create" className="block w-10 h-10 bg-[#d1ff75] hover:bg-[#c2f066] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center text-gray-800 hover:scale-110">
+                            <Users className="w-4 h-4" />
+                        </Link>
+                    </li>
+                    <li className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-300">
+                        <Link href="/projects/create" className="block w-10 h-10 bg-[#d1ff75] hover:bg-[#c2f066] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center text-gray-800 hover:scale-110">
+                            <FileText className="w-4 h-4" />
+                        </Link>
+                    </li>
+                </ul>
             </div>
         </AuthenticatedLayout>
     );
