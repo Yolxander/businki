@@ -177,10 +177,12 @@ export default function TaskDetails({ auth, taskId }) {
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                        </Button>
+                        <Link href={`/tasks/${taskId}/edit`}>
+                            <Button variant="outline" size="sm">
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                            </Button>
+                        </Link>
                         <Button variant="outline" size="sm">
                             <MoreHorizontal className="w-4 h-4" />
                         </Button>

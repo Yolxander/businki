@@ -101,6 +101,24 @@ Route::get('/tasks/{id}', function ($id) {
         'taskId' => $id,
     ]);
 })->name('tasks.show');
+
+Route::get('/tasks/{id}/edit', function ($id) {
+    return Inertia::render('EditTask', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+        'taskId' => $id,
+    ]);
+})->name('tasks.edit');
+
+Route::get('/projects/{id}/edit', function ($id) {
+    return Inertia::render('EditProject', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+        'projectId' => $id,
+    ]);
+})->name('projects.edit');
     Route::get('/calendar', function () {
         return Inertia::render('Calendar', [
             'auth' => [

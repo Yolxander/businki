@@ -189,10 +189,12 @@ export default function ProjectDetails({ auth, project }) {
                             <Share className="w-4 h-4 mr-2" />
                             Share
                         </Button>
-                        <Button variant="outline">
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                        </Button>
+                        <Link href={`/projects/${projectData.id}/edit`}>
+                            <Button variant="outline">
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                            </Button>
+                        </Link>
                         <Button>
                             <Plus className="w-4 h-4 mr-2" />
                             Add Task
