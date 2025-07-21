@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AuthenticatedLayout, { SidebarContext } from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +37,9 @@ import {
     ExternalLink,
     Copy,
     Star,
-    Flag
+    Flag,
+    Maximize2,
+    Minimize2
 } from 'lucide-react';
 
 export default function StartWork({ auth, taskId }) {
@@ -54,6 +56,10 @@ export default function StartWork({ auth, taskId }) {
     const [newNote, setNewNote] = useState('');
     const [newSubtask, setNewSubtask] = useState('');
     const [activeTab, setActiveTab] = useState('work');
+    const [isFullScreen, setIsFullScreen] = useState(false);
+    const mainRef = useRef(null);
+    const { sidebarCollapsed, setSidebarCollapsed } = useContext(SidebarContext);
+    const prevSidebarCollapsed = useRef(sidebarCollapsed);
 
     useEffect(() => {
         // Mock task data - in real app this would fetch from API
@@ -118,6 +124,33 @@ export default function StartWork({ auth, taskId }) {
         }
         return () => clearInterval(interval);
     }, [workSession.isActive]);
+
+    // Full screen logic
+    useEffect(() => {
+        function handleFullScreenChange() {
+            const isFs = document.fullscreenElement === mainRef.current;
+            setIsFullScreen(isFs);
+            if (!isFs) {
+                setSidebarCollapsed(prevSidebarCollapsed.current);
+            }
+        }
+        document.addEventListener('fullscreenchange', handleFullScreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
+    }, [setSidebarCollapsed]);
+
+    const handleToggleFullScreen = () => {
+        if (!isFullScreen) {
+            prevSidebarCollapsed.current = sidebarCollapsed;
+            setSidebarCollapsed(true);
+            if (mainRef.current.requestFullscreen) {
+                mainRef.current.requestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    };
 
     const startWork = () => {
         setWorkSession(prev => ({
@@ -241,7 +274,7 @@ export default function StartWork({ auth, taskId }) {
         <AuthenticatedLayout user={auth.user}>
             <Head title={`Start Work - ${task.title}`} />
 
-            <div className="h-screen flex flex-col bg-background">
+            <div ref={mainRef} className="h-screen flex flex-col bg-background">
                 {/* Header */}
                 <div className="flex-shrink-0 p-6 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <div className="flex items-center justify-between">
@@ -260,7 +293,7 @@ export default function StartWork({ auth, taskId }) {
                             </div>
                         </div>
 
-                        {/* Work Timer */}
+                        {/* Work Timer & Full Screen */}
                         <div className="flex items-center space-x-4">
                             <div className="text-center">
                                 <div className="text-2xl font-mono font-bold text-foreground">
@@ -286,6 +319,15 @@ export default function StartWork({ auth, taskId }) {
                                         </Button>
                                     </>
                                 )}
+                                <Button
+                                    variant={isFullScreen ? 'secondary' : 'outline'}
+                                    size="icon"
+                                    className="ml-2"
+                                    onClick={handleToggleFullScreen}
+                                    title={isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
+                                >
+                                    {isFullScreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                                </Button>
                             </div>
                         </div>
                     </div>
