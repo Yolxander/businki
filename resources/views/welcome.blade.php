@@ -3,91 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bobbi Admin</title>
-
-    <!-- Favicon -->
+    <title>Bobbi</title>
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ asset('logo.png') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Rationale&family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&family=Turret+Road:wght@200;300;400;500;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        body { font-family: 'Inter', sans-serif; }
         .orbitron { font-family: 'Orbitron', sans-serif; }
+        .frosted-glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .circular-text {
+            transform: rotate(-90deg);
+        }
+        .hero-image {
+            background-image: url('/bobbi-dashboard.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
     </style>
-    <script>
-        // Debug logging for login buttons
-        document.addEventListener('DOMContentLoaded', function() {
-            const loginButtons = document.querySelectorAll('a[href*="login"], a[href*="dashboard"]');
-            loginButtons.forEach(function(button) {
-                button.addEventListener('click', function(e) {
-                    console.log('Login button clicked:', {
-                        href: this.href,
-                        text: this.textContent.trim(),
-                        timestamp: new Date().toISOString()
-                    });
-                });
-            });
-        });
-    </script>
 </head>
-<body class="bg-black text-gray-100 min-h-screen flex flex-col">
+<body class="text-gray-900 min-h-screen px-6" style="background-color: oklch(0.205 0 0);">
     <!-- Header -->
-    <header class="w-full flex justify-center pt-8 pb-4">
-        <nav class="w-[95%] max-w-6xl bg-gray-900 rounded-lg flex items-center justify-between px-8 py-4 shadow border border-gray-800">
-            <div class="orbitron text-2xl text-amber-400 tracking-widest font-bold">Bobbi <span class="text-white">Admin</span></div>
-            <a href="{{ auth()->check() ? '/dashboard' : '/login' }}" class="bg-amber-400 hover:bg-amber-500 text-black font-semibold rounded-lg px-6 py-3 transition">
-                @if(auth()->check())
-                    Go to Dashboard
-                @else
-                    Login to Bobbi Admin
-                @endif
-            </a>
+    <header class="w-full py-3 px-2">
+        <nav class="w-full mx-auto flex items-center justify-between">
+            <div class="text-2xl font-bold text-white orbitron">Bobbi</div>
+            <div class="flex space-x-8">
+                <a href="#" class="text-white hover:text-gray-300 transition orbitron">About Us</a>
+                <a href="#" class="text-white hover:text-gray-300 transition orbitron">Pricing</a>
+                <a href="#" class="text-white hover:text-gray-300 transition orbitron">Login</a>
+            </div>
         </nav>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col lg:flex-row items-stretch justify-center w-full max-w-6xl mx-auto px-0 gap-0 mt-8">
-        <!-- Left: Overview -->
-        <section class="flex-1 flex flex-col items-start justify-center max-w-xl bg-black px-10 py-12">
-            <div class="bg-gray-900 border border-gray-800 rounded-lg shadow-lg w-full p-8 mb-8">
-                <h1 class="orbitron text-4xl md:text-5xl font-extrabold text-amber-400 mb-4 leading-tight">
-                    Welcome to <span class="text-white">Bobbi</span> Admin
+    <!-- Hero Section -->
+    <main class="relative w-full h-[90vh] mx-auto px-8 mb-6">
+        <!-- Background Image Container -->
+        <div class="hero-image absolute inset-0 rounded-2xl overflow-hidden shadow-md">
+            <!-- Overlay for better text readability -->
+            <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+
+            <!-- Large "Title" Text Overlay -->
+            <div class="absolute bottom-80 left-[5%] inset-0 flex items-center justify-center w-[800px]">
+                <h1 class="text-xl md:text-8xl font-bold text-white tracking-wider ">
+                    The Future of Freelance
                 </h1>
-                <div class="prose dark:prose-invert max-w-none mb-6">
-                    <h2 class="text-xl font-semibold">What you can do:</h2>
-                    <ul class="list-disc pl-6 space-y-2 text-lg">
-                        <li><span class="orbitron text-amber-400">Bobbi</span> Project &amp; Task Management</li>
-                        <li>Automate Proposals &amp; Client Workflows</li>
-                        <li>Track Progress, Deadlines, and Analytics</li>
-                        <li>Manage Teams, Permissions, and Roles</li>
-                        <li>Integrate AI-powered tools for productivity</li>
-                        <li>Access detailed reports and dashboards</li>
-                    </ul>
-                </div>
-                <a href="{{ auth()->check() ? '/dashboard' : '/login' }}" class="bg-amber-400 hover:bg-amber-500 text-black font-semibold rounded-lg px-6 py-3 transition w-full text-center block">
-                    @if(auth()->check())
-                        Go to Dashboard
-                    @else
-                        Login to Bobbi Admin
-                    @endif
-                </a>
             </div>
-        </section>
-        <!-- Right: Full Image -->
-        <section class="flex-1 flex flex-col justify-stretch items-stretch">
-            <div class="flex-1 h-full w-full">
-                <img src="https://source.unsplash.com/1200x1200/?dashboard,technology,admin" alt="Bobbi Admin Hero" class="object-cover w-full h-full min-h-[400px] max-h-none rounded-none" style="min-width:320px; max-width:100%;" />
+
+            <!-- Left Information Box -->
+            <div class="absolute bottom-10 right-96 w-96 frosted-glass rounded-2xl p-8">
+                <p class="text-white text-lg leading-relaxed mb-6">
+                    Crafting spaces that harmonize modern aesthetics with timeless elegance, our contemporary interior designs breathe life into every room, redefining the essence of chic living.
+                </p>
+                <button class="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition orbitron">
+                    View More →
+                </button>
             </div>
-        </section>
+
+            <!-- Left Information Box -->
+            <div class="absolute bottom-20 right-10 w-80 frosted-glass rounded-2xl p-8">
+                <p class="text-white text-lg leading-relaxed mb-6">
+                    Crafting spaces that harmonize modern aesthetics with timeless elegance, our contemporary interior designs breathe life into every room, redefining the essence of chic living.
+                </p>
+                <button class="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition orbitron">
+                    View More →
+                </button>
+            </div>
+
+{{--            <!-- Right Circular Text -->--}}
+{{--            <div class="absolute right-20 bottom-40">--}}
+{{--                <div class="circular-text text-white font-medium text-sm tracking-wider orbitron">--}}
+{{--                    Modern • Minimalist • Modern • Minimalist--}}
+{{--                </div>--}}
+{{--            </div>--}}
+        </div>
     </main>
 
-    <!-- Bottom Bar: Left text, right image -->
-    <div class="w-full max-w-6xl mx-auto flex flex-row items-stretch mt-0 mb-8 px-0">
-        <div class="flex-1 bg-gray-900 border border-gray-800 text-amber-400 rounded-l-lg px-10 py-6 text-lg font-semibold shadow-lg orbitron flex items-center">
-            <span class="text-white">Bobbi</span> Admin &mdash; Your all-in-one business control center
-        </div>
-        <div class="flex-1 hidden lg:block">
-            <img src="https://source.unsplash.com/1200x400/?dashboard,technology,admin" alt="Bobbi Admin Banner" class="object-cover w-full h-full rounded-r-lg" style="min-width:320px; max-width:100%; min-height:100px;" />
-        </div>
-    </div>
+
 </body>
 </html>
