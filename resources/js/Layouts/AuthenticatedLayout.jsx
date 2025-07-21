@@ -118,7 +118,10 @@ export default function AuthenticatedLayout({ user, header, children }) {
         setTabs(prev => {
             const existingTab = prev.find(tab => tab.id === tabId);
             if (!existingTab) {
-                const newTabs = [...prev, { id: tabId, name: currentName, path: currentPath }];
+                let newTabs = [...prev, { id: tabId, name: currentName, path: currentPath }];
+                if (newTabs.length > 5) {
+                    newTabs = newTabs.slice(1); // Remove the first (oldest) tab
+                }
                 return newTabs;
             }
             return prev;
