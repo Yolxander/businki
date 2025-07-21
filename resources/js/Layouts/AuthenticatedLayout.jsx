@@ -80,7 +80,9 @@ export default function AuthenticatedLayout({ user, header, children }) {
             '/context-engineering': 'Context Engineering',
             '/api-dashboard': 'API Dashboard',
             '/user-management': 'User Management',
-            '/analytics': 'Analytics'
+            '/analytics': 'Analytics',
+            '/proposals': 'Proposals',
+            '/proposals/create': 'Create Proposal'
         };
 
         // Handle dynamic routes
@@ -90,6 +92,16 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 currentName = 'Client Details';
             } else if (currentPath.startsWith('/projects/') && currentPath !== '/projects') {
                 currentName = 'Project Details';
+            } else if (currentPath.startsWith('/proposals/') && currentPath !== '/proposals/create') {
+                // Extract proposal ID for better naming
+                const proposalId = currentPath.split('/').pop();
+                currentName = `Proposal ${proposalId}`;
+            } else if (currentPath.startsWith('/tasks/') && currentPath.includes('/start-work')) {
+                // Extract task ID for Start Work page
+                const taskId = currentPath.split('/')[2];
+                currentName = `Start Work - Task ${taskId}`;
+            } else if (currentPath.startsWith('/tasks/') && currentPath !== '/tasks') {
+                currentName = 'Task Details';
             } else {
                 currentName = 'Unknown Page';
             }
@@ -140,6 +152,21 @@ export default function AuthenticatedLayout({ user, header, children }) {
         }
     };
 
+    const handleCloseAll = () => {
+        // Keep only the dashboard tab
+        const dashboardTab = tabs.find(t => t.id === '/dashboard');
+        if (dashboardTab) {
+            setTabs([dashboardTab]);
+            setActiveTab('/dashboard');
+            router.visit('/dashboard');
+        } else {
+            // If no dashboard tab exists, clear all and go to dashboard
+            setTabs([]);
+            setActiveTab('/dashboard');
+            router.visit('/dashboard');
+        }
+    };
+
     // Clear tabs when user logs out
     const handleLogout = () => {
         localStorage.removeItem('bobbi-tabs');
@@ -158,6 +185,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
     const workNavigation = [
         { name: 'Projects', href: '/projects', icon: FileText },
         { name: 'Clients', href: '/clients', icon: Users },
+        { name: 'Proposals', href: '/proposals', icon: FileText },
         { name: 'Bobbi Flow', href: '/bobbi-flow', icon: Target },
         { name: 'Calendar', href: '/calendar', icon: Calendar },
     ];
@@ -200,6 +228,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                     activeTab={activeTab}
                                     onTabClick={handleTabClick}
                                     onTabClose={handleTabClose}
+                                    onCloseAll={handleCloseAll}
                                 />
                             </div>
                         )}

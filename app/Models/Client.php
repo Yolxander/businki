@@ -38,4 +38,14 @@ class Client extends Model
         return $this->belongsToMany(User::class, 'user_client')
                     ->withTimestamps();
     }
+
+    /**
+     * Get the proposals associated with the client through intakes.
+     */
+    public function proposals()
+    {
+        return Proposal::whereHas('intakeResponse.intake', function ($query) {
+            $query->where('client_id', $this->id);
+        });
+    }
 }

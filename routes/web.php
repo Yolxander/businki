@@ -78,6 +78,28 @@ Route::middleware(['auth'])->group(function () {
             'clientId' => $id,
         ]);
     })->name('clients.show');
+    Route::get('/proposals/{id}', function ($id) {
+        return Inertia::render('ProposalDetails', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'proposalId' => $id,
+        ]);
+    })->name('proposals.show');
+    Route::get('/proposals', function () {
+        return Inertia::render('Proposals', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('proposals.index');
+    Route::get('/proposals/create', function () {
+        return Inertia::render('CreateProposal', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('proposals.create');
     Route::get('/bobbi-flow', function () {
         return Inertia::render('BobbiFlow', [
             'auth' => [
@@ -110,6 +132,15 @@ Route::get('/tasks/{id}/edit', function ($id) {
         'taskId' => $id,
     ]);
 })->name('tasks.edit');
+
+Route::get('/tasks/{id}/start-work', function ($id) {
+    return Inertia::render('StartWork', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+        'taskId' => $id,
+    ]);
+})->name('tasks.start-work');
 
 Route::get('/projects/{id}/edit', function ($id) {
     return Inertia::render('EditProject', [

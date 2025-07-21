@@ -171,7 +171,7 @@ class ClientController extends Controller
     {
         try {
             Log::info('Fetching client details', ['client_id' => $id]);
-            $client = Client::with('intakes')->findOrFail($id);
+            $client = Client::with(['intakes', 'proposals.intakeResponse.intake'])->findOrFail($id);
             return response()->json($client);
         } catch (\Exception $e) {
             Log::warning('Client not found', ['client_id' => $id]);

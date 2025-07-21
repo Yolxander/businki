@@ -359,10 +359,12 @@ export default function TaskDetails({ auth, taskId }) {
                                 <CardTitle>Quick Actions</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Play className="w-4 h-4 mr-2" />
-                                    Start Work
-                                </Button>
+                                <Link href={`/tasks/${taskId}/start-work`}>
+                                    <Button variant="outline" className="w-full justify-start">
+                                        <Play className="w-4 h-4 mr-2" />
+                                        Start Work
+                                    </Button>
+                                </Link>
                                 <Button variant="outline" className="w-full justify-start">
                                     <Eye className="w-4 h-4 mr-2" />
                                     Mark for Review

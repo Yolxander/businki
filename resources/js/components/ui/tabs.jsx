@@ -44,10 +44,10 @@ TabsContent.displayName = TabsPrimitive.Content.displayName
 export { Tabs, TabsList, TabsTrigger, TabsContent }
 
 // Browser-like tabs component for navigation
-import { X } from 'lucide-react';
+import { X, XCircle } from 'lucide-react';
 import { Button } from './button';
 
-export function BrowserTabs({ tabs, activeTab, onTabClick, onTabClose }) {
+export function BrowserTabs({ tabs, activeTab, onTabClick, onTabClose, onCloseAll }) {
     return (
         <div className="flex items-center space-x-1 overflow-x-auto">
             {tabs.map((tab) => (
@@ -76,6 +76,20 @@ export function BrowserTabs({ tabs, activeTab, onTabClick, onTabClose }) {
                     </Button>
                 </div>
             ))}
+
+            {/* Close All Button */}
+            {tabs.length > 1 && (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted-foreground/20 transition-colors ml-2"
+                    onClick={onCloseAll}
+                    title="Close all tabs"
+                >
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Close All
+                </Button>
+            )}
         </div>
     );
 }
