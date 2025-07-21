@@ -39,8 +39,38 @@ import {
     Star,
     Flag,
     Maximize2,
-    Minimize2
+    Minimize2,
+    Keyboard
 } from 'lucide-react';
+
+function ShortcutsModal({ open, onClose }) {
+    return (
+        open && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-background rounded-lg shadow-lg max-w-md w-full p-6 relative">
+                    <button
+                        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+                        onClick={onClose}
+                        aria-label="Close"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                    <h2 className="text-xl font-bold mb-4">Keyboard Shortcuts</h2>
+                    <ul className="space-y-2 text-sm">
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">f</span> — Toggle Full Screen</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">s</span> — Start/Pause Work</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">e</span> — Stop Work</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">1</span> — Work Area tab</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">2</span> — Work Notes tab</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">3</span> — Subtasks tab</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">4</span> — Files tab</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">?</span> — Show this help</li>
+                    </ul>
+                </div>
+            </div>
+        )
+    );
+}
 
 export default function StartWork({ auth, taskId }) {
     const [task, setTask] = useState(null);
@@ -60,6 +90,7 @@ export default function StartWork({ auth, taskId }) {
     const mainRef = useRef(null);
     const { sidebarCollapsed, setSidebarCollapsed } = useContext(SidebarContext);
     const prevSidebarCollapsed = useRef(sidebarCollapsed);
+    const [showShortcuts, setShowShortcuts] = useState(false);
 
     useEffect(() => {
         // Mock task data - in real app this would fetch from API
@@ -254,6 +285,47 @@ export default function StartWork({ auth, taskId }) {
         }
     };
 
+    // Keyboard shortcuts
+    useEffect(() => {
+        function handleKeyDown(e) {
+            if (showShortcuts) {
+                if (e.key === 'Escape') {
+                    setShowShortcuts(false);
+                    e.preventDefault();
+                }
+                return;
+            }
+            if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+                setShowShortcuts(true);
+                e.preventDefault();
+            } else if (e.key === 'f') {
+                handleToggleFullScreen();
+                e.preventDefault();
+            } else if (e.key === 's') {
+                if (!workSession.isActive) startWork();
+                else pauseWork();
+                e.preventDefault();
+            } else if (e.key === 'e') {
+                if (workSession.isActive) stopWork();
+                e.preventDefault();
+            } else if (e.key === '1') {
+                setActiveTab('work');
+                e.preventDefault();
+            } else if (e.key === '2') {
+                setActiveTab('notes');
+                e.preventDefault();
+            } else if (e.key === '3') {
+                setActiveTab('subtasks');
+                e.preventDefault();
+            } else if (e.key === '4') {
+                setActiveTab('attachments');
+                e.preventDefault();
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showShortcuts, workSession.isActive, setActiveTab, handleToggleFullScreen, startWork, pauseWork, stopWork]);
+
     if (loading) {
         return (
             <AuthenticatedLayout user={auth.user}>
@@ -273,7 +345,7 @@ export default function StartWork({ auth, taskId }) {
     return (
         <AuthenticatedLayout user={auth.user}>
             <Head title={`Start Work - ${task.title}`} />
-
+            <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
             <div ref={mainRef} className="h-screen flex flex-col bg-background">
                 {/* Header */}
                 <div className="flex-shrink-0 p-6 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -292,8 +364,7 @@ export default function StartWork({ auth, taskId }) {
                                 </p>
                             </div>
                         </div>
-
-                        {/* Work Timer & Full Screen */}
+                        {/* Work Timer, Full Screen, Shortcuts */}
                         <div className="flex items-center space-x-4">
                             <div className="text-center">
                                 <div className="text-2xl font-mono font-bold text-foreground">
@@ -327,6 +398,15 @@ export default function StartWork({ auth, taskId }) {
                                     title={isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
                                 >
                                     {isFullScreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="ml-2"
+                                    onClick={() => setShowShortcuts(true)}
+                                    title="Keyboard Shortcuts (? or Shift+/)"
+                                >
+                                    <Keyboard className="w-5 h-5" />
                                 </Button>
                             </div>
                         </div>
