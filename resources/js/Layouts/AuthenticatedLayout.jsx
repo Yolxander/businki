@@ -24,7 +24,8 @@ import {
     Shield,
     ChevronLeft,
     ChevronRight,
-    Target
+    Target,
+    CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrowserTabs } from '@/components/ui/tabs';
@@ -87,7 +88,8 @@ export default function AuthenticatedLayout({ user, header, children }) {
             '/user-management': 'User Management',
             '/analytics': 'Analytics',
             '/proposals': 'Proposals',
-            '/proposals/create': 'Create Proposal'
+            '/proposals/create': 'Create Proposal',
+            '/subscriptions': 'Subscriptions'
         };
 
         // Handle dynamic routes
@@ -101,6 +103,10 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 // Extract proposal ID for better naming
                 const proposalId = currentPath.split('/').pop();
                 currentName = `Proposal ${proposalId}`;
+            } else if (currentPath.startsWith('/subscriptions/') && currentPath !== '/subscriptions') {
+                // Extract subscription ID for better naming
+                const subscriptionId = currentPath.split('/').pop();
+                currentName = `Subscription ${subscriptionId}`;
             } else if (currentPath.startsWith('/tasks/') && currentPath.includes('/start-work')) {
                 // Extract task ID for Start Work page
                 const taskId = currentPath.split('/')[2];
@@ -194,6 +200,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
         { name: 'Projects', href: '/projects', icon: FileText },
         { name: 'Clients', href: '/clients', icon: Users },
         { name: 'Proposals', href: '/proposals', icon: FileText },
+        { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
         { name: 'Bobbi Flow', href: '/bobbi-flow', icon: Target },
         { name: 'Calendar', href: '/calendar', icon: Calendar },
     ];

@@ -100,6 +100,21 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('proposals.create');
+    Route::get('/subscriptions', function () {
+        return Inertia::render('Subscriptions', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('subscriptions');
+    Route::get('/subscriptions/{id}', function ($id) {
+        return Inertia::render('SubscriptionDetails', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'subscriptionId' => $id,
+        ]);
+    })->name('subscriptions.show');
     Route::get('/bobbi-flow', function () {
         return Inertia::render('BobbiFlow', [
             'auth' => [
