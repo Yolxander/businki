@@ -38,6 +38,9 @@ class ClientController extends Controller
                     'state' => $client->state,
                     'zip_code' => $client->zip_code,
                     'description' => $client->description,
+                    'industry' => $client->industry,
+                    'budget_range' => $client->budget_range,
+                    'lead_source' => $client->lead_source,
                 ];
             });
 
@@ -191,6 +194,9 @@ class ClientController extends Controller
                 'contact_person' => $request->contactPerson,
                 'status' => $request->status,
                 'description' => $request->notes,
+                'industry' => $request->industry,
+                'budget_range' => $request->budget,
+                'lead_source' => $request->source,
             ];
 
             $client = Client::create($clientData);
@@ -306,6 +312,9 @@ class ClientController extends Controller
                 'contact_person' => $request->contactPerson,
                 'status' => $request->status,
                 'description' => $request->notes,
+                'industry' => $request->industry,
+                'budget_range' => $request->budget,
+                'lead_source' => $request->source,
             ];
 
             $client->update($clientData);

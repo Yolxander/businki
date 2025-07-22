@@ -147,6 +147,33 @@ export default function Clients({ auth, clients = [], error }) {
                                     </div>
                                 </div>
 
+                                {/* Business Information */}
+                                {(client.industry || client.budget_range || client.lead_source) && (
+                                    <div className="space-y-2 pt-2 border-t">
+                                        {client.industry && (
+                                            <div className="flex items-center text-sm">
+                                                <Building className="w-4 h-4 mr-2 text-muted-foreground" />
+                                                <span className="text-muted-foreground">Industry: </span>
+                                                <span className="text-foreground ml-1">{client.industry}</span>
+                                            </div>
+                                        )}
+                                        {client.budget_range && (
+                                            <div className="flex items-center text-sm">
+                                                <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
+                                                <span className="text-muted-foreground">Budget: </span>
+                                                <span className="text-foreground ml-1">{client.budget_range}</span>
+                                            </div>
+                                        )}
+                                        {client.lead_source && (
+                                            <div className="flex items-center text-sm">
+                                                <User className="w-4 h-4 mr-2 text-muted-foreground" />
+                                                <span className="text-muted-foreground">Source: </span>
+                                                <span className="text-foreground ml-1">{client.lead_source}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* Stats */}
                                 <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                                     <div className="text-center">

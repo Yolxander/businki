@@ -70,8 +70,8 @@ export default function EditClient({ auth, clientId }) {
                     industry: clientData.industry || '',
                     status: clientData.status || 'prospect',
                     notes: clientData.description || clientData.notes || '',
-                    budget: clientData.budget || '',
-                    source: clientData.source || ''
+                    budget: clientData.budget_range || '',
+                    source: clientData.lead_source || ''
                 });
             } catch (err) {
                 console.error('Error fetching client:', err);

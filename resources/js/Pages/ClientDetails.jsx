@@ -343,12 +343,12 @@ export default function ClientDetails({ auth, clientId }) {
                                         <div className="flex items-center text-sm">
                                             <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
                                             <span className="font-medium">Budget Range:</span>
-                                            <span className="ml-2 text-muted-foreground">{clientData.budget}</span>
+                                            <span className="ml-2 text-muted-foreground">{clientData.budget_range || clientData.budget}</span>
                                         </div>
                                         <div className="flex items-center text-sm">
                                             <Target className="w-4 h-4 mr-2 text-muted-foreground" />
                                             <span className="font-medium">Lead Source:</span>
-                                            <span className="ml-2 text-muted-foreground">{clientData.source}</span>
+                                            <span className="ml-2 text-muted-foreground">{clientData.lead_source || clientData.source}</span>
                                         </div>
                                         <div className="flex items-center text-sm">
                                             <TrendingUp className="w-4 h-4 mr-2 text-muted-foreground" />
