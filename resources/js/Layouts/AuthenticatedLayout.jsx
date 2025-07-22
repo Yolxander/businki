@@ -188,10 +188,13 @@ export default function AuthenticatedLayout({ user, header, children }) {
         localStorage.removeItem('bobbi-sidebar-collapsed');
         post('/logout', {
             onSuccess: () => {
-                console.log('Logout successful');
+                console.log('Logout successful - redirecting to login page');
             },
             onError: (errors) => {
                 console.error('Logout failed', errors);
+            },
+            onFinish: () => {
+                // The backend will handle the redirect to /login
             }
         });
     };

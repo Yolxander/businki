@@ -102,6 +102,6 @@ class AuthController extends Controller
             'timestamp' => now()
         ]);
 
-        return redirect('/');
+        return redirect('/login');
     }
 }
