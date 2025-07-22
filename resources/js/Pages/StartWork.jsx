@@ -41,7 +41,8 @@ import {
     Flag,
     Maximize2,
     Minimize2,
-    Keyboard
+    Keyboard,
+    Zap
 } from 'lucide-react';
 
 function ShortcutsModal({ open, onClose }) {
@@ -326,6 +327,47 @@ export default function StartWork({ auth, task, error }) {
         } catch (error) {
             console.error('Failed to add subtask:', error);
             toast.error("Failed to add subtask. Please try again.");
+        }
+    };
+
+    const generateSubtasks = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/tasks/${transformedTask.id}/generate-subtasks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    max_subtasks: 5
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                const newSubtasks = result.data;
+
+                // Transform the subtasks to match the local state format
+                const transformedSubtasks = newSubtasks.map(subtask => ({
+                    id: subtask.id,
+                    text: subtask.description,
+                    completed: false,
+                    completedAt: null
+                }));
+
+                // Add new subtasks to the existing list
+                setSubtasks(prev => [...prev, ...transformedSubtasks]);
+                toast.success(`Generated ${newSubtasks.length} subtasks successfully`);
+            } else {
+                const error = await response.json();
+                toast.error(error.message || 'Failed to generate subtasks');
+            }
+        } catch (error) {
+            console.error('Error generating subtasks:', error);
+            toast.error('Failed to generate subtasks');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -642,8 +684,26 @@ export default function StartWork({ auth, task, error }) {
                                 {/* Subtasks */}
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Subtasks</CardTitle>
-                                        <CardDescription>Manage your task breakdown</CardDescription>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle>Subtasks</CardTitle>
+                                                <CardDescription>Manage your task breakdown</CardDescription>
+                                            </div>
+                                            <Button
+                                                onClick={generateSubtasks}
+                                                disabled={loading}
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex items-center space-x-2"
+                                            >
+                                                {loading ? (
+                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <Zap className="w-4 h-4" />
+                                                )}
+                                                <span>Generate with AI</span>
+                                            </Button>
+                                        </div>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="space-y-3">

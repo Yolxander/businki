@@ -392,4 +392,148 @@ class AIGenerationController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Generate subtasks for a specific task
+     */
+    public function generateSubtasks(Request $request, $taskId): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'max_subtasks' => 'integer|min:1|max:10',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $task = Task::with(['project', 'project.client'])->findOrFail($taskId);
+
+            // Build context for AI generation
+            $context = [
+                'task_title' => $task->title,
+                'task_description' => $task->description,
+                'task_priority' => $task->priority,
+                'task_status' => $task->status,
+                'project_title' => $task->project->title ?? 'No Project',
+                'project_description' => $task->project->description ?? '',
+                'client_name' => $task->project->client ?
+                    $task->project->client->first_name . ' ' . $task->project->client->last_name : 'No Client',
+            ];
+
+            $maxSubtasks = $request->get('max_subtasks', 5);
+
+            // Generate subtasks using AI
+            $prompt = $this->buildSubtaskPrompt($context, $maxSubtasks);
+            $aiResponse = $this->openAIService->generateChatCompletionWithParams(
+                $prompt,
+                config('services.openai.model'),
+                0.7,
+                2000
+            );
+
+            if (!isset($aiResponse['content'])) {
+                throw new \Exception('Failed to generate subtasks');
+            }
+
+            // Parse the AI response to extract subtasks
+            $subtasks = $this->parseSubtasksFromResponse($aiResponse['content']);
+
+            // Create subtasks in database
+            $createdSubtasks = DB::transaction(function () use ($subtasks, $task) {
+                $createdSubtasks = [];
+
+                foreach ($subtasks as $subtaskText) {
+                    $subtask = Subtask::create([
+                        'task_id' => $task->id,
+                        'description' => $subtaskText,
+                        'status' => 'todo'
+                    ]);
+
+                    $createdSubtasks[] = $subtask;
+                }
+
+                Log::info('AI-generated subtasks created', [
+                    'task_id' => $task->id,
+                    'subtask_count' => count($createdSubtasks),
+                    'user_id' => auth()->id()
+                ]);
+
+                return $createdSubtasks;
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Subtasks generated successfully',
+                'data' => $createdSubtasks
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to generate subtasks', [
+                'task_id' => $taskId,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to generate subtasks: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Build prompt for subtask generation
+     */
+    private function buildSubtaskPrompt(array $context, int $maxSubtasks): string
+    {
+        return "You are a professional project management assistant. Based on the following task and project information, generate {$maxSubtasks} specific, actionable subtasks that will help complete this task.
+
+Task Information:
+- Title: {$context['task_title']}
+- Description: {$context['task_description']}
+- Priority: {$context['task_priority']}
+- Status: {$context['task_status']}
+
+Project Information:
+- Project: {$context['project_title']}
+- Project Description: {$context['project_description']}
+- Client: {$context['client_name']}
+
+Please generate exactly {$maxSubtasks} subtasks that are:
+1. Specific and actionable
+2. Logical steps to complete the main task
+3. Clear and concise (1-2 sentences each)
+4. Appropriate for the task priority and complexity
+
+Format your response as a numbered list, with each subtask on a new line starting with a number and period (e.g., '1. First subtask').";
+    }
+
+    /**
+     * Parse subtasks from AI response
+     */
+    private function parseSubtasksFromResponse(string $response): array
+    {
+        $lines = explode("\n", trim($response));
+        $subtasks = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            // Match numbered lines (1. 2. 3. etc.)
+            if (preg_match('/^\d+\.\s*(.+)$/', $line, $matches)) {
+                $subtasks[] = trim($matches[1]);
+            }
+            // Also match lines that start with - or *
+            elseif (preg_match('/^[-*]\s*(.+)$/', $line, $matches)) {
+                $subtasks[] = trim($matches[1]);
+            }
+        }
+
+        return array_filter($subtasks); // Remove empty entries
+    }
 }
