@@ -54,9 +54,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::resource('proposals', ProposalController::class);
 
     // Project routes
-    Route::apiResource('projects', ProjectController::class);
-    Route::post('/projects/new-client-project', [ProjectController::class, 'newClientProject']);
-    Route::post('/projects/connect-client', [ProjectController::class, 'connectClientForProject']);
+
 
     // Subscription routes
     Route::prefix('subscriptions')->group(function () {

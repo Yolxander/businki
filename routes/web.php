@@ -6,8 +6,10 @@ use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\ToolController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProjectController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 Route::get('/', function () {
     return view('welcome');
@@ -49,13 +51,7 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('analytics');
-    Route::get('/projects', function () {
-        return Inertia::render('Projects', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-        ]);
-    })->name('projects');
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/clients', function () {
         return Inertia::render('Clients', [
             'auth' => [
@@ -164,30 +160,16 @@ Route::get('/tasks/{id}/start-work', function ($id) {
     ]);
 })->name('tasks.start-work');
 
-Route::get('/projects/{id}/edit', function ($id) {
-    return Inertia::render('EditProject', [
-        'auth' => [
-            'user' => Auth::user(),
-        ],
-        'projectId' => $id,
-    ]);
-})->name('projects.edit');
+
     Route::get('/calendar', [App\Http\Controllers\CalendarController::class, 'index'])->name('calendar');
-    Route::get('/projects/create', function () {
-        return Inertia::render('CreateProject', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-        ]);
-    })->name('projects.create');
-    Route::get('/projects/{id}', function ($id) {
-        return Inertia::render('ProjectDetails', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-            'projectId' => $id,
-        ]);
-    })->name('projects.show');
+    Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
+    Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
+    Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
+    Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+    Route::post('/projects/new-client-project', [ProjectController::class, 'newClientProject'])->name('projects.new-client-project');
+    Route::post('/projects/connect-client', [ProjectController::class, 'connectClientForProject'])->name('projects.connect-client');
     Route::get('/ai-settings', function () {
         return Inertia::render('AISettings', [
             'auth' => [

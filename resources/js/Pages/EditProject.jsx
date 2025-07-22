@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,127 +10,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Save, Building, Calendar, DollarSign, Users, Target, Plus, X, FileText, Clock, Star } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
 
-export default function EditProject({ auth, projectId }) {
-    const [newTag, setNewTag] = useState('');
-    const [newPhase, setNewPhase] = useState('');
+export default function EditProject({ auth, project, clients, projectId }) {
+    const { success, error } = useToast();
 
-    // Mock project data - in real app this would come from props
-    const project = {
+    // Use real project data from props
+    const projectData = project || {
         id: projectId,
-        name: 'Website Redesign',
-        description: 'Complete redesign of the company website with modern design, improved user experience, and better conversion optimization.',
-        client: 'acme-corp',
-        status: 'in-progress',
-        priority: 'high',
-        startDate: '2024-01-15',
-        endDate: '2024-03-15',
-        budget: '25000',
-        actualCost: '18000',
-        progress: 65,
-        tags: ['Design', 'Development', 'SEO'],
-        team: [
-            { id: 1, name: 'John Smith', role: 'Project Manager', email: 'john@example.com' },
-            { id: 2, name: 'Sarah Johnson', role: 'Designer', email: 'sarah@example.com' },
-            { id: 3, name: 'Mike Wilson', role: 'Developer', email: 'mike@example.com' }
-        ],
-        phases: [
-            { id: 1, name: 'Discovery & Planning', status: 'completed', startDate: '2024-01-15', endDate: '2024-01-30' },
-            { id: 2, name: 'Design Phase', status: 'in-progress', startDate: '2024-02-01', endDate: '2024-02-15' },
-            { id: 3, name: 'Development', status: 'pending', startDate: '2024-02-16', endDate: '2024-03-01' },
-            { id: 4, name: 'Testing & Launch', status: 'pending', startDate: '2024-03-02', endDate: '2024-03-15' }
-        ],
-        milestones: [
-            { id: 1, name: 'Project Kickoff', date: '2024-01-15', completed: true },
-            { id: 2, name: 'Design Approval', date: '2024-02-15', completed: false },
-            { id: 3, name: 'Development Complete', date: '2024-03-01', completed: false },
-            { id: 4, name: 'Go Live', date: '2024-03-15', completed: false }
-        ]
+        name: 'Loading...',
+        description: '',
+        status: 'not_started',
+        priority: 'medium',
+        kickoff_date: '',
+        due_date: '',
+        progress: 0,
+        current_phase: ''
     };
 
-    const { data, setData, put, processing, errors } = useForm({
-        name: project.name,
-        description: project.description,
-        client: project.client,
-        status: project.status,
-        priority: project.priority,
-        startDate: project.startDate,
-        endDate: project.endDate,
-        budget: project.budget,
-        tags: project.tags,
-        team: project.team,
-        phases: project.phases,
-        milestones: project.milestones
+    const [formData, setFormData] = useState({
+        name: projectData.name,
+        description: projectData.description,
+        client_id: projectData.client_id,
+        status: projectData.status,
+        priority: projectData.priority,
+        kickoff_date: projectData.kickoff_date ? projectData.kickoff_date.split('T')[0] : '',
+        start_date: projectData.start_date ? projectData.start_date.split('T')[0] : '',
+        due_date: projectData.due_date ? projectData.due_date.split('T')[0] : '',
+        notes: projectData.notes,
+        color: projectData.color,
+        progress: projectData.progress || 0,
+        current_phase: projectData.current_phase
     });
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState({});
 
-    // Mock data for dropdowns
-    const clients = [
-        { id: 'acme-corp', name: 'Acme Corporation' },
-        { id: 'techstart', name: 'TechStart Inc' },
-        { id: 'retailplus', name: 'RetailPlus' }
-    ];
+    // Use real clients data from props
+    const clientsData = clients || [];
 
-    const teamMembers = [
-        { id: 1, name: 'John Smith', role: 'Project Manager', email: 'john@example.com' },
-        { id: 2, name: 'Sarah Johnson', role: 'Designer', email: 'sarah@example.com' },
-        { id: 3, name: 'Mike Wilson', role: 'Developer', email: 'mike@example.com' },
-        { id: 4, name: 'Lisa Brown', role: 'QA Tester', email: 'lisa@example.com' },
-        { id: 5, name: 'David Lee', role: 'Content Writer', email: 'david@example.com' }
-    ];
 
-    const addTag = () => {
-        if (newTag.trim() && !data.tags.includes(newTag.trim())) {
-            setData('tags', [...data.tags, newTag.trim()]);
-            setNewTag('');
-        }
-    };
-
-    const removeTag = (tagToRemove) => {
-        setData('tags', data.tags.filter(tag => tag !== tagToRemove));
-    };
-
-    const addPhase = () => {
-        if (newPhase.trim()) {
-            const newPhaseObj = {
-                id: Date.now(),
-                name: newPhase.trim(),
-                status: 'pending',
-                startDate: '',
-                endDate: ''
-            };
-            setData('phases', [...data.phases, newPhaseObj]);
-            setNewPhase('');
-        }
-    };
-
-    const removePhase = (phaseId) => {
-        setData('phases', data.phases.filter(phase => phase.id !== phaseId));
-    };
-
-    const updatePhase = (phaseId, field, value) => {
-        setData('phases', data.phases.map(phase =>
-            phase.id === phaseId ? { ...phase, [field]: value } : phase
-        ));
-    };
-
-    const addTeamMember = (memberId) => {
-        const member = teamMembers.find(m => m.id === memberId);
-        if (member && !data.team.find(t => t.id === memberId)) {
-            setData('team', [...data.team, member]);
-        }
-    };
-
-    const removeTeamMember = (memberId) => {
-        setData('team', data.team.filter(member => member.id !== memberId));
-    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        put(`/projects/${projectId}`, {
+        setProcessing(true);
+        setErrors({});
+
+        router.put(`/projects/${projectId}`, formData, {
+            preserveScroll: true,
             onSuccess: () => {
-                console.log('Project updated successfully');
+                success('Project updated successfully!');
+                setProcessing(false);
             },
             onError: (errors) => {
+                error('Failed to update project. Please try again.');
+                setErrors(errors);
+                setProcessing(false);
                 console.error('Project update failed', errors);
             }
         });
@@ -185,11 +119,8 @@ export default function EditProject({ auth, projectId }) {
 
                 <form onSubmit={handleSubmit}>
                     <Tabs defaultValue="overview" className="space-y-6">
-                        <TabsList className="grid w-full grid-cols-4">
+                        <TabsList className="grid w-full grid-cols-1">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="team">Team</TabsTrigger>
-                            <TabsTrigger value="phases">Phases</TabsTrigger>
-                            <TabsTrigger value="milestones">Milestones</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="overview" className="space-y-6">
@@ -207,8 +138,8 @@ export default function EditProject({ auth, projectId }) {
                                                 <Label htmlFor="name">Project Name</Label>
                                                 <Input
                                                     id="name"
-                                                    value={data.name}
-                                                    onChange={(e) => setData('name', e.target.value)}
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
                                                     placeholder="Enter project name"
                                                     className={errors.name ? 'border-red-500' : ''}
                                                 />
@@ -219,8 +150,8 @@ export default function EditProject({ auth, projectId }) {
                                                 <Label htmlFor="description">Description</Label>
                                                 <Textarea
                                                     id="description"
-                                                    value={data.description}
-                                                    onChange={(e) => setData('description', e.target.value)}
+                                                    value={formData.description}
+                                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
                                                     placeholder="Describe the project in detail"
                                                     rows={4}
                                                     className={errors.description ? 'border-red-500' : ''}
@@ -228,17 +159,30 @@ export default function EditProject({ auth, projectId }) {
                                                 {errors.description && <p className="text-sm text-red-500 mt-1">{errors.description}</p>}
                                             </div>
 
+                                            <div>
+                                                <Label htmlFor="notes">Notes</Label>
+                                                <Textarea
+                                                    id="notes"
+                                                    value={formData.notes}
+                                                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                                    placeholder="Additional notes about the project"
+                                                    rows={3}
+                                                    className={errors.notes ? 'border-red-500' : ''}
+                                                />
+                                                {errors.notes && <p className="text-sm text-red-500 mt-1">{errors.notes}</p>}
+                                            </div>
+
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <Label htmlFor="client">Client</Label>
-                                                    <Select value={data.client} onValueChange={(value) => setData('client', value)}>
+                                                    <Label htmlFor="client_id">Client</Label>
+                                                    <Select value={formData.client_id} onValueChange={(value) => setFormData({...formData, client_id: value})}>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Select client" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {clients.map((client) => (
+                                                            {clientsData.map((client) => (
                                                                 <SelectItem key={client.id} value={client.id}>
-                                                                    {client.name}
+                                                                    {client.company_name || `${client.first_name} ${client.last_name}`}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -247,7 +191,7 @@ export default function EditProject({ auth, projectId }) {
 
                                                 <div>
                                                     <Label htmlFor="priority">Priority</Label>
-                                                    <Select value={data.priority} onValueChange={(value) => setData('priority', value)}>
+                                                    <Select value={formData.priority} onValueChange={(value) => setFormData({...formData, priority: value})}>
                                                         <SelectTrigger>
                                                             <SelectValue />
                                                         </SelectTrigger>
@@ -269,92 +213,82 @@ export default function EditProject({ auth, projectId }) {
                                             <CardDescription>Configure timeline, budget, and status</CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-3 gap-4">
                                                 <div>
-                                                    <Label htmlFor="startDate">Start Date</Label>
+                                                    <Label htmlFor="kickoff_date">Kickoff Date</Label>
                                                     <Input
-                                                        id="startDate"
+                                                        id="kickoff_date"
                                                         type="date"
-                                                        value={data.startDate}
-                                                        onChange={(e) => setData('startDate', e.target.value)}
+                                                        value={formData.kickoff_date}
+                                                        onChange={(e) => setFormData({...formData, kickoff_date: e.target.value})}
                                                     />
                                                 </div>
 
                                                 <div>
-                                                    <Label htmlFor="endDate">End Date</Label>
+                                                    <Label htmlFor="start_date">Start Date</Label>
                                                     <Input
-                                                        id="endDate"
+                                                        id="start_date"
                                                         type="date"
-                                                        value={data.endDate}
-                                                        onChange={(e) => setData('endDate', e.target.value)}
+                                                        value={formData.start_date}
+                                                        onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor="due_date">Due Date</Label>
+                                                    <Input
+                                                        id="due_date"
+                                                        type="date"
+                                                        value={formData.due_date}
+                                                        onChange={(e) => setFormData({...formData, due_date: e.target.value})}
                                                     />
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-3 gap-4">
                                                 <div>
-                                                    <Label htmlFor="budget">Budget</Label>
+                                                    <Label htmlFor="current_phase">Current Phase</Label>
                                                     <Input
-                                                        id="budget"
-                                                        value={data.budget}
-                                                        onChange={(e) => setData('budget', e.target.value)}
-                                                        placeholder="Enter budget amount"
+                                                        id="current_phase"
+                                                        value={formData.current_phase}
+                                                        onChange={(e) => setFormData({...formData, current_phase: e.target.value})}
+                                                        placeholder="Enter current phase"
                                                     />
                                                 </div>
 
                                                 <div>
                                                     <Label htmlFor="status">Status</Label>
-                                                    <Select value={data.status} onValueChange={(value) => setData('status', value)}>
+                                                    <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
                                                         <SelectTrigger>
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="planning">Planning</SelectItem>
-                                                            <SelectItem value="in-progress">In Progress</SelectItem>
-                                                            <SelectItem value="on-hold">On Hold</SelectItem>
+                                                            <SelectItem value="not_started">Not Started</SelectItem>
+                                                            <SelectItem value="in_progress">In Progress</SelectItem>
+                                                            <SelectItem value="paused">Paused</SelectItem>
                                                             <SelectItem value="completed">Completed</SelectItem>
-                                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                                            <SelectItem value="planned">Planned</SelectItem>
                                                         </SelectContent>
                                                     </Select>
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor="progress">Progress (%)</Label>
+                                                    <Input
+                                                        id="progress"
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        value={formData.progress}
+                                                        onChange={(e) => setFormData({...formData, progress: parseInt(e.target.value) || 0})}
+                                                        placeholder="0-100"
+                                                    />
                                                 </div>
                                             </div>
                                         </CardContent>
                                     </Card>
 
-                                    {/* Tags */}
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Tags</CardTitle>
-                                            <CardDescription>Add tags to categorize the project</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <div className="flex flex-wrap gap-2">
-                                                {data.tags.map((tag, index) => (
-                                                    <Badge key={index} variant="outline" className="bg-muted/30">
-                                                        {tag}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeTag(tag)}
-                                                            className="ml-2 hover:text-red-500"
-                                                        >
-                                                            <X className="w-3 h-3" />
-                                                        </button>
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                            <div className="flex space-x-2">
-                                                <Input
-                                                    placeholder="Add new tag..."
-                                                    value={newTag}
-                                                    onChange={(e) => setNewTag(e.target.value)}
-                                                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                                                />
-                                                <Button type="button" onClick={addTag} disabled={!newTag.trim()}>
-                                                    <Plus className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+
                                 </div>
 
                                 {/* Sidebar */}
@@ -384,174 +318,31 @@ export default function EditProject({ auth, projectId }) {
                                         </CardHeader>
                                         <CardContent className="space-y-3">
                                             <div>
-                                                <h3 className="font-medium text-sm text-foreground">{data.name}</h3>
-                                                <p className="text-xs text-muted-foreground line-clamp-2">{data.description}</p>
+                                                <h3 className="font-medium text-sm text-foreground">{formData.name}</h3>
+                                                <p className="text-xs text-muted-foreground line-clamp-2">{formData.description}</p>
                                             </div>
                                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                                <span>Start: {data.startDate}</span>
-                                                <span>End: {data.endDate}</span>
+                                                <span>Kickoff: {formData.kickoff_date}</span>
+                                                <span>Due: {formData.due_date}</span>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <Badge className={getPriorityColor(data.priority)}>
-                                                    {data.priority}
+                                                <Badge className={getPriorityColor(formData.priority)}>
+                                                    {formData.priority}
                                                 </Badge>
-                                                <Badge className={getStatusColor(data.status)}>
-                                                    {data.status.replace('-', ' ')}
+                                                <Badge className={getStatusColor(formData.status)}>
+                                                    {formData.status.replace('_', ' ')}
                                                 </Badge>
                                             </div>
                                             <div className="text-xs text-muted-foreground">
-                                                Budget: ${data.budget}
+                                                Progress: {formData.progress}%
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                Phase: {formData.current_phase}
                                             </div>
                                         </CardContent>
                                     </Card>
                                 </div>
                             </div>
-                        </TabsContent>
-
-                        <TabsContent value="team" className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Team Members</CardTitle>
-                                    <CardDescription>Manage project team and roles</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-3">
-                                        {data.team.map((member) => (
-                                            <div key={member.id} className="flex items-center justify-between p-3 border rounded-md">
-                                                <div>
-                                                    <p className="font-medium text-sm">{member.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{member.role}</p>
-                                                    <p className="text-xs text-muted-foreground">{member.email}</p>
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => removeTeamMember(member.id)}
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div>
-                                        <Label>Add Team Member</Label>
-                                        <Select onValueChange={addTeamMember}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select team member" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {teamMembers.filter(member => !data.team.find(t => t.id === member.id)).map((member) => (
-                                                    <SelectItem key={member.id} value={member.id}>
-                                                        {member.name} - {member.role}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="phases" className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Project Phases</CardTitle>
-                                    <CardDescription>Define project phases and timelines</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-3">
-                                        {data.phases.map((phase) => (
-                                            <div key={phase.id} className="p-3 border rounded-md space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <Input
-                                                        value={phase.name}
-                                                        onChange={(e) => updatePhase(phase.id, 'name', e.target.value)}
-                                                        className="font-medium"
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => removePhase(phase.id)}
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    <Select value={phase.status} onValueChange={(value) => updatePhase(phase.id, 'status', value)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="pending">Pending</SelectItem>
-                                                            <SelectItem value="in-progress">In Progress</SelectItem>
-                                                            <SelectItem value="completed">Completed</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <Input
-                                                        type="date"
-                                                        value={phase.startDate}
-                                                        onChange={(e) => updatePhase(phase.id, 'startDate', e.target.value)}
-                                                        placeholder="Start Date"
-                                                    />
-                                                    <Input
-                                                        type="date"
-                                                        value={phase.endDate}
-                                                        onChange={(e) => updatePhase(phase.id, 'endDate', e.target.value)}
-                                                        placeholder="End Date"
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="flex space-x-2">
-                                        <Input
-                                            placeholder="Add new phase..."
-                                            value={newPhase}
-                                            onChange={(e) => setNewPhase(e.target.value)}
-                                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addPhase())}
-                                        />
-                                        <Button type="button" onClick={addPhase} disabled={!newPhase.trim()}>
-                                            <Plus className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="milestones" className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Project Milestones</CardTitle>
-                                    <CardDescription>Track important project milestones</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-3">
-                                        {data.milestones.map((milestone) => (
-                                            <div key={milestone.id} className="flex items-center space-x-3 p-3 border rounded-md">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={milestone.completed}
-                                                    onChange={(e) => {
-                                                        setData('milestones', data.milestones.map(m =>
-                                                            m.id === milestone.id ? { ...m, completed: e.target.checked } : m
-                                                        ));
-                                                    }}
-                                                />
-                                                <div className="flex-1">
-                                                    <p className={`font-medium text-sm ${milestone.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                                                        {milestone.name}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">{milestone.date}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
                         </TabsContent>
                     </Tabs>
                 </form>

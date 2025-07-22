@@ -82,11 +82,31 @@ export default function CreateProject({ auth, clients }) {
             return;
         }
 
-        // In a real app, you would submit this to your API
-        console.log('Creating project:', formData);
+        // Prepare the data for submission
+        const projectData = {
+            name: formData.name,
+            description: formData.description,
+            client_id: formData.client_id,
+            status: formData.status,
+            priority: formData.priority,
+            kickoff_date: formData.start_date,
+            start_date: formData.start_date,
+            due_date: formData.due_date,
+            current_phase: 'Planning', // Default phase
+            progress: 0, // Default progress
+            notes: '', // Default notes
+            color: null // Default color
+        };
 
-        // For demo purposes, redirect to projects page
-        router.visit('/projects');
+        // Submit to the ProjectController@store method
+        router.post('/projects', projectData, {
+            onSuccess: () => {
+                // Success will be handled by the controller redirect
+            },
+            onError: (errors) => {
+                setErrors(errors);
+            }
+        });
     };
 
     const getStatusColor = (status) => {

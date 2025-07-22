@@ -17,58 +17,20 @@ import {
     FileText
 } from 'lucide-react';
 
-export default function Projects({ auth }) {
-    const projects = [
-        {
-            id: 1,
-            name: 'Website Redesign',
-            client: 'Acme Corp',
-            status: 'in-progress',
-            progress: 65,
-            dueDate: '2024-02-15',
-            tasks: { completed: 8, total: 12 },
-            priority: 'high'
-        },
-        {
-            id: 2,
-            name: 'Brand Identity',
-            client: 'TechStart',
-            status: 'completed',
-            progress: 100,
-            dueDate: '2024-01-30',
-            tasks: { completed: 15, total: 15 },
-            priority: 'medium'
-        },
-        {
-            id: 3,
-            name: 'Mobile App',
-            client: 'InnovateLab',
-            status: 'planned',
-            progress: 0,
-            dueDate: '2024-03-01',
-            tasks: { completed: 0, total: 20 },
-            priority: 'high'
-        },
-        {
-            id: 4,
-            name: 'E-commerce Platform',
-            client: 'RetailPlus',
-            status: 'in-progress',
-            progress: 35,
-            dueDate: '2024-02-28',
-            tasks: { completed: 7, total: 20 },
-            priority: 'medium'
-        }
-    ];
+export default function Projects({ auth, projects = [] }) {
 
     const getStatusColor = (status) => {
         switch (status) {
             case 'completed':
                 return 'bg-green-100 text-green-800';
-            case 'in-progress':
+            case 'in_progress':
                 return 'bg-blue-100 text-blue-800';
-            case 'planned':
+            case 'not_started':
                 return 'bg-gray-100 text-gray-800';
+            case 'planned':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'paused':
+                return 'bg-orange-100 text-orange-800';
             default:
                 return 'bg-gray-100 text-gray-800';
         }
@@ -144,16 +106,18 @@ export default function Projects({ auth }) {
                                         <CardTitle className="text-lg">{project.name}</CardTitle>
                                         <CardDescription className="flex items-center mt-1">
                                             <Users className="w-4 h-4 mr-1" />
-                                            {project.client}
+                                            {project.client ? `${project.client.first_name} ${project.client.last_name}` : 'No Client'}
                                         </CardDescription>
                                     </div>
                                     <div className="flex flex-col items-end space-y-1">
                                         <Badge className={getStatusColor(project.status)}>
-                                            {project.status.replace('-', ' ')}
+                                            {project.status.replace('_', ' ')}
                                         </Badge>
-                                        <Badge className={getPriorityColor(project.priority)} size="sm">
-                                            {project.priority}
-                                        </Badge>
+                                        {project.priority && (
+                                            <Badge className={getPriorityColor(project.priority)} size="sm">
+                                                {project.priority}
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
                             </CardHeader>
@@ -162,12 +126,12 @@ export default function Projects({ auth }) {
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-sm font-medium text-foreground">Progress</span>
-                                        <span className="text-sm text-muted-foreground">{project.progress}%</span>
+                                        <span className="text-sm text-muted-foreground">{project.progress || 0}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-2">
                                         <div
                                             className="bg-primary h-2 rounded-full transition-all duration-300"
-                                            style={{ width: `${project.progress}%` }}
+                                            style={{ width: `${project.progress || 0}%` }}
                                         ></div>
                                     </div>
                                 </div>
@@ -177,13 +141,13 @@ export default function Projects({ auth }) {
                                     <div className="flex items-center">
                                         <Target className="w-4 h-4 mr-1 text-muted-foreground" />
                                         <span className="text-muted-foreground">
-                                            {project.tasks.completed}/{project.tasks.total} tasks
+                                            {project.tasks ? `${project.tasks.filter(t => t.status === 'completed').length}/${project.tasks.length} tasks` : '0/0 tasks'}
                                         </span>
                                     </div>
                                     <div className="flex items-center">
                                         <Calendar className="w-4 h-4 mr-1 text-muted-foreground" />
                                         <span className="text-muted-foreground">
-                                            {new Date(project.dueDate).toLocaleDateString()}
+                                            {project.due_date ? new Date(project.due_date).toLocaleDateString() : 'No due date'}
                                         </span>
                                     </div>
                                 </div>

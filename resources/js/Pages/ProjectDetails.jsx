@@ -26,110 +26,34 @@ import {
 export default function ProjectDetails({ auth, project }) {
     const [activeTab, setActiveTab] = useState('overview');
 
-    // Sample project data (in real app, this would come from props)
+    // Use real project data or fallback to mock data for development
     const projectData = project || {
         id: 1,
         name: 'Website Redesign',
         description: 'Complete redesign of the company website with modern UI/UX, responsive design, and improved performance.',
-        client: 'Acme Corp',
-        status: 'in-progress',
+        client: { first_name: 'Acme', last_name: 'Corp' },
+        status: 'in_progress',
         priority: 'high',
         progress: 65,
-        startDate: '2024-01-15',
-        dueDate: '2024-02-15',
-        budget: 15000,
-        actualCost: 8500,
-        tasks: [
-            {
-                id: 1,
-                title: 'Design homepage mockups',
-                status: 'completed',
-                priority: 'high',
-                assignee: 'Alex Johnson',
-                dueDate: '2024-01-25',
-                completed: true
-            },
-            {
-                id: 2,
-                title: 'Develop responsive layout',
-                status: 'in-progress',
-                priority: 'high',
-                assignee: 'Maria Garcia',
-                dueDate: '2024-02-05',
-                completed: false
-            },
-            {
-                id: 3,
-                title: 'Implement user authentication',
-                status: 'todo',
-                priority: 'medium',
-                assignee: 'David Chen',
-                dueDate: '2024-02-10',
-                completed: false
-            },
-            {
-                id: 4,
-                title: 'Content migration',
-                status: 'todo',
-                priority: 'medium',
-                assignee: 'Sarah Wilson',
-                dueDate: '2024-02-12',
-                completed: false
-            }
-        ],
-        milestones: [
-            {
-                id: 1,
-                title: 'Design Phase Complete',
-                date: '2024-01-25',
-                status: 'completed'
-            },
-            {
-                id: 2,
-                title: 'Development Phase Complete',
-                date: '2024-02-10',
-                status: 'in-progress'
-            },
-            {
-                id: 3,
-                title: 'Testing & Launch',
-                date: '2024-02-15',
-                status: 'pending'
-            }
-        ],
-        team: [
-            {
-                id: 1,
-                name: 'Alex Johnson',
-                role: 'UI/UX Designer',
-                avatar: 'AJ',
-                status: 'active'
-            },
-            {
-                id: 2,
-                name: 'Maria Garcia',
-                role: 'Frontend Developer',
-                avatar: 'MG',
-                status: 'active'
-            },
-            {
-                id: 3,
-                name: 'David Chen',
-                role: 'Backend Developer',
-                avatar: 'DC',
-                status: 'active'
-            }
-        ]
+        start_date: '2024-01-15',
+        due_date: '2024-02-15',
+        tasks: [],
+        milestones: [],
+        team: []
     };
 
     const getStatusColor = (status) => {
         switch (status) {
             case 'completed':
                 return 'bg-green-100 text-green-800';
-            case 'in-progress':
+            case 'in_progress':
                 return 'bg-blue-100 text-blue-800';
-            case 'planned':
+            case 'not_started':
                 return 'bg-gray-100 text-gray-800';
+            case 'planned':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'paused':
+                return 'bg-orange-100 text-orange-800';
             case 'pending':
                 return 'bg-yellow-100 text-yellow-800';
             default:
@@ -163,8 +87,8 @@ export default function ProjectDetails({ auth, project }) {
         }
     };
 
-    const completedTasks = projectData.tasks.filter(task => task.completed).length;
-    const totalTasks = projectData.tasks.length;
+    const completedTasks = projectData.tasks ? projectData.tasks.filter(task => task.status === 'completed').length : 0;
+    const totalTasks = projectData.tasks ? projectData.tasks.length : 0;
 
     return (
         <AuthenticatedLayout user={auth.user}>
@@ -181,7 +105,9 @@ export default function ProjectDetails({ auth, project }) {
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold text-foreground">{projectData.name}</h1>
-                            <p className="text-muted-foreground">Client: {projectData.client}</p>
+                            <p className="text-muted-foreground">
+                                Client: {projectData.client ? `${projectData.client.first_name} ${projectData.client.last_name}` : 'No Client'}
+                            </p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -234,8 +160,8 @@ export default function ProjectDetails({ auth, project }) {
                             <CardTitle className="text-sm font-medium text-muted-foreground">Budget</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-foreground">${projectData.actualCost.toLocaleString()}</div>
-                            <p className="text-xs text-muted-foreground">of ${projectData.budget.toLocaleString()}</p>
+                            <div className="text-2xl font-bold text-foreground">$0</div>
+                            <p className="text-xs text-muted-foreground">Budget not set</p>
                         </CardContent>
                     </Card>
 
@@ -244,7 +170,7 @@ export default function ProjectDetails({ auth, project }) {
                             <CardTitle className="text-sm font-medium text-muted-foreground">Team</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-foreground">{projectData.team.length}</div>
+                            <div className="text-2xl font-bold text-foreground">{projectData.team ? projectData.team.length : 0}</div>
                             <p className="text-xs text-muted-foreground">Members</p>
                         </CardContent>
                     </Card>
@@ -315,11 +241,15 @@ export default function ProjectDetails({ auth, project }) {
                                         </div>
                                         <div>
                                             <h3 className="font-medium text-foreground mb-2">Start Date</h3>
-                                            <p className="text-muted-foreground">{new Date(projectData.startDate).toLocaleDateString()}</p>
+                                            <p className="text-muted-foreground">
+                                                {projectData.start_date ? new Date(projectData.start_date).toLocaleDateString() : 'Not set'}
+                                            </p>
                                         </div>
                                         <div>
                                             <h3 className="font-medium text-foreground mb-2">Due Date</h3>
-                                            <p className="text-muted-foreground">{new Date(projectData.dueDate).toLocaleDateString()}</p>
+                                            <p className="text-muted-foreground">
+                                                {projectData.due_date ? new Date(projectData.due_date).toLocaleDateString() : 'Not set'}
+                                            </p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -331,25 +261,37 @@ export default function ProjectDetails({ auth, project }) {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        {projectData.tasks.slice(0, 3).map(task => (
-                                            <div key={task.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                                                <div className="flex items-center space-x-3">
-                                                    {getTaskStatusIcon(task.status)}
-                                                    <div>
-                                                        <h3 className="font-medium text-foreground">{task.title}</h3>
-                                                        <p className="text-sm text-muted-foreground">{task.assignee}</p>
+                                        {projectData.tasks && projectData.tasks.length > 0 ? (
+                                            projectData.tasks.slice(0, 3).map(task => (
+                                                <div key={task.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                                                    <div className="flex items-center space-x-3">
+                                                        {getTaskStatusIcon(task.status)}
+                                                        <div>
+                                                            <h3 className="font-medium text-foreground">{task.title}</h3>
+                                                            <p className="text-sm text-muted-foreground">{task.assignee || 'Unassigned'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        {task.priority && (
+                                                            <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                                {task.priority}
+                                                            </Badge>
+                                                        )}
+                                                        <span className="text-sm text-muted-foreground">
+                                                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                        {task.priority}
-                                                    </Badge>
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {new Date(task.dueDate).toLocaleDateString()}
-                                                    </span>
-                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <p className="text-muted-foreground">No tasks yet</p>
+                                                <Button className="mt-2" size="sm">
+                                                    <Plus className="w-4 h-4 mr-2" />
+                                                    Add First Task
+                                                </Button>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -383,18 +325,26 @@ export default function ProjectDetails({ auth, project }) {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        {projectData.milestones.map(milestone => (
-                                            <div key={milestone.id} className="flex items-center space-x-3">
-                                                <div className={`w-2 h-2 rounded-full ${
-                                                    milestone.status === 'completed' ? 'bg-green-500' :
-                                                    milestone.status === 'in-progress' ? 'bg-blue-500' : 'bg-gray-500'
-                                                }`}></div>
-                                                <div className="flex-1">
-                                                    <h3 className="text-sm font-medium text-foreground">{milestone.title}</h3>
-                                                    <p className="text-xs text-muted-foreground">{new Date(milestone.date).toLocaleDateString()}</p>
+                                        {projectData.milestones && projectData.milestones.length > 0 ? (
+                                            projectData.milestones.map(milestone => (
+                                                <div key={milestone.id} className="flex items-center space-x-3">
+                                                    <div className={`w-2 h-2 rounded-full ${
+                                                        milestone.status === 'completed' ? 'bg-green-500' :
+                                                        milestone.status === 'in-progress' ? 'bg-blue-500' : 'bg-gray-500'
+                                                    }`}></div>
+                                                    <div className="flex-1">
+                                                        <h3 className="text-sm font-medium text-foreground">{milestone.title}</h3>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {milestone.date ? new Date(milestone.date).toLocaleDateString() : 'No date set'}
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-4">
+                                                <p className="text-muted-foreground">No milestones yet</p>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -418,28 +368,48 @@ export default function ProjectDetails({ auth, project }) {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {projectData.tasks.map(task => (
-                                    <div key={task.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                                        <div className="flex items-center space-x-3">
-                                            {getTaskStatusIcon(task.status)}
-                                            <div>
-                                                <h3 className="font-medium text-foreground">{task.title}</h3>
-                                                <p className="text-sm text-muted-foreground">Assigned to {task.assignee}</p>
+                                {projectData.tasks && projectData.tasks.length > 0 ? (
+                                    projectData.tasks.map(task => (
+                                        <div key={task.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                                            <div className="flex items-center space-x-3">
+                                                {getTaskStatusIcon(task.status)}
+                                                <div>
+                                                    <h3 className="font-medium text-foreground">{task.title}</h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Assigned to {task.assignee || 'Unassigned'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                {task.priority && (
+                                                    <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                        {task.priority}
+                                                    </Badge>
+                                                )}
+                                                <span className="text-sm text-muted-foreground">
+                                                    Due {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
+                                                </span>
+                                                <Button variant="ghost" size="sm">
+                                                    <MoreVertical className="w-4 h-4" />
+                                                </Button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-2">
-                                            <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                {task.priority}
-                                            </Badge>
-                                            <span className="text-sm text-muted-foreground">
-                                                Due {new Date(task.dueDate).toLocaleDateString()}
-                                            </span>
-                                            <Button variant="ghost" size="sm">
-                                                <MoreVertical className="w-4 h-4" />
-                                            </Button>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-12">
+                                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Target className="w-8 h-8 text-muted-foreground" />
                                         </div>
+                                        <h3 className="text-lg font-medium text-foreground mb-2">No tasks yet</h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            Get started by creating your first task
+                                        </p>
+                                        <Button>
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Create Task
+                                        </Button>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -461,17 +431,33 @@ export default function ProjectDetails({ auth, project }) {
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {projectData.team.map(member => (
-                                    <div key={member.id} className="flex items-center space-x-3 p-4 border border-border rounded-lg">
-                                        <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
-                                            <span className="text-sm font-semibold text-primary-foreground">{member.avatar}</span>
+                                {projectData.team && projectData.team.length > 0 ? (
+                                    projectData.team.map(member => (
+                                        <div key={member.id} className="flex items-center space-x-3 p-4 border border-border rounded-lg">
+                                            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+                                                <span className="text-sm font-semibold text-primary-foreground">{member.avatar}</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-medium text-foreground">{member.name}</h3>
+                                                <p className="text-sm text-muted-foreground">{member.role}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className="font-medium text-foreground">{member.name}</h3>
-                                            <p className="text-sm text-muted-foreground">{member.role}</p>
+                                    ))
+                                ) : (
+                                    <div className="col-span-full text-center py-12">
+                                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Users className="w-8 h-8 text-muted-foreground" />
                                         </div>
+                                        <h3 className="text-lg font-medium text-foreground mb-2">No team members yet</h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            Add team members to collaborate on this project
+                                        </p>
+                                        <Button>
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Add Member
+                                        </Button>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -485,26 +471,44 @@ export default function ProjectDetails({ auth, project }) {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-6">
-                                {projectData.milestones.map((milestone, index) => (
-                                    <div key={milestone.id} className="flex items-start space-x-4">
-                                        <div className="flex flex-col items-center">
-                                            <div className={`w-4 h-4 rounded-full ${
-                                                milestone.status === 'completed' ? 'bg-green-500' :
-                                                milestone.status === 'in-progress' ? 'bg-blue-500' : 'bg-gray-500'
-                                            }`}></div>
-                                            {index < projectData.milestones.length - 1 && (
-                                                <div className="w-0.5 h-8 bg-gray-300 mt-2"></div>
-                                            )}
+                                {projectData.milestones && projectData.milestones.length > 0 ? (
+                                    projectData.milestones.map((milestone, index) => (
+                                        <div key={milestone.id} className="flex items-start space-x-4">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-4 h-4 rounded-full ${
+                                                    milestone.status === 'completed' ? 'bg-green-500' :
+                                                    milestone.status === 'in-progress' ? 'bg-blue-500' : 'bg-gray-500'
+                                                }`}></div>
+                                                {index < projectData.milestones.length - 1 && (
+                                                    <div className="w-0.5 h-8 bg-gray-300 mt-2"></div>
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-medium text-foreground">{milestone.title}</h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {milestone.date ? new Date(milestone.date).toLocaleDateString() : 'No date set'}
+                                                </p>
+                                                <Badge className={`mt-2 ${getStatusColor(milestone.status)}`}>
+                                                    {milestone.status.replace('-', ' ')}
+                                                </Badge>
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-medium text-foreground">{milestone.title}</h3>
-                                            <p className="text-sm text-muted-foreground">{new Date(milestone.date).toLocaleDateString()}</p>
-                                            <Badge className={`mt-2 ${getStatusColor(milestone.status)}`}>
-                                                {milestone.status.replace('-', ' ')}
-                                            </Badge>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-12">
+                                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Calendar className="w-8 h-8 text-muted-foreground" />
                                         </div>
+                                        <h3 className="text-lg font-medium text-foreground mb-2">No timeline yet</h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            Create milestones to track project progress
+                                        </p>
+                                        <Button>
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Add Milestone
+                                        </Button>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </CardContent>
                     </Card>
