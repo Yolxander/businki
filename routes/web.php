@@ -122,6 +122,13 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('bobbi-flow');
+    Route::get('/tasks', function () {
+        return Inertia::render('Tasks', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+        ]);
+    })->name('tasks.index');
     Route::get('/tasks/create', function () {
     return Inertia::render('CreateTask', [
         'auth' => [

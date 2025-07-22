@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('proposals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('intake_response_id')->constrained()->onDelete('cascade');
+            $table->foreignId('intake_response_id')->nullable()->constrained()->onDelete('set null');
             $table->text('scope');
             $table->json('deliverables');
             $table->json('timeline');

@@ -18,11 +18,40 @@ class Client extends Model
         'city',
         'state',
         'zip_code',
+        'company_name',
+        'website',
+        'description',
+        'status',
+        'total_revenue',
+        'last_contact',
+        'rating',
+        'contact_person',
+    ];
+
+    protected $casts = [
+        'total_revenue' => 'decimal:2',
+        'last_contact' => 'date',
+        'rating' => 'integer',
     ];
 
     public function intakes()
     {
         return $this->hasMany(Intake::class);
+    }
+
+    public function proposals()
+    {
+        return $this->hasMany(Proposal::class);
+    }
+
+    public function projects()
+    {
+        return $this->hasMany(Project::class);
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
     }
 
     public function getFullNameAttribute()
@@ -42,7 +71,7 @@ class Client extends Model
     /**
      * Get the proposals associated with the client through intakes.
      */
-    public function proposals()
+    public function proposalsThroughIntakes()
     {
         return Proposal::whereHas('intakeResponse.intake', function ($query) {
             $query->where('client_id', $this->id);

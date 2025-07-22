@@ -60,6 +60,11 @@ class User extends Authenticatable
         return $this->hasMany(Proposal::class);
     }
 
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     /**
      * Get the clients associated with the user.
      */

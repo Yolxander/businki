@@ -8,6 +8,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\ToolController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\ListingController;
@@ -56,6 +57,17 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::apiResource('projects', ProjectController::class);
     Route::post('/projects/new-client-project', [ProjectController::class, 'newClientProject']);
     Route::post('/projects/connect-client', [ProjectController::class, 'connectClientForProject']);
+
+    // Subscription routes
+    Route::prefix('subscriptions')->group(function () {
+        Route::get('/', [SubscriptionController::class, 'index']);
+        Route::post('/', [SubscriptionController::class, 'store']);
+        Route::get('/stats', [SubscriptionController::class, 'stats']);
+        Route::get('/clients', [SubscriptionController::class, 'getClients']);
+        Route::get('/{subscription}', [SubscriptionController::class, 'show']);
+        Route::put('/{subscription}', [SubscriptionController::class, 'update']);
+        Route::delete('/{subscription}', [SubscriptionController::class, 'destroy']);
+    });
 
     // Task routes
     Route::prefix('tasks')->group(function () {

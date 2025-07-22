@@ -192,10 +192,12 @@ export default function Dashboard({ auth, stats }) {
                                 View Calendar
                             </Button>
                         </Link>
-                        <Button>
-                            <Plus className="w-4 h-4 mr-2" />
-                            New Project
-                        </Button>
+                        <Link href="/projects/create">
+                            <Button>
+                                <Plus className="w-4 h-4 mr-2" />
+                                New Project
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 
@@ -239,46 +241,48 @@ export default function Dashboard({ auth, stats }) {
                             <CardContent>
                                 <div className="space-y-4">
                                     {recentProjects.map((project) => (
-                                        <div key={project.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                                            <div className="flex-1">
-                                                <div className="flex items-center space-x-3">
-                                                    <h3 className="font-medium text-foreground">{project.name}</h3>
-                                                    <div className="flex items-center">
-                                                        <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)} mr-2`}></div>
-                                                        <span className="text-sm text-muted-foreground">{getStatusText(project.status)}</span>
+                                        <Link key={project.id} href={`/projects/${project.id}`}>
+                                            <div className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center space-x-3">
+                                                        <h3 className="font-medium text-foreground">{project.name}</h3>
+                                                        <div className="flex items-center">
+                                                            <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)} mr-2`}></div>
+                                                            <span className="text-sm text-muted-foreground">{getStatusText(project.status)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground mt-1">{project.client}</p>
+                                                    <div className="flex items-center space-x-4 mt-2">
+                                                        <div className="flex items-center space-x-2">
+                                                            <Target className="w-4 h-4 text-muted-foreground" />
+                                                            <span className="text-sm text-muted-foreground">
+                                                                {project.tasks.completed}/{project.tasks.total} tasks
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                                                            <span className="text-sm text-muted-foreground">
+                                                                Due {new Date(project.dueDate).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground mt-1">{project.client}</p>
-                                                <div className="flex items-center space-x-4 mt-2">
-                                                    <div className="flex items-center space-x-2">
-                                                        <Target className="w-4 h-4 text-muted-foreground" />
-                                                        <span className="text-sm text-muted-foreground">
-                                                            {project.tasks.completed}/{project.tasks.total} tasks
-                                                        </span>
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-primary transition-all duration-300"
+                                                            style={{ width: `${project.progress}%` }}
+                                                        ></div>
                                                     </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                                                        <span className="text-sm text-muted-foreground">
-                                                            Due {new Date(project.dueDate).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
+                                                    <span className="text-sm font-medium text-muted-foreground">
+                                                        {project.progress}%
+                                                    </span>
+                                                    <Button variant="ghost" size="sm">
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center space-x-2">
-                                                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-primary transition-all duration-300"
-                                                        style={{ width: `${project.progress}%` }}
-                                                    ></div>
-                                                </div>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                                                    {project.progress}%
-                                                </span>
-                                                <Button variant="ghost" size="sm">
-                                                    <Eye className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             </CardContent>
@@ -294,22 +298,30 @@ export default function Dashboard({ auth, stats }) {
                                 <CardDescription className="text-muted-foreground">Get things done faster</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <Button className="w-full justify-start" variant="outline">
-                                    <Users className="w-4 h-4 mr-2" />
-                                    Add New Client
-                                </Button>
-                                <Button className="w-full justify-start" variant="outline">
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    Create Project
-                                </Button>
-                                <Button className="w-full justify-start" variant="outline">
-                                    <Target className="w-4 h-4 mr-2" />
-                                    Add Task
-                                </Button>
-                                <Button className="w-full justify-start" variant="outline">
-                                    <Zap className="w-4 h-4 mr-2" />
-                                    Generate Proposal
-                                </Button>
+                                <Link href="/clients/create">
+                                    <Button className="w-full justify-start" variant="outline">
+                                        <Users className="w-4 h-4 mr-2" />
+                                        Add New Client
+                                    </Button>
+                                </Link>
+                                <Link href="/projects/create">
+                                    <Button className="w-full justify-start" variant="outline">
+                                        <FileText className="w-4 h-4 mr-2" />
+                                        Create Project
+                                    </Button>
+                                </Link>
+                                <Link href="/tasks/create">
+                                    <Button className="w-full justify-start" variant="outline">
+                                        <Target className="w-4 h-4 mr-2" />
+                                        Add Task
+                                    </Button>
+                                </Link>
+                                <Link href="/proposals/create">
+                                    <Button className="w-full justify-start" variant="outline">
+                                        <Zap className="w-4 h-4 mr-2" />
+                                        Generate Proposal
+                                    </Button>
+                                </Link>
                             </CardContent>
                         </Card>
 
@@ -322,23 +334,25 @@ export default function Dashboard({ auth, stats }) {
                             <CardContent>
                                 <div className="space-y-4">
                                     {recentTasks.map((task) => (
-                                        <div key={task.id} className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                                            {getTaskStatusIcon(task.status)}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-foreground truncate">
-                                                    {task.title}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">{task.project}</p>
-                                                <div className="flex items-center space-x-2 mt-1">
-                                                    <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                        {task.priority}
-                                                    </Badge>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Due {new Date(task.dueDate).toLocaleDateString()}
-                                                    </span>
+                                        <Link key={task.id} href={`/tasks/${task.id}`}>
+                                            <div className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                                {getTaskStatusIcon(task.status)}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-foreground truncate">
+                                                        {task.title}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">{task.project}</p>
+                                                    <div className="flex items-center space-x-2 mt-1">
+                                                        <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                            {task.priority}
+                                                        </Badge>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Due {new Date(task.dueDate).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             </CardContent>
@@ -366,18 +380,20 @@ export default function Dashboard({ auth, stats }) {
                         <CardContent>
                             <div className="space-y-4">
                                 {statsData.recentProposals.map((proposal) => (
-                                    <div key={proposal.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                                        <div>
-                                            <h3 className="font-medium text-foreground">{proposal.title}</h3>
-                                            <p className="text-sm text-muted-foreground">{proposal.client_name}</p>
+                                    <Link key={proposal.id} href={`/proposals/${proposal.id}`}>
+                                        <div className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                            <div>
+                                                <h3 className="font-medium text-foreground">{proposal.title}</h3>
+                                                <p className="text-sm text-muted-foreground">{proposal.client_name}</p>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Badge variant={proposal.status === 'draft' ? 'outline' : 'default'}>
+                                                    {proposal.status}
+                                                </Badge>
+                                                <span className="text-sm text-muted-foreground">{proposal.created_at}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center space-x-2">
-                                            <Badge variant={proposal.status === 'draft' ? 'outline' : 'default'}>
-                                                {proposal.status}
-                                            </Badge>
-                                            <span className="text-sm text-muted-foreground">{proposal.created_at}</span>
-                                        </div>
-                                    </div>
+                                    </Link>
                                 ))}
                             </div>
                         </CardContent>

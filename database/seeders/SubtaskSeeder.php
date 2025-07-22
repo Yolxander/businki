@@ -10,34 +10,81 @@ class SubtaskSeeder extends Seeder
 {
     public function run(): void
     {
-        $taskId = DB::table('tasks')->value('id');
-        $providerId = DB::table('providers')->value('id');
+        $taskIds = DB::table('tasks')->pluck('id')->toArray();
 
-        DB::table('subtasks')->insert([
+        $subtasks = [
             [
-                'title' => 'Initialize git',
-                'description' => 'Run git init in project folder',
+                'description' => 'Initialize git repository and set up remote',
                 'status' => 'todo',
-                'completed' => false,
-                'task_id' => $taskId,
-                'provider_id' => $providerId,
-                'code_snippet' => 'git init',
-                'language' => 'bash',
+                'task_id' => $taskIds[0] ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'title' => 'Add Tailwind to project',
+                'description' => 'Create README.md with project overview',
+                'status' => 'done',
+                'task_id' => $taskIds[0] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'description' => 'Set up .gitignore file',
+                'status' => 'done',
+                'task_id' => $taskIds[0] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'description' => 'Install and configure TailwindCSS',
                 'status' => 'in_progress',
-                'completed' => false,
-                'task_id' => $taskId,
-                'provider_id' => $providerId,
-                'code_snippet' => 'npm install -D tailwindcss postcss autoprefixer',
-                'language' => 'bash',
+                'task_id' => $taskIds[1] ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-        ]);
+            [
+                'description' => 'Create base component library',
+                'status' => 'todo',
+                'task_id' => $taskIds[1] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'description' => 'Design color palette and typography',
+                'status' => 'todo',
+                'task_id' => $taskIds[1] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'description' => 'Create wireframes for landing page',
+                'status' => 'todo',
+                'task_id' => $taskIds[2] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'description' => 'Implement responsive navigation',
+                'status' => 'todo',
+                'task_id' => $taskIds[2] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'description' => 'Design database schema',
+                'status' => 'done',
+                'task_id' => $taskIds[4] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'description' => 'Create database migrations',
+                'status' => 'done',
+                'task_id' => $taskIds[4] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        ];
+
+        DB::table('subtasks')->insert($subtasks);
     }
 }
