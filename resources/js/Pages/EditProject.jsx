@@ -57,10 +57,6 @@ export default function EditProject({ auth, project, clients, projectId }) {
 
         router.put(`/projects/${projectId}`, formData, {
             preserveScroll: true,
-            onSuccess: () => {
-                success('Project updated successfully!');
-                setProcessing(false);
-            },
             onError: (errors) => {
                 error('Failed to update project. Please try again.');
                 setErrors(errors);

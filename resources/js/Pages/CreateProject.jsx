@@ -113,11 +113,6 @@ export default function CreateProject({ auth, clients }) {
 
         // Submit to the ProjectController@store method
         router.post('/projects', projectData, {
-            onSuccess: () => {
-                // Show success toast
-                toast.success(`${formData.name} has been created successfully!`);
-                // Success will be handled by the controller redirect
-            },
             onError: (errors) => {
                 setErrors(errors);
                 // Show error toast

@@ -360,7 +360,9 @@ class ProjectController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
 
-            return back()->with('success', 'Project updated successfully!')->with('requestId', $requestId);
+            return redirect()->route('projects.show', $project->id)
+                ->with('success', 'Project updated successfully!')
+                ->with('requestId', $requestId);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error("[$requestId] Validation failed for project update", [
@@ -402,8 +404,21 @@ class ProjectController extends Controller
                 'user_email' => auth()->user()?->email,
                 'project_id' => $project->id,
                 'project_name' => $project->name,
+                'project_user_id' => $project->user_id,
                 'timestamp' => now()->toISOString()
             ]);
+
+            // Check if the project belongs to the current user
+            if ($project->user_id !== auth()->id()) {
+                Log::warning("[$requestId] Unauthorized project deletion attempt", [
+                    'user_id' => auth()->id(),
+                    'project_id' => $project->id,
+                    'project_user_id' => $project->user_id,
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
 
             $projectName = $project->name;
             $projectId = $project->id;
@@ -417,6 +432,12 @@ class ProjectController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
 
+            // For Inertia.js requests, use Inertia::location to avoid method preservation
+            if (request()->header('X-Inertia')) {
+                return Inertia::location(route('projects.index'));
+            }
+
+            // For regular requests, redirect
             return redirect()->route('projects.index')
                 ->with('success', "Project '$projectName' deleted successfully!")
                 ->with('requestId', $requestId);
@@ -432,7 +453,8 @@ class ProjectController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
 
-            return back()->withErrors(['general' => 'Failed to delete project. Please try again.']);
+            return redirect()->route('projects.index')
+                ->withErrors(['general' => 'Failed to delete project. Please try again.']);
         }
     }
 

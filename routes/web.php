@@ -289,14 +289,11 @@ Route::get('/tasks/{id}/start-work', function ($id) {
     Route::post('/api/context-engineering/documents', [App\Http\Controllers\Api\ContextEngineeringController::class, 'store']);
     Route::put('/api/context-engineering/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'update']);
     Route::delete('/api/context-engineering/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'destroy']);
-    Route::post('/api/context-engineering/project', [App\Http\Controllers\Api\ContextEngineeringController::class, 'createProject']);
     Route::post('/api/context-engineering/generate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'generate']);
     Route::post('/api/context-engineering/upload', [App\Http\Controllers\Api\ContextEngineeringController::class, 'upload']);
     Route::post('/api/context-engineering/documents/{document}/version', [App\Http\Controllers\Api\ContextEngineeringController::class, 'createVersion']);
     Route::patch('/api/context-engineering/documents/{document}/activate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'activate']);
     Route::get('/api/context-engineering/templates', [App\Http\Controllers\Api\ContextEngineeringController::class, 'templates']);
-    Route::get('/api/context-engineering/projects', [App\Http\Controllers\Api\ContextEngineeringController::class, 'projects']);
-    Route::delete('/api/context-engineering/projects/{project}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'deleteProject']);
     Route::post('/api/context-engineering/documents/{document}/regenerate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'regenerateDocument']);
     Route::get('/api/context-engineering/types', [App\Http\Controllers\Api\ContextEngineeringController::class, 'types']);
     Route::get('/api/context-engineering/stats', [App\Http\Controllers\Api\ContextEngineeringController::class, 'stats']);

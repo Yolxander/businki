@@ -5,6 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
     ArrowLeft,
     Edit,
     Plus,
@@ -94,17 +105,15 @@ export default function ProjectDetails({ auth, project }) {
     const totalTasks = projectData.tasks ? projectData.tasks.length : 0;
 
     const handleDeleteProject = () => {
-        if (confirm(`Are you sure you want to delete "${projectData.name}"? This action cannot be undone.`)) {
-            router.delete(`/projects/${projectData.id}`, {
-                onSuccess: () => {
-                    toast.success(`Project "${projectData.name}" has been deleted successfully!`);
-                    router.visit('/projects');
-                },
-                onError: (errors) => {
-                    toast.error('Failed to delete project. Please try again.');
-                }
-            });
-        }
+        const deleteUrl = `/projects/${projectData.id}`;
+        console.log('Attempting to delete project:', projectData.id);
+        console.log('Delete URL:', deleteUrl);
+        router.delete(deleteUrl, {
+            onError: (errors) => {
+                console.error('Delete project error:', errors);
+                toast.error('Failed to delete project. Please try again.');
+            }
+        });
     };
 
     return (
@@ -333,14 +342,35 @@ export default function ProjectDetails({ auth, project }) {
                                         <Download className="w-4 h-4 mr-2" />
                                         Export Report
                                     </Button>
-                                    <Button
-                                        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        variant="outline"
-                                        onClick={handleDeleteProject}
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete Project
-                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button
+                                                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                variant="outline"
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Delete Project
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete the project
+                                                    "{projectData.name}" and remove all associated data from our servers.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    onClick={handleDeleteProject}
+                                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                                >
+                                                    Delete Project
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </CardContent>
                             </Card>
 
