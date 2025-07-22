@@ -367,7 +367,7 @@ export default function TaskDetails({ auth, task, error }) {
         }
     };
 
-    const progressPercentage = (transformedTask.subtasks.filter(st => st.completed).length / transformedTask.subtasks.length) * 100;
+
 
     return (
         <AuthenticatedLayout user={auth.user}>
@@ -443,7 +443,7 @@ export default function TaskDetails({ auth, task, error }) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-lg font-semibold text-foreground">
-                                {transformedTask.subtasks.filter(st => st.completed).length}/{transformedTask.subtasks.length}
+                                {subtasks.filter(st => st.completed).length}/{subtasks.length}
                             </div>
                             <p className="text-xs text-muted-foreground">Subtasks completed</p>
                         </CardContent>
@@ -690,12 +690,12 @@ export default function TaskDetails({ auth, task, error }) {
                                         <CardTitle>Subtasks</CardTitle>
                                         <div className="flex items-center space-x-2 mt-1">
                                             <span className="text-sm text-muted-foreground">
-                                                {transformedTask.subtasks.filter(st => st.completed).length} of {transformedTask.subtasks.length} completed
+                                                {subtasks.filter(st => st.completed).length} of {subtasks.length} completed
                                             </span>
                                             <div className="w-20 bg-muted rounded-full h-2">
                                                 <div
                                                     className="bg-primary h-2 rounded-full transition-all duration-300"
-                                                    style={{ width: `${progressPercentage}%` }}
+                                                    style={{ width: `${subtasks.length > 0 ? (subtasks.filter(st => st.completed).length / subtasks.length) * 100 : 0}%` }}
                                                 ></div>
                                             </div>
                                         </div>
