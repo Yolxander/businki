@@ -4,39 +4,49 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
     ArrowLeft,
     Edit,
-    Plus,
-    Users,
     Calendar,
-    Target,
-    CheckCircle,
     Clock,
-    AlertCircle,
-    FileText,
-    DollarSign,
+    User,
+    Building,
+    Tag,
     MessageSquare,
+    CheckCircle,
+    AlertCircle,
+    Circle,
+    Play,
+    Pause,
+    Eye,
+    CheckCircle2,
+    Plus,
+    MoreHorizontal,
+    Trash2,
+    Copy,
+    ExternalLink,
+    FileText,
+    Link as LinkIcon,
+    Flag,
+    Star,
+    Target,
+    MessageSquare as MessageSquareIcon,
     Download,
     Share,
     MoreVertical,
-    Trash2
+    Trash2 as Trash2Icon
 } from 'lucide-react';
-import { useToast } from '@/components/ui/toast';
 
 export default function ProjectDetails({ auth, project }) {
-    const { toast } = useToast();
     const [activeTab, setActiveTab] = useState('overview');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 

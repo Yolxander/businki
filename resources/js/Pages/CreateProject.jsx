@@ -4,22 +4,29 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { DatePicker } from '@/components/ui/date-picker';
-import { useToast } from '@/components/ui/toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 import {
     ArrowLeft,
     Save,
-    Plus,
-    Users,
     Calendar,
+    Clock,
+    User,
+    Building,
+    Tag,
+    Target,
+    AlertCircle,
     DollarSign,
     FileText,
-    Target,
-    AlertCircle
+    Target as TargetIcon,
+    AlertCircle as AlertCircleIcon
 } from 'lucide-react';
 
 export default function CreateProject({ auth, clients }) {
-    const { toast } = useToast();
     const [formData, setFormData] = useState({
         name: '',
         description: '',

@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/toast';
+import { toast } from 'sonner';
 import {
     ArrowLeft,
     Play,
@@ -57,15 +57,16 @@ function ShortcutsModal({ open, onClose }) {
                         <X className="w-5 h-5" />
                     </button>
                     <h2 className="text-xl font-bold mb-4">Keyboard Shortcuts</h2>
+                    <p className="text-sm text-muted-foreground mb-4">Press B + the following keys:</p>
                     <ul className="space-y-2 text-sm">
-                        <li><span className="font-mono bg-muted px-2 py-1 rounded">f</span> — Toggle Full Screen</li>
-                        <li><span className="font-mono bg-muted px-2 py-1 rounded">s</span> — Start/Pause Work</li>
-                        <li><span className="font-mono bg-muted px-2 py-1 rounded">e</span> — Stop Work</li>
-                        <li><span className="font-mono bg-muted px-2 py-1 rounded">1</span> — Work Area tab</li>
-                        <li><span className="font-mono bg-muted px-2 py-1 rounded">2</span> — Work Notes tab</li>
-                        <li><span className="font-mono bg-muted px-2 py-1 rounded">3</span> — Subtasks tab</li>
-                        <li><span className="font-mono bg-muted px-2 py-1 rounded">4</span> — Files tab</li>
-                        <li><span className="font-mono bg-muted px-2 py-1 rounded">?</span> — Show this help</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">B + f</span> — Toggle Full Screen</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">B + s</span> — Start/Pause Work</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">B + e</span> — Stop Work</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">B + 1</span> — Work Area tab</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">B + 2</span> — Work Notes tab</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">B + 3</span> — Subtasks tab</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">B + 4</span> — Files tab</li>
+                        <li><span className="font-mono bg-muted px-2 py-1 rounded">B + ?</span> — Show this help</li>
                     </ul>
                 </div>
             </div>
@@ -92,7 +93,7 @@ export default function StartWork({ auth, task, error }) {
     const { sidebarCollapsed, setSidebarCollapsed } = useContext(SidebarContext);
     const prevSidebarCollapsed = useRef(sidebarCollapsed);
     const [showShortcuts, setShowShortcuts] = useState(false);
-    const { toast } = useToast();
+    const [bKeyPressed, setBKeyPressed] = useState(false);
 
     // Map database status to frontend status
     const mapStatus = (dbStatus) => {
@@ -280,24 +281,13 @@ export default function StartWork({ auth, task, error }) {
                         : subtask
                 ));
 
-                toast({
-                    title: "Success",
-                    description: `Subtask marked as ${newStatus === 'done' ? 'completed' : 'incomplete'}!`,
-                });
+                toast.success(`Subtask marked as ${newStatus === 'done' ? 'completed' : 'incomplete'}!`);
             } else {
-                toast({
-                    title: "Error",
-                    description: data.error || "Failed to update subtask. Please try again.",
-                    variant: "destructive"
-                });
+                toast.error(data.error || "Failed to update subtask. Please try again.");
             }
         } catch (error) {
             console.error('Failed to update subtask:', error);
-            toast({
-                title: "Error",
-                description: "Failed to update subtask. Please try again.",
-                variant: "destructive"
-            });
+            toast.error("Failed to update subtask. Please try again.");
         }
     };
 
@@ -328,25 +318,14 @@ export default function StartWork({ auth, task, error }) {
                 };
                 setSubtasks(prev => [...prev, newSubtaskItem]);
 
-                toast({
-                    title: "Success",
-                    description: "Subtask added successfully!",
-                });
+                toast.success("Subtask added successfully!");
                 setNewSubtask('');
             } else {
-                toast({
-                    title: "Error",
-                    description: data.error || "Failed to add subtask. Please try again.",
-                    variant: "destructive"
-                });
+                toast.error(data.error || "Failed to add subtask. Please try again.");
             }
         } catch (error) {
             console.error('Failed to add subtask:', error);
-            toast({
-                title: "Error",
-                description: "Failed to add subtask. Please try again.",
-                variant: "destructive"
-            });
+            toast.error("Failed to add subtask. Please try again.");
         }
     };
 
@@ -386,36 +365,58 @@ export default function StartWork({ auth, task, error }) {
                 }
                 return;
             }
-            if (e.key === '?' || (e.shiftKey && e.key === '/')) {
-                setShowShortcuts(true);
-                e.preventDefault();
-            } else if (e.key === 'f') {
-                handleToggleFullScreen();
-                e.preventDefault();
-            } else if (e.key === 's') {
-                if (!workSession.isActive) startWork();
-                else pauseWork();
-                e.preventDefault();
-            } else if (e.key === 'e') {
-                if (workSession.isActive) stopWork();
-                e.preventDefault();
-            } else if (e.key === '1') {
-                setActiveTab('work');
-                e.preventDefault();
-            } else if (e.key === '2') {
-                setActiveTab('notes');
-                e.preventDefault();
-            } else if (e.key === '3') {
-                setActiveTab('subtasks');
-                e.preventDefault();
-            } else if (e.key === '4') {
-                setActiveTab('attachments');
-                e.preventDefault();
+
+            // Check for B key press
+            if (e.key.toLowerCase() === 'b' && !bKeyPressed) {
+                setBKeyPressed(true);
+                return;
+            }
+
+            // Only process shortcuts if B key is pressed
+            if (bKeyPressed) {
+                if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+                    setShowShortcuts(true);
+                    e.preventDefault();
+                } else if (e.key === 'f') {
+                    handleToggleFullScreen();
+                    e.preventDefault();
+                } else if (e.key === 's') {
+                    if (!workSession.isActive) startWork();
+                    else pauseWork();
+                    e.preventDefault();
+                } else if (e.key === 'e') {
+                    if (workSession.isActive) stopWork();
+                    e.preventDefault();
+                } else if (e.key === '1') {
+                    setActiveTab('work');
+                    e.preventDefault();
+                } else if (e.key === '2') {
+                    setActiveTab('notes');
+                    e.preventDefault();
+                } else if (e.key === '3') {
+                    setActiveTab('subtasks');
+                    e.preventDefault();
+                } else if (e.key === '4') {
+                    setActiveTab('attachments');
+                    e.preventDefault();
+                }
             }
         }
+
+        function handleKeyUp(e) {
+            // Reset B key state when released
+            if (e.key.toLowerCase() === 'b') {
+                setBKeyPressed(false);
+            }
+        }
+
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showShortcuts, workSession.isActive, setActiveTab, handleToggleFullScreen, startWork, pauseWork, stopWork]);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, [showShortcuts, workSession.isActive, setActiveTab, handleToggleFullScreen, startWork, pauseWork, stopWork, bKeyPressed]);
 
     if (loading) {
         return (

@@ -1,20 +1,19 @@
-import React, { useState } from 'react';
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Save, Building, Calendar, DollarSign, Users, Target, Plus, X, FileText, Clock, Star } from 'lucide-react';
-import { useToast } from '@/components/ui/toast';
+
 
 export default function EditProject({ auth, project, clients, projectId }) {
-    const { success, error } = useToast();
-
     // Use real project data from props
     const projectData = project || {
         id: projectId,
@@ -58,7 +57,7 @@ export default function EditProject({ auth, project, clients, projectId }) {
         router.put(`/projects/${projectId}`, formData, {
             preserveScroll: true,
             onError: (errors) => {
-                error('Failed to update project. Please try again.');
+                toast.error('Failed to update project. Please try again.');
                 setErrors(errors);
                 setProcessing(false);
                 console.error('Project update failed', errors);

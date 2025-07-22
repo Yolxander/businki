@@ -231,6 +231,7 @@ button,
   border: none;
 }
 
+/* Dark theme slider styles */
 .dark .slider::-webkit-slider-track {
   background: #404040;
 }
@@ -245,4 +246,31 @@ button,
 
 .dark .slider::-moz-range-thumb {
   background: #d1ff75;
+}
+
+/* Ensure Sonner toast is always visible, even in fullscreen mode */
+[data-sonner-toaster] {
+  z-index: 999999 !important;
+  position: fixed !important;
+  pointer-events: auto !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  z-index: 999999 !important;
+  position: relative !important;
+}
+
+/* Fullscreen mode toast visibility */
+:fullscreen [data-sonner-toaster],
+:-webkit-full-screen [data-sonner-toaster],
+:-moz-full-screen [data-sonner-toaster] {
+  z-index: 999999 !important;
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+}
+
+/* Ensure toast container is above everything */
+[data-sonner-toaster] {
+  isolation: isolate;
 }

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/components/ui/toast';
+import { toast } from 'sonner';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -45,7 +45,6 @@ export default function TaskDetails({ auth, task, error }) {
     const [newComment, setNewComment] = useState('');
     const [newSubtask, setNewSubtask] = useState('');
     const [subtasks, setSubtasks] = useState([]);
-    const { toast } = useToast();
 
     // Map database status to frontend status
     const mapStatus = (dbStatus) => {
@@ -106,25 +105,14 @@ export default function TaskDetails({ auth, task, error }) {
                 };
                 setSubtasks(prev => [...prev, newSubtaskItem]);
 
-                toast({
-                    title: "Success",
-                    description: "Subtask added successfully!",
-                });
+                toast.success("Subtask added successfully!");
                 setNewSubtask('');
             } else {
-                toast({
-                    title: "Error",
-                    description: data.error || "Failed to add subtask. Please try again.",
-                    variant: "destructive"
-                });
+                toast.error(data.error || "Failed to add subtask. Please try again.");
             }
         } catch (error) {
             console.error('Failed to add subtask:', error);
-            toast({
-                title: "Error",
-                description: "Failed to add subtask. Please try again.",
-                variant: "destructive"
-            });
+            toast.error("Failed to add subtask. Please try again.");
         }
     };
 
@@ -161,24 +149,13 @@ export default function TaskDetails({ auth, task, error }) {
                         : subtask
                 ));
 
-                toast({
-                    title: "Success",
-                    description: `Subtask marked as ${newStatus === 'done' ? 'completed' : 'incomplete'}!`,
-                });
+                toast.success(`Subtask marked as ${newStatus === 'done' ? 'completed' : 'incomplete'}!`);
             } else {
-                toast({
-                    title: "Error",
-                    description: data.error || "Failed to update subtask. Please try again.",
-                    variant: "destructive"
-                });
+                toast.error(data.error || "Failed to update subtask. Please try again.");
             }
         } catch (error) {
             console.error('Failed to update subtask:', error);
-            toast({
-                title: "Error",
-                description: "Failed to update subtask. Please try again.",
-                variant: "destructive"
-            });
+            toast.error("Failed to update subtask. Please try again.");
         }
     };
 
