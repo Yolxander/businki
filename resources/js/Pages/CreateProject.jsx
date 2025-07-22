@@ -87,7 +87,8 @@ export default function CreateProject({ auth, clients }) {
     };
 
     const handleSubmit = (e) => {
-        e.preventDefault();
+        console.log('handleSubmit called!');
+        if (e) e.preventDefault();
 
         // Basic validation
         const newErrors = {};
@@ -100,8 +101,12 @@ export default function CreateProject({ auth, clients }) {
             newErrors.due_date = 'Due date must be after start date';
         }
 
+        console.log('Validation errors:', newErrors);
+        console.log('Form data:', formData);
+
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
+            console.log('Validation failed, returning early');
             return;
         }
 
@@ -121,9 +126,16 @@ export default function CreateProject({ auth, clients }) {
             color: null // Default color
         };
 
+        console.log('Submitting project data:', projectData);
+
         // Submit to the ProjectController@store method
         router.post('/projects', projectData, {
+            onSuccess: () => {
+                console.log('Project created successfully!');
+                toast.success("Project created successfully!");
+            },
             onError: (errors) => {
+                console.log('Project creation failed:', errors);
                 setErrors(errors);
                 // Show error toast
                 toast.error("Failed to create project. Please check the form and try again.");
@@ -135,7 +147,7 @@ export default function CreateProject({ auth, clients }) {
         switch (status) {
             case 'completed':
                 return 'bg-green-100 text-green-800';
-            case 'in-progress':
+            case 'in_progress':
                 return 'bg-blue-100 text-blue-800';
             case 'planned':
                 return 'bg-gray-100 text-gray-800';
@@ -284,7 +296,7 @@ export default function CreateProject({ auth, clients }) {
                                                 className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
                                             >
                                                 <option value="planned">Planned</option>
-                                                <option value="in-progress">In Progress</option>
+                                                <option value="in_progress">In Progress</option>
                                                 <option value="completed">Completed</option>
                                             </select>
                                         </div>
@@ -448,6 +460,8 @@ export default function CreateProject({ auth, clients }) {
                             </Card>
                         </div>
                     </div>
+
+
                 </form>
             </div>
         </AuthenticatedLayout>
