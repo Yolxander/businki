@@ -181,6 +181,51 @@ export default function AuthenticatedLayout({ user, header, children }) {
         }
     };
 
+    const handleCloseOther = (tabId) => {
+        const targetTab = tabs.find(t => t.id === tabId);
+        if (!targetTab) return;
+
+        // Keep only the selected tab
+        setTabs([targetTab]);
+        setActiveTab(tabId);
+        router.visit(targetTab.path);
+    };
+
+    const handleMoveTab = (tabId, direction) => {
+        const tabIndex = tabs.findIndex(t => t.id === tabId);
+        if (tabIndex === -1) return;
+
+        const newTabs = [...tabs];
+        const tab = newTabs[tabIndex];
+
+        switch (direction) {
+            case 'up':
+                if (tabIndex > 0) {
+                    newTabs.splice(tabIndex, 1);
+                    newTabs.splice(tabIndex - 1, 0, tab);
+                }
+                break;
+            case 'down':
+                if (tabIndex < newTabs.length - 1) {
+                    newTabs.splice(tabIndex, 1);
+                    newTabs.splice(tabIndex + 1, 0, tab);
+                }
+                break;
+            case 'start':
+                newTabs.splice(tabIndex, 1);
+                newTabs.unshift(tab);
+                break;
+            case 'end':
+                newTabs.splice(tabIndex, 1);
+                newTabs.push(tab);
+                break;
+            default:
+                return;
+        }
+
+        setTabs(newTabs);
+    };
+
     // Clear tabs when user logs out
     const handleLogout = () => {
         localStorage.removeItem('bobbi-tabs');
@@ -248,6 +293,8 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                         onTabClick={handleTabClick}
                                         onTabClose={handleTabClose}
                                         onCloseAll={handleCloseAll}
+                                        onCloseOther={handleCloseOther}
+                                        onMoveTab={handleMoveTab}
                                     />
                                 </div>
                             )}
