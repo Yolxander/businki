@@ -137,6 +137,10 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
     Route::put('/tasks/{task}', [App\Http\Controllers\TaskController::class, 'update'])->name('tasks.update');
     Route::delete('/tasks/{task}', [App\Http\Controllers\TaskController::class, 'destroy'])->name('tasks.destroy');
 
+    // Subtask routes
+    Route::post('/tasks/{task}/subtasks', [App\Http\Controllers\TaskController::class, 'addSubtask'])->name('tasks.subtasks.store');
+    Route::put('/tasks/{task}/subtasks/{subtask}', [App\Http\Controllers\TaskController::class, 'updateSubtask'])->name('tasks.subtasks.update');
+
     Route::get('/calendar', [App\Http\Controllers\CalendarController::class, 'index'])->name('calendar');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');

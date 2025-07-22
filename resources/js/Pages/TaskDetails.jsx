@@ -8,16 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/components/ui/toast';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
     ArrowLeft,
@@ -50,6 +44,8 @@ import {
 export default function TaskDetails({ auth, task, error }) {
     const [newComment, setNewComment] = useState('');
     const [newSubtask, setNewSubtask] = useState('');
+    const [subtasks, setSubtasks] = useState([]);
+    const { toast } = useToast();
 
     // Map database status to frontend status
     const mapStatus = (dbStatus) => {
@@ -61,12 +57,127 @@ export default function TaskDetails({ auth, task, error }) {
         return statusMap[dbStatus] || 'todo';
     };
 
+    // Initialize subtasks from task data
+    React.useEffect(() => {
+        if (task && task.subtasks) {
+            setSubtasks(task.subtasks.map(subtask => ({
+                id: subtask.id,
+                text: subtask.description,
+                completed: subtask.status === 'done',
+                completedAt: subtask.status === 'done' ? subtask.updated_at : null
+            })));
+        }
+    }, [task]);
+
     const handleDeleteTask = () => {
         if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
             router.delete(`/tasks/${transformedTask.id}`, {
                 onSuccess: () => {
                     router.visit('/bobbi-flow');
                 }
+            });
+        }
+    };
+
+    const addSubtask = async () => {
+        if (!newSubtask.trim()) return;
+
+        try {
+            const response = await fetch(`/tasks/${transformedTask.id}/subtasks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    description: newSubtask.trim()
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Add the new subtask to local state
+                const newSubtaskItem = {
+                    id: data.subtask.id,
+                    text: data.subtask.description,
+                    completed: false,
+                    completedAt: null
+                };
+                setSubtasks(prev => [...prev, newSubtaskItem]);
+
+                toast({
+                    title: "Success",
+                    description: "Subtask added successfully!",
+                });
+                setNewSubtask('');
+            } else {
+                toast({
+                    title: "Error",
+                    description: data.error || "Failed to add subtask. Please try again.",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            console.error('Failed to add subtask:', error);
+            toast({
+                title: "Error",
+                description: "Failed to add subtask. Please try again.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const toggleSubtask = async (subtaskId) => {
+        // Find the current subtask to determine its status
+        const currentSubtask = subtasks.find(st => st.id === subtaskId);
+        if (!currentSubtask) return;
+
+        const newStatus = currentSubtask.completed ? 'todo' : 'done';
+
+        try {
+            const response = await fetch(`/tasks/${transformedTask.id}/subtasks/${subtaskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    status: newStatus
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Update the subtask in local state
+                setSubtasks(prev => prev.map(subtask =>
+                    subtask.id === subtaskId
+                        ? {
+                            ...subtask,
+                            completed: newStatus === 'done',
+                            completedAt: newStatus === 'done' ? new Date().toISOString() : null
+                          }
+                        : subtask
+                ));
+
+                toast({
+                    title: "Success",
+                    description: `Subtask marked as ${newStatus === 'done' ? 'completed' : 'incomplete'}!`,
+                });
+            } else {
+                toast({
+                    title: "Error",
+                    description: data.error || "Failed to update subtask. Please try again.",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            console.error('Failed to update subtask:', error);
+            toast({
+                title: "Error",
+                description: "Failed to update subtask. Please try again.",
+                variant: "destructive"
             });
         }
     };
@@ -508,10 +619,11 @@ export default function TaskDetails({ auth, task, error }) {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
-                                    {transformedTask.subtasks.map((subtask) => (
+                                    {subtasks.map((subtask) => (
                                         <div key={subtask.id} className="flex items-center space-x-3">
                                             <Checkbox
                                                 checked={subtask.completed}
+                                                onCheckedChange={() => toggleSubtask(subtask.id)}
                                                 className="flex-shrink-0"
                                             />
                                             <span className={`flex-1 ${subtask.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
@@ -519,11 +631,18 @@ export default function TaskDetails({ auth, task, error }) {
                                             </span>
                                             {subtask.completed && (
                                                 <span className="text-xs text-muted-foreground">
-                                                    {subtask.completedAt}
+                                                    {subtask.completedAt ? new Date(subtask.completedAt).toLocaleDateString() : 'Completed'}
                                                 </span>
                                             )}
                                         </div>
                                     ))}
+
+                                    {subtasks.length === 0 && (
+                                        <div className="text-center py-4 text-muted-foreground">
+                                            <p className="text-sm">No subtasks yet</p>
+                                            <p className="text-xs">Add a subtask to break down this task</p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="mt-4 flex space-x-2">
@@ -532,9 +651,10 @@ export default function TaskDetails({ auth, task, error }) {
                                         placeholder="Add new subtask..."
                                         value={newSubtask}
                                         onChange={(e) => setNewSubtask(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
                                         className="flex-1 px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     />
-                                    <Button size="sm" disabled={!newSubtask.trim()}>
+                                    <Button size="sm" disabled={!newSubtask.trim()} onClick={addSubtask}>
                                         <Plus className="w-4 h-4" />
                                     </Button>
                                 </div>

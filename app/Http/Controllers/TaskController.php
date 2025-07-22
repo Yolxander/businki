@@ -304,6 +304,126 @@ class TaskController extends Controller
     }
 
     /**
+     * Add a subtask to the specified task.
+     */
+    public function addSubtask(Request $request, Task $task)
+    {
+        Log::info('Adding subtask to task', ['task_id' => $task->id, 'user_id' => auth()->id()]);
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'description' => 'required|string|max:500',
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Subtask creation validation failed', ['errors' => $validator->errors()]);
+                if (request()->header('X-Inertia')) {
+                    return back()->withErrors($validator->errors());
+                }
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $subtask = Subtask::create([
+                'task_id' => $task->id,
+                'description' => $request->description,
+                'status' => 'todo'
+            ]);
+
+            Log::info('Subtask created successfully', [
+                'task_id' => $task->id,
+                'subtask_id' => $subtask->id,
+                'user_id' => auth()->id()
+            ]);
+
+            if (request()->header('X-Inertia')) {
+                return redirect()->route('tasks.show', $task->id)
+                    ->with('success', 'Subtask added successfully!');
+            }
+
+            return response()->json([
+                'subtask' => $subtask,
+                'message' => 'Subtask added successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to add subtask', [
+                'task_id' => $task->id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if (request()->header('X-Inertia')) {
+                return back()->withErrors(['error' => 'Failed to add subtask']);
+            }
+
+            return response()->json(['error' => 'Failed to add subtask'], 500);
+        }
+    }
+
+    /**
+     * Update a subtask status.
+     */
+    public function updateSubtask(Request $request, Task $task, Subtask $subtask)
+    {
+        Log::info('Updating subtask', [
+            'task_id' => $task->id,
+            'subtask_id' => $subtask->id,
+            'user_id' => auth()->id()
+        ]);
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'status' => 'required|in:todo,done',
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Subtask update validation failed', ['errors' => $validator->errors()]);
+                if (request()->header('X-Inertia')) {
+                    return back()->withErrors($validator->errors());
+                }
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $subtask->update([
+                'status' => $request->status
+            ]);
+
+            Log::info('Subtask updated successfully', [
+                'task_id' => $task->id,
+                'subtask_id' => $subtask->id,
+                'status' => $request->status,
+                'user_id' => auth()->id()
+            ]);
+
+            if (request()->header('X-Inertia')) {
+                return redirect()->route('tasks.show', $task->id)
+                    ->with('success', 'Subtask updated successfully!');
+            }
+
+            return response()->json([
+                'subtask' => $subtask,
+                'message' => 'Subtask updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update subtask', [
+                'task_id' => $task->id,
+                'subtask_id' => $subtask->id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if (request()->header('X-Inertia')) {
+                return back()->withErrors(['error' => 'Failed to update subtask']);
+            }
+
+            return response()->json(['error' => 'Failed to update subtask'], 500);
+        }
+    }
+
+    /**
      * Display the specified resource.
      */
     public function show(Task $task)
