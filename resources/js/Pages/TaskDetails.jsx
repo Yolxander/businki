@@ -9,6 +9,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
     ArrowLeft,
     Edit,
     Calendar,
@@ -416,14 +427,35 @@ export default function TaskDetails({ auth, task, error }) {
                                             <Flag className="w-4 h-4 mr-2" />
                                             Flag Task
                                         </Button>
-                                        <Button
-                                            variant="outline"
-                                            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                                            onClick={handleDeleteTask}
-                                        >
-                                            <Trash2 className="w-4 h-4 mr-2" />
-                                            Delete Task
-                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <Trash2 className="w-4 h-4 mr-2" />
+                                                    Delete Task
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. This will permanently delete the task
+                                                        "{transformedTask.title}" and remove all associated data from our servers.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={handleDeleteTask}
+                                                        className="bg-red-600 hover:bg-red-700 text-white"
+                                                    >
+                                                        Delete Task
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </CardContent>
                                 </Card>
 

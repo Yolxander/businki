@@ -72,9 +72,8 @@ function ShortcutsModal({ open, onClose }) {
     );
 }
 
-export default function StartWork({ auth, taskId }) {
-    const [task, setTask] = useState(null);
-    const [loading, setLoading] = useState(true);
+export default function StartWork({ auth, task, error }) {
+    const [loading, setLoading] = useState(false);
     const [workSession, setWorkSession] = useState({
         isActive: false,
         startTime: null,
@@ -92,55 +91,56 @@ export default function StartWork({ auth, taskId }) {
     const prevSidebarCollapsed = useRef(sidebarCollapsed);
     const [showShortcuts, setShowShortcuts] = useState(false);
 
-    useEffect(() => {
-        // Mock task data - in real app this would fetch from API
-        const mockTask = {
-            id: taskId,
-            title: 'Design homepage mockups',
-            description: 'Create modern, responsive homepage mockups for the new website redesign project. Focus on user experience and conversion optimization.',
-            client: 'Acme Corporation',
-            project: 'Website Redesign',
-            priority: 'high',
-            status: 'in-progress',
-            dueDate: '2024-02-15',
-            estimatedTime: '4h',
-            actualTime: '2.5h',
-            tags: ['Design', 'UI/UX', 'Homepage'],
-            assignee: 'client',
-            createdBy: 'John Smith',
-            createdAt: '2024-02-01',
-            updatedAt: '2024-02-10',
-            subtasks: [
-                { id: 1, text: 'Create wireframes', completed: true, completedAt: '2024-02-05' },
-                { id: 2, text: 'Design desktop version', completed: true, completedAt: '2024-02-08' },
-                { id: 3, text: 'Design mobile version', completed: false },
-                { id: 4, text: 'Create responsive breakpoints', completed: false },
-                { id: 5, text: 'Design call-to-action buttons', completed: false }
-            ],
-            workNotes: [
-                {
-                    id: 1,
-                    content: 'Started working on mobile design. Using Figma for wireframes.',
-                    timestamp: '2024-02-10 09:30 AM',
-                    type: 'work'
-                },
-                {
-                    id: 2,
-                    content: 'Client feedback received: "Love the desktop design, can we make the hero section more prominent?"',
-                    timestamp: '2024-02-10 11:45 AM',
-                    type: 'feedback'
-                }
-            ],
-            attachments: [
-                { id: 1, name: 'wireframes.pdf', size: '2.4 MB', type: 'pdf' },
-                { id: 2, name: 'design-specs.fig', size: '1.8 MB', type: 'figma' },
-                { id: 3, name: 'brand-guidelines.pdf', size: '3.1 MB', type: 'pdf' }
-            ]
+    // Map database status to frontend status
+    const mapStatus = (dbStatus) => {
+        const statusMap = {
+            'todo': 'inbox',
+            'in_progress': 'in-progress',
+            'done': 'done'
         };
+        return statusMap[dbStatus] || dbStatus;
+    };
 
-        setTask(mockTask);
-        setLoading(false);
-    }, [taskId]);
+    // Transform task data to match component expectations
+    const transformedTask = task ? {
+        id: task.id,
+        title: task.title,
+        description: task.description || '',
+        client: task.project?.client?.name || 'No Client',
+        project: task.project?.name || 'No Project',
+        priority: task.priority || 'medium',
+        status: mapStatus(task.status),
+        dueDate: task.due_date ? task.due_date.split('T')[0] : null,
+        estimatedTime: task.estimated_hours ? `${task.estimated_hours}h` : null,
+        tags: task.tags || [],
+        subtasks: task.subtasks?.map(subtask => ({
+            id: subtask.id,
+            text: subtask.description,
+            completed: subtask.status === 'done'
+        })) || [],
+        assignee: task.assigned_to ? 'me' : 'client'
+    } : null;
+
+    // Handle error case
+    if (error || !transformedTask) {
+        return (
+            <AuthenticatedLayout user={auth.user}>
+                <Head title="Task Not Found" />
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <h1 className="text-2xl font-bold text-foreground mb-2">Task Not Found</h1>
+                        <p className="text-muted-foreground mb-4">The task you're looking for doesn't exist or you don't have permission to access it.</p>
+                        <Link href="/bobbi-flow">
+                            <Button variant="outline">
+                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                Back to Flow
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+            </AuthenticatedLayout>
+        );
+    }
 
     // Timer functionality
     useEffect(() => {
@@ -340,27 +340,27 @@ export default function StartWork({ auth, taskId }) {
         );
     }
 
-    const progressPercentage = (task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100;
+    const progressPercentage = (transformedTask.subtasks.filter(st => st.completed).length / transformedTask.subtasks.length) * 100;
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title={`Start Work - ${task.title}`} />
+            <Head title={`Start Work - ${transformedTask.title}`} />
             <ShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
             <div ref={mainRef} className="h-screen flex flex-col bg-background">
                 {/* Header */}
                 <div className="flex-shrink-0 p-6 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                            <Link href={`/tasks/${taskId}`}>
+                            <Link href={`/tasks/${transformedTask.id}`}>
                                 <Button variant="outline" size="sm">
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     Back to Task
                                 </Button>
                             </Link>
                             <div>
-                                <h1 className="text-xl font-semibold text-foreground">{task.title}</h1>
+                                <h1 className="text-xl font-semibold text-foreground">{transformedTask.title}</h1>
                                 <p className="text-sm text-muted-foreground">
-                                    {task.client} • {task.project}
+                                    {transformedTask.client} • {transformedTask.project}
                                 </p>
                             </div>
                         </div>
@@ -434,24 +434,24 @@ export default function StartWork({ auth, taskId }) {
                                         <CardTitle className="flex items-center justify-between">
                                             <span>Task Overview</span>
                                             <div className="flex items-center space-x-2">
-                                                {getPriorityIcon(task.priority)}
-                                                <Badge className={getPriorityColor(task.priority)}>
-                                                    {task.priority} Priority
+                                                {getPriorityIcon(transformedTask.priority)}
+                                                <Badge className={getPriorityColor(transformedTask.priority)}>
+                                                    {transformedTask.priority} Priority
                                                 </Badge>
                                             </div>
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground leading-relaxed mb-4">{task.description}</p>
+                                        <p className="text-muted-foreground leading-relaxed mb-4">{transformedTask.description}</p>
                                         <div className="grid grid-cols-2 gap-4 text-sm">
                                             <div className="flex items-center space-x-2">
                                                 <Calendar className="w-4 h-4 text-muted-foreground" />
-                                                <span className="text-muted-foreground">Due: {task.dueDate}</span>
+                                                <span className="text-muted-foreground">Due: {transformedTask.dueDate}</span>
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <Clock className="w-4 h-4 text-muted-foreground" />
                                                 <span className="text-muted-foreground">
-                                                    {task.actualTime} / {task.estimatedTime}
+                                                    {transformedTask.estimatedTime} / {transformedTask.estimatedTime}
                                                 </span>
                                             </div>
                                         </div>
@@ -477,7 +477,7 @@ export default function StartWork({ auth, taskId }) {
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
-                                                {task.subtasks.filter(st => st.completed).length} of {task.subtasks.length} subtasks completed
+                                                {transformedTask.subtasks.filter(st => st.completed).length} of {transformedTask.subtasks.length} subtasks completed
                                             </span>
                                             <span className="text-muted-foreground">
                                                 {formatTime(workSession.elapsedTime)} worked today
@@ -536,17 +536,11 @@ export default function StartWork({ auth, taskId }) {
                                         </div>
 
                                         <div className="space-y-3">
-                                            {task.workNotes.map((note) => (
-                                                <div key={note.id} className="p-3 border rounded-lg">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-sm font-medium">
-                                                            {note.type === 'work' ? 'Work Note' : 'Feedback'}
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground">{note.timestamp}</span>
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">{note.content}</p>
-                                                </div>
-                                            ))}
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">No work notes yet</p>
+                                                <p className="text-xs">Add notes to track your progress</p>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -561,22 +555,22 @@ export default function StartWork({ auth, taskId }) {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="space-y-3">
-                                            {task.subtasks.map((subtask) => (
-                                                <div key={subtask.id} className="flex items-center space-x-3 p-2 border rounded-lg">
-                                                    <Checkbox
-                                                        checked={subtask.completed}
-                                                        onCheckedChange={() => toggleSubtask(subtask.id)}
-                                                    />
-                                                    <span className={`flex-1 ${subtask.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                                                        {subtask.text}
+                                                                                    {transformedTask.subtasks.map((subtask) => (
+                                            <div key={subtask.id} className="flex items-center space-x-3 p-2 border rounded-lg">
+                                                <Checkbox
+                                                    checked={subtask.completed}
+                                                    onCheckedChange={() => toggleSubtask(subtask.id)}
+                                                />
+                                                <span className={`flex-1 ${subtask.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                                                    {subtask.text}
+                                                </span>
+                                                {subtask.completed && (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        Completed
                                                     </span>
-                                                    {subtask.completed && (
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {subtask.completedAt}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                )}
+                                            </div>
+                                        ))}
                                         </div>
 
                                         <div className="flex space-x-2">
@@ -603,25 +597,11 @@ export default function StartWork({ auth, taskId }) {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-3">
-                                            {task.attachments.map((attachment) => (
-                                                <div key={attachment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                                    <div className="flex items-center space-x-3">
-                                                        <FileText className="w-5 h-5 text-blue-500" />
-                                                        <div>
-                                                            <p className="font-medium">{attachment.name}</p>
-                                                            <p className="text-sm text-muted-foreground">{attachment.size}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <Button variant="ghost" size="sm">
-                                                            <Eye className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="sm">
-                                                            <Download className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">No attachments yet</p>
+                                                <p className="text-xs">Upload files to share with your team</p>
+                                            </div>
                                         </div>
 
                                         <div className="mt-4 pt-4 border-t">
@@ -648,19 +628,19 @@ export default function StartWork({ auth, taskId }) {
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">Status</span>
                                         <Badge className="bg-blue-100 text-blue-800">
-                                            {task.status.replace('-', ' ')}
+                                            {transformedTask.status.replace('-', ' ')}
                                         </Badge>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">Priority</span>
                                         <div className="flex items-center space-x-1">
-                                            {getPriorityIcon(task.priority)}
-                                            <span className="text-sm capitalize">{task.priority}</span>
+                                            {getPriorityIcon(transformedTask.priority)}
+                                            <span className="text-sm capitalize">{transformedTask.priority}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">Assignee</span>
-                                        <span className="text-sm">{task.assignee === 'client' ? 'Client' : 'You'}</span>
+                                        <span className="text-sm">{transformedTask.assignee === 'client' ? 'Client' : 'You'}</span>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -673,11 +653,11 @@ export default function StartWork({ auth, taskId }) {
                                 <CardContent className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">Estimated</span>
-                                        <span className="text-sm font-medium">{task.estimatedTime}</span>
+                                        <span className="text-sm font-medium">{transformedTask.estimatedTime}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">Actual</span>
-                                        <span className="text-sm font-medium">{task.actualTime}</span>
+                                        <span className="text-sm font-medium">Not tracked</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">Today</span>
@@ -693,7 +673,7 @@ export default function StartWork({ auth, taskId }) {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex flex-wrap gap-2">
-                                        {task.tags.map((tag, index) => (
+                                        {transformedTask.tags.map((tag, index) => (
                                             <Badge key={index} variant="outline" className="bg-muted/30">
                                                 {tag}
                                             </Badge>
@@ -710,15 +690,15 @@ export default function StartWork({ auth, taskId }) {
                                 <CardContent className="space-y-3 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Created by:</span>
-                                        <span>{task.createdBy}</span>
+                                        <span>{task.user?.name || 'Unknown'}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Created:</span>
-                                        <span>{task.createdAt}</span>
+                                        <span>{task.created_at ? task.created_at.split('T')[0] : 'Unknown'}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Updated:</span>
-                                        <span>{task.updatedAt}</span>
+                                        <span>{task.updated_at ? task.updated_at.split('T')[0] : 'Unknown'}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Task ID:</span>

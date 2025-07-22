@@ -130,14 +130,7 @@ Route::get('/tasks/{task}', [App\Http\Controllers\TaskController::class, 'show']
 
 Route::get('/tasks/{task}/edit', [App\Http\Controllers\TaskController::class, 'edit'])->name('tasks.edit');
 
-Route::get('/tasks/{id}/start-work', function ($id) {
-    return Inertia::render('StartWork', [
-        'auth' => [
-            'user' => Auth::user(),
-        ],
-        'taskId' => $id,
-    ]);
-})->name('tasks.start-work');
+Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::class, 'startWork'])->name('tasks.start-work');
 
     // Task web routes for Inertia.js
     Route::post('/tasks', [App\Http\Controllers\TaskController::class, 'store'])->name('tasks.store');

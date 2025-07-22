@@ -267,6 +267,43 @@ class TaskController extends Controller
     }
 
     /**
+     * Show the start work page for the specified task.
+     */
+    public function startWork(Task $task)
+    {
+        Log::info('Loading start work page', ['task_id' => $task->id, 'user_id' => auth()->id()]);
+
+        try {
+            // Load task with relationships
+            $task->load(['project.client', 'assignedUser', 'subtasks', 'user']);
+
+            Log::info('Start work page loaded successfully', [
+                'task_id' => $task->id,
+                'user_id' => auth()->id()
+            ]);
+
+            return Inertia::render('StartWork', [
+                'auth' => ['user' => auth()->user()],
+                'task' => $task
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to load start work page', [
+                'task_id' => $task->id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return Inertia::render('StartWork', [
+                'auth' => ['user' => auth()->user()],
+                'task' => null,
+                'error' => 'Failed to load task data'
+            ]);
+        }
+    }
+
+    /**
      * Display the specified resource.
      */
     public function show(Task $task)
