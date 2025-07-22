@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save, User, Building, Mail, Phone, Globe, MapPin, DollarSign } from 'lucide-react';
 
-export default function CreateClient({ auth }) {
-    const { data, setData, post, processing, errors } = useForm({
+export default function EditClient({ auth, clientId }) {
+    const [client, setClient] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const { data, setData, put, processing, errors } = useForm({
         name: '',
         contactPerson: '',
         email: '',
@@ -29,37 +33,132 @@ export default function CreateClient({ auth }) {
         source: ''
     });
 
+    useEffect(() => {
+        const fetchClient = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/clients/${clientId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    credentials: 'same-origin',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch client data');
+                }
+
+                const clientData = await response.json();
+                setClient(clientData);
+
+                // Map API data to form fields
+                setData({
+                    name: clientData.first_name || '',
+                    contactPerson: clientData.last_name || clientData.contact_person || '',
+                    email: clientData.email || '',
+                    phone: clientData.phone || '',
+                    website: clientData.website || '',
+                    company: clientData.company_name || '',
+                    address: clientData.address || '',
+                    city: clientData.city || '',
+                    state: clientData.state || '',
+                    zipCode: clientData.zip_code || '',
+                    country: clientData.country || '',
+                    industry: clientData.industry || '',
+                    status: clientData.status || 'prospect',
+                    notes: clientData.description || clientData.notes || '',
+                    budget: clientData.budget || '',
+                    source: clientData.source || ''
+                });
+            } catch (err) {
+                console.error('Error fetching client:', err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchClient();
+    }, [clientId, setData]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/clients', {
+        console.log('Form submitted with data:', data);
+        put(`/clients/${clientId}`, {
             onError: (errors) => {
-                console.error('Client creation failed', errors);
+                console.error('Client update failed', errors);
             }
         });
     };
 
-    return (
-        <AuthenticatedLayout user={auth.user}>
-            <Head title="Create Client" />
+    if (loading) {
+        return (
+            <AuthenticatedLayout user={auth.user}>
+                <Head title="Loading Client" />
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+                        <p className="mt-4 text-muted-foreground">Loading client data...</p>
+                    </div>
+                </div>
+            </AuthenticatedLayout>
+        );
+    }
 
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+    if (error) {
+        return (
+            <AuthenticatedLayout user={auth.user}>
+                <Head title="Error Loading Client" />
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <p className="text-red-600 mb-4">Error: {error}</p>
                         <Link href="/clients">
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline">
                                 <ArrowLeft className="w-4 h-4 mr-2" />
                                 Back to Clients
                             </Button>
                         </Link>
-                        <div>
-                            <h1 className="text-2xl font-bold text-foreground">Create New Client</h1>
-                            <p className="text-muted-foreground">Add a new client to your portfolio</p>
-                        </div>
                     </div>
                 </div>
+            </AuthenticatedLayout>
+        );
+    }
 
+    return (
+        <AuthenticatedLayout user={auth.user}>
+            <Head title="Edit Client" />
+
+            <div className="space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Header with Form Actions */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <Link href={`/clients/${clientId}`}>
+                                <Button variant="outline" size="sm">
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Back to Client
+                                </Button>
+                            </Link>
+                            <div>
+                                <h1 className="text-2xl font-bold text-foreground">Edit Client</h1>
+                                <p className="text-muted-foreground">Update client information</p>
+                            </div>
+                        </div>
+                        <div className="flex space-x-4">
+                            <Link href={`/clients/${clientId}`}>
+                                <Button variant="outline" type="button">
+                                    Cancel
+                                </Button>
+                            </Link>
+                            <Button type="submit" disabled={processing}>
+                                <Save className="w-4 h-4 mr-2" />
+                                {processing ? 'Updating...' : 'Update Client'}
+                            </Button>
+                        </div>
+                    </div>
                     {/* Basic Information */}
                     <Card>
                         <CardHeader>
@@ -68,7 +167,7 @@ export default function CreateClient({ auth }) {
                                 Basic Information
                             </CardTitle>
                             <CardDescription>
-                                Enter the primary contact and company details
+                                Update the primary contact and company details
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -158,7 +257,7 @@ export default function CreateClient({ auth }) {
                                 Address Information
                             </CardTitle>
                             <CardDescription>
-                                Enter the client's address details
+                                Update the client's address details
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -303,19 +402,6 @@ export default function CreateClient({ auth }) {
                             </div>
                         </CardContent>
                     </Card>
-
-                    {/* Form Actions */}
-                    <div className="flex justify-end space-x-4">
-                        <Link href="/clients">
-                            <Button variant="outline" type="button">
-                                Cancel
-                            </Button>
-                        </Link>
-                        <Button type="submit" disabled={processing}>
-                            <Save className="w-4 h-4 mr-2" />
-                            {processing ? 'Creating...' : 'Create Client'}
-                        </Button>
-                    </div>
                 </form>
             </div>
         </AuthenticatedLayout>

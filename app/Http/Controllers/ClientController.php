@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class ClientController extends Controller
 {
@@ -15,13 +16,49 @@ class ClientController extends Controller
         try {
             Log::info('Fetching all clients');
             $clients = Client::with('intakes')->get();
-            return response()->json($clients);
+
+            // Transform clients data to match frontend expectations
+            $transformedClients = $clients->map(function ($client) {
+                return [
+                    'id' => $client->id,
+                    'name' => $client->first_name . ' ' . $client->last_name,
+                    'full_name' => $client->first_name . ' ' . $client->last_name,
+                    'contactPerson' => $client->contact_person ?: $client->first_name . ' ' . $client->last_name,
+                    'email' => $client->email,
+                    'phone' => $client->phone,
+                    'website' => $client->website,
+                    'company' => $client->company_name,
+                    'status' => $client->status ?: 'prospect',
+                    'projects' => $client->projects ? $client->projects->count() : 0,
+                    'totalRevenue' => $client->total_revenue ?: 0,
+                    'lastContact' => $client->last_contact ?: now()->subDays(30)->toDateString(),
+                    'rating' => $client->rating ?: 3,
+                    'address' => $client->address,
+                    'city' => $client->city,
+                    'state' => $client->state,
+                    'zip_code' => $client->zip_code,
+                    'description' => $client->description,
+                ];
+            });
+
+            return Inertia::render('Clients', [
+                'auth' => [
+                    'user' => Auth::user(),
+                ],
+                'clients' => $transformedClients,
+            ]);
         } catch (\Exception $e) {
             Log::error('Error fetching clients', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return response()->json(['message' => 'Error fetching clients'], 500);
+            return Inertia::render('Clients', [
+                'auth' => [
+                    'user' => Auth::user(),
+                ],
+                'clients' => [],
+                'error' => 'Error fetching clients'
+            ]);
         }
     }
 
@@ -112,23 +149,51 @@ class ClientController extends Controller
             Log::info('Creating new client', ['request_data' => $request->all()]);
 
             $validator = Validator::make($request->all(), [
-                'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
+                'name' => 'required|string|max:255',
+                'contactPerson' => 'required|string|max:255',
                 'email' => 'required|email|unique:clients',
                 'phone' => 'nullable|string|max:20',
-                'company_name' => 'nullable|string|max:255',
+                'company' => 'nullable|string|max:255',
                 'address' => 'nullable|string|max:255',
                 'city' => 'nullable|string|max:255',
                 'state' => 'nullable|string|max:255',
-                'zip_code' => 'nullable|string|max:20',
+                'zipCode' => 'nullable|string|max:20',
+                'country' => 'nullable|string|max:255',
+                'industry' => 'nullable|string|max:255',
+                'status' => 'nullable|string|max:50',
+                'notes' => 'nullable|string',
+                'budget' => 'nullable|string|max:255',
+                'source' => 'nullable|string|max:255',
+                'website' => 'nullable|string|max:255',
             ]);
 
             if ($validator->fails()) {
                 Log::warning('Client validation failed', ['errors' => $validator->errors()->toArray()]);
+
+                if ($request->header('X-Inertia')) {
+                    return back()->withErrors($validator->errors());
+                }
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            $client = Client::create($request->all());
+            // Map frontend fields to database fields
+            $clientData = [
+                'first_name' => $request->name,
+                'last_name' => $request->contactPerson,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'company_name' => $request->company,
+                'address' => $request->address,
+                'city' => $request->city,
+                'state' => $request->state,
+                'zip_code' => $request->zipCode,
+                'website' => $request->website,
+                'contact_person' => $request->contactPerson,
+                'status' => $request->status,
+                'description' => $request->notes,
+            ];
+
+            $client = Client::create($clientData);
 
             // Connect the logged-in user to the client via pivot table
             $userId = Auth::id();
@@ -153,16 +218,26 @@ class ClientController extends Controller
                 ]);
             }
 
-            // Load the users relationship for the response
-            $client->load('users');
-
             Log::info('Client created successfully', ['client_id' => $client->id]);
+
+            // Handle Inertia.js requests with proper redirect
+            if ($request->header('X-Inertia')) {
+                return redirect()->route('clients.show', $client->id)
+                    ->with('success', 'Client created successfully!');
+            }
+
+            // Handle API requests
+            $client->load('users');
             return response()->json($client, 201);
         } catch (\Exception $e) {
             Log::error('Failed to create client', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            if ($request->header('X-Inertia')) {
+                return back()->withErrors(['general' => 'Failed to create client. Please try again.']);
+            }
             return response()->json(['message' => 'Failed to create client', 'error' => $e->getMessage()], 500);
         }
     }
@@ -186,15 +261,22 @@ class ClientController extends Controller
             $client = Client::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'first_name' => 'sometimes|required|string|max:255',
-                'last_name' => 'sometimes|required|string|max:255',
+                'name' => 'sometimes|required|string|max:255',
+                'contactPerson' => 'sometimes|required|string|max:255',
                 'email' => 'sometimes|required|email|unique:clients,email,' . $id,
                 'phone' => 'nullable|string|max:20',
-                'company_name' => 'nullable|string|max:255',
+                'company' => 'nullable|string|max:255',
                 'address' => 'nullable|string|max:255',
                 'city' => 'nullable|string|max:255',
                 'state' => 'nullable|string|max:255',
-                'zip_code' => 'nullable|string|max:20',
+                'zipCode' => 'nullable|string|max:20',
+                'country' => 'nullable|string|max:255',
+                'industry' => 'nullable|string|max:255',
+                'status' => 'nullable|string|max:50',
+                'notes' => 'nullable|string',
+                'budget' => 'nullable|string|max:255',
+                'source' => 'nullable|string|max:255',
+                'website' => 'nullable|string|max:255',
             ]);
 
             if ($validator->fails()) {
@@ -202,17 +284,49 @@ class ClientController extends Controller
                     'client_id' => $id,
                     'errors' => $validator->errors()->toArray()
                 ]);
+
+                if ($request->header('X-Inertia')) {
+                    return back()->withErrors($validator->errors());
+                }
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            $client->update($request->all());
+            // Map frontend fields to database fields
+            $clientData = [
+                'first_name' => $request->name,
+                'last_name' => $request->contactPerson,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'company_name' => $request->company,
+                'address' => $request->address,
+                'city' => $request->city,
+                'state' => $request->state,
+                'zip_code' => $request->zipCode,
+                'website' => $request->website,
+                'contact_person' => $request->contactPerson,
+                'status' => $request->status,
+                'description' => $request->notes,
+            ];
+
+            $client->update($clientData);
             Log::info('Client updated successfully', ['client_id' => $client->id]);
+
+            // Handle Inertia.js requests with proper redirect
+            if ($request->header('X-Inertia')) {
+                return Inertia::location(route('clients.show', $client->id));
+            }
+
+            // Handle API requests
             return response()->json($client);
         } catch (\Exception $e) {
             Log::error('Error updating client', [
                 'client_id' => $id,
                 'error' => $e->getMessage()
             ]);
+
+            if ($request->header('X-Inertia')) {
+                return back()->withErrors(['general' => 'Failed to update client. Please try again.']);
+            }
             return response()->json(['message' => 'Error updating client'], 500);
         }
     }
@@ -222,14 +336,26 @@ class ClientController extends Controller
         try {
             Log::info('Deleting client', ['client_id' => $id]);
             $client = Client::findOrFail($id);
+            $clientName = $client->first_name . ' ' . $client->last_name;
             $client->delete();
             Log::info('Client deleted successfully', ['client_id' => $id]);
+
+            // Handle Inertia.js requests with proper redirect
+            if (request()->header('X-Inertia')) {
+                return Inertia::location(route('clients'));
+            }
+
+            // Handle API requests
             return response()->json(null, 204);
         } catch (\Exception $e) {
             Log::error('Error deleting client', [
                 'client_id' => $id,
                 'error' => $e->getMessage()
             ]);
+
+            if (request()->header('X-Inertia')) {
+                return back()->withErrors(['general' => 'Failed to delete client. Please try again.']);
+            }
             return response()->json(['message' => 'Error deleting client'], 500);
         }
     }

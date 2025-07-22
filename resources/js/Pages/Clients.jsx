@@ -21,65 +21,7 @@ import {
     Trash2
 } from 'lucide-react';
 
-export default function Clients({ auth }) {
-    const clients = [
-        {
-            id: 1,
-            name: 'Acme Corporation',
-            contactPerson: 'John Smith',
-            email: 'john.smith@acme.com',
-            phone: '+1 (555) 123-4567',
-            website: 'www.acme.com',
-            company: 'Acme Corp',
-            status: 'active',
-            projects: 3,
-            totalRevenue: 25000,
-            lastContact: '2024-01-15',
-            rating: 5
-        },
-        {
-            id: 2,
-            name: 'TechStart Solutions',
-            contactPerson: 'Sarah Johnson',
-            email: 'sarah@techstart.com',
-            phone: '+1 (555) 987-6543',
-            website: 'www.techstart.com',
-            company: 'TechStart',
-            status: 'active',
-            projects: 2,
-            totalRevenue: 18000,
-            lastContact: '2024-01-20',
-            rating: 4
-        },
-        {
-            id: 3,
-            name: 'InnovateLab',
-            contactPerson: 'Mike Chen',
-            email: 'mike@innovatelab.com',
-            phone: '+1 (555) 456-7890',
-            website: 'www.innovatelab.com',
-            company: 'InnovateLab',
-            status: 'prospect',
-            projects: 0,
-            totalRevenue: 0,
-            lastContact: '2024-01-10',
-            rating: 3
-        },
-        {
-            id: 4,
-            name: 'RetailPlus',
-            contactPerson: 'Emily Davis',
-            email: 'emily@retailplus.com',
-            phone: '+1 (555) 789-0123',
-            website: 'www.retailplus.com',
-            company: 'RetailPlus',
-            status: 'active',
-            projects: 1,
-            totalRevenue: 12000,
-            lastContact: '2024-01-25',
-            rating: 5
-        }
-    ];
+export default function Clients({ auth, clients = [], error }) {
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -150,6 +92,17 @@ export default function Clients({ auth }) {
                     </CardContent>
                 </Card>
 
+                {/* Error Message */}
+                {error && (
+                    <Card className="border-red-200 bg-red-50">
+                        <CardContent className="pt-6">
+                            <div className="text-center text-red-600">
+                                <p>{error}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Clients Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {clients.map((client) => (
@@ -160,7 +113,7 @@ export default function Clients({ auth }) {
                                         <CardTitle className="text-lg">{client.name}</CardTitle>
                                         <CardDescription className="flex items-center mt-1">
                                             <Building className="w-4 h-4 mr-1" />
-                                            {client.company}
+                                            {client.company || 'No company'}
                                         </CardDescription>
                                     </div>
                                     <div className="flex flex-col items-end space-y-1">
@@ -168,7 +121,7 @@ export default function Clients({ auth }) {
                                             {client.status}
                                         </Badge>
                                         <div className="flex">
-                                            {renderStars(client.rating)}
+                                            {renderStars(client.rating || 3)}
                                         </div>
                                     </div>
                                 </div>
@@ -178,31 +131,31 @@ export default function Clients({ auth }) {
                                 <div className="space-y-2">
                                     <div className="flex items-center text-sm">
                                         <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                                        <span className="text-foreground">{client.contactPerson}</span>
+                                        <span className="text-foreground">{client.contactPerson || 'No contact person'}</span>
                                     </div>
                                     <div className="flex items-center text-sm">
                                         <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
-                                        <span className="text-muted-foreground">{client.email}</span>
+                                        <span className="text-muted-foreground">{client.email || 'No email'}</span>
                                     </div>
                                     <div className="flex items-center text-sm">
                                         <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
-                                        <span className="text-muted-foreground">{client.phone}</span>
+                                        <span className="text-muted-foreground">{client.phone || 'No phone'}</span>
                                     </div>
                                     <div className="flex items-center text-sm">
                                         <Globe className="w-4 h-4 mr-2 text-muted-foreground" />
-                                        <span className="text-muted-foreground">{client.website}</span>
+                                        <span className="text-muted-foreground">{client.website || 'No website'}</span>
                                     </div>
                                 </div>
 
                                 {/* Stats */}
                                 <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                                     <div className="text-center">
-                                        <div className="text-lg font-semibold text-foreground">{client.projects}</div>
+                                        <div className="text-lg font-semibold text-foreground">{client.projects || 0}</div>
                                         <div className="text-xs text-muted-foreground">Projects</div>
                                     </div>
                                     <div className="text-center">
                                         <div className="text-lg font-semibold text-foreground">
-                                            ${client.totalRevenue.toLocaleString()}
+                                            ${(client.totalRevenue || 0).toLocaleString()}
                                         </div>
                                         <div className="text-xs text-muted-foreground">Revenue</div>
                                     </div>
@@ -215,7 +168,7 @@ export default function Clients({ auth }) {
                                         <span className="text-muted-foreground">Last contact:</span>
                                     </div>
                                     <span className="text-foreground">
-                                        {new Date(client.lastContact).toLocaleDateString()}
+                                        {client.lastContact ? new Date(client.lastContact).toLocaleDateString() : 'Never'}
                                     </span>
                                 </div>
 
@@ -226,9 +179,11 @@ export default function Clients({ auth }) {
                                             View Details
                                         </Button>
                                     </Link>
-                                    <Button variant="outline" size="sm">
-                                        <Edit className="w-4 h-4" />
-                                    </Button>
+                                    <Link href={`/clients/${client.id}/edit`}>
+                                        <Button variant="outline" size="sm">
+                                            <Edit className="w-4 h-4" />
+                                        </Button>
+                                    </Link>
                                     <Button variant="outline" size="sm">
                                         <Trash2 className="w-4 h-4" />
                                     </Button>

@@ -1,10 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
     ArrowLeft,
     Edit,
@@ -33,6 +44,7 @@ export default function ClientDetails({ auth, clientId }) {
     const [client, setClient] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
         const fetchClient = async () => {
@@ -65,6 +77,15 @@ export default function ClientDetails({ auth, clientId }) {
 
         fetchClient();
     }, [clientId]);
+
+    const handleDeleteClient = () => {
+        router.delete(`/clients/${clientId}`, {
+            onError: (errors) => {
+                console.error('Delete client error:', errors);
+                alert('Failed to delete client. Please try again.');
+            }
+        });
+    };
 
     // Mock client data - fallback while loading or if API fails
     const mockClient = {
@@ -196,7 +217,8 @@ export default function ClientDetails({ auth, clientId }) {
     }
 
     const getStatusColor = (status) => {
-        switch (status) {
+        const safeStatus = status || 'inactive';
+        switch (safeStatus) {
             case 'active':
                 return 'bg-green-100 text-green-800';
             case 'prospect':
@@ -209,7 +231,8 @@ export default function ClientDetails({ auth, clientId }) {
     };
 
     const getProjectStatusColor = (status) => {
-        switch (status) {
+        const safeStatus = status || 'planned';
+        switch (safeStatus) {
             case 'completed':
                 return 'bg-green-100 text-green-800';
             case 'in-progress':
@@ -222,7 +245,8 @@ export default function ClientDetails({ auth, clientId }) {
     };
 
     const getProposalStatusColor = (status) => {
-        switch (status) {
+        const safeStatus = status || 'draft';
+        switch (safeStatus) {
             case 'accepted':
                 return 'bg-green-100 text-green-800';
             case 'sent':
@@ -237,10 +261,11 @@ export default function ClientDetails({ auth, clientId }) {
     };
 
     const renderStars = (rating) => {
+        const safeRating = rating || 0;
         return Array.from({ length: 5 }, (_, i) => (
             <Star
                 key={i}
-                className={`w-4 h-4 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                className={`w-4 h-4 ${i < safeRating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
             />
         ));
     };
@@ -287,7 +312,7 @@ export default function ClientDetails({ auth, clientId }) {
                                     <span>Client Information</span>
                                     <div className="flex items-center space-x-2">
                                         <Badge className={getStatusColor(clientData.status)}>
-                                            {clientData.status}
+                                            {clientData.status || 'inactive'}
                                         </Badge>
                                         <div className="flex">
                                             {renderStars(clientData.rating)}
@@ -328,7 +353,7 @@ export default function ClientDetails({ auth, clientId }) {
                                         <div className="flex items-center text-sm">
                                             <TrendingUp className="w-4 h-4 mr-2 text-muted-foreground" />
                                             <span className="font-medium">Total Revenue:</span>
-                                            <span className="ml-2 text-muted-foreground">${clientData.totalRevenue.toLocaleString()}</span>
+                                            <span className="ml-2 text-muted-foreground">${(clientData.totalRevenue || 0).toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -385,19 +410,19 @@ export default function ClientDetails({ auth, clientId }) {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-foreground">{clientData.projects.length}</div>
+                                    <div className="text-2xl font-bold text-foreground">{clientData.projects?.length || 0}</div>
                                     <div className="text-sm text-muted-foreground">Total Projects</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-foreground">{clientData.proposals.length}</div>
+                                    <div className="text-2xl font-bold text-foreground">{clientData.proposals?.length || 0}</div>
                                     <div className="text-sm text-muted-foreground">Total Proposals</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-foreground">${clientData.totalRevenue.toLocaleString()}</div>
+                                    <div className="text-2xl font-bold text-foreground">${(clientData.totalRevenue || 0).toLocaleString()}</div>
                                     <div className="text-sm text-muted-foreground">Total Revenue</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-foreground">{clientData.rating}/5</div>
+                                    <div className="text-2xl font-bold text-foreground">{clientData.rating || 0}/5</div>
                                     <div className="text-sm text-muted-foreground">Client Rating</div>
                                 </div>
                             </CardContent>
@@ -426,6 +451,36 @@ export default function ClientDetails({ auth, clientId }) {
                                         Create Proposal
                                     </Button>
                                 </Link>
+                                                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            size="sm"
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Delete Client
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the client
+                                                "{clientData.full_name || clientData.name}" and remove all associated data from our servers.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={handleDeleteClient}
+                                                className="bg-red-600 hover:bg-red-700 text-white"
+                                            >
+                                                Delete Client
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </CardContent>
                         </Card>
                     </div>
@@ -448,19 +503,19 @@ export default function ClientDetails({ auth, clientId }) {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {clientData.projects.map((project) => (
+                                    {(clientData.projects || []).map((project) => (
                                         <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg">
                                             <div className="flex-1">
                                                 <div className="flex items-center space-x-3">
-                                                    <h4 className="font-medium">{project.name}</h4>
+                                                    <h4 className="font-medium">{project.name || 'Unnamed Project'}</h4>
                                                     <Badge className={getProjectStatusColor(project.status)}>
-                                                        {project.status.replace('-', ' ')}
+                                                        {(project.status || 'planned').replace('-', ' ')}
                                                     </Badge>
                                                 </div>
                                                 <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
-                                                    <span>Budget: ${project.budget.toLocaleString()}</span>
-                                                    <span>Due: {new Date(project.dueDate).toLocaleDateString()}</span>
-                                                    <span>Progress: {project.progress}%</span>
+                                                    <span>Budget: ${(project.budget || 0).toLocaleString()}</span>
+                                                    <span>Due: {project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'Not set'}</span>
+                                                    <span>Progress: {project.progress || 0}%</span>
                                                 </div>
                                             </div>
                                             <Link href={`/projects/${project.id}`}>
@@ -483,24 +538,24 @@ export default function ClientDetails({ auth, clientId }) {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {clientData.proposals.map((proposal) => (
+                                    {(clientData.proposals || []).map((proposal) => (
                                         <div key={proposal.id} className="flex items-center justify-between p-4 border rounded-lg">
                                             <div className="flex-1">
                                                 <div className="flex items-center space-x-3">
                                                     <FileTextIcon className="w-5 h-5 text-blue-500" />
-                                                    <h4 className="font-medium">{proposal.title}</h4>
+                                                    <h4 className="font-medium">{proposal.title || 'Untitled Proposal'}</h4>
                                                     <Badge className={getProposalStatusColor(proposal.status)}>
-                                                        {proposal.status}
+                                                        {proposal.status || 'draft'}
                                                     </Badge>
                                                 </div>
                                                 <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
-                                                    <span>Price: ${proposal.price.toLocaleString()}</span>
-                                                    <span>Created: {new Date(proposal.created_at).toLocaleDateString()}</span>
-                                                    <span>Deliverables: {proposal.deliverables.length} items</span>
+                                                    <span>Price: ${(proposal.price || 0).toLocaleString()}</span>
+                                                    <span>Created: {proposal.created_at ? new Date(proposal.created_at).toLocaleDateString() : 'Not set'}</span>
+                                                    <span>Deliverables: {(proposal.deliverables || []).length} items</span>
                                                 </div>
                                                 <div className="mt-2">
                                                     <p className="text-sm text-muted-foreground line-clamp-2">
-                                                        {proposal.scope}
+                                                        {proposal.scope || 'No scope description available'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -516,7 +571,7 @@ export default function ClientDetails({ auth, clientId }) {
                                             </div>
                                         </div>
                                     ))}
-                                    {clientData.proposals.length === 0 && (
+                                    {(clientData.proposals || []).length === 0 && (
                                         <div className="text-center py-8">
                                             <FileTextIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                                             <p className="text-muted-foreground">No proposals created yet</p>
@@ -540,22 +595,22 @@ export default function ClientDetails({ auth, clientId }) {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {clientData.contactHistory.map((contact) => (
+                                    {(clientData.contactHistory || []).map((contact) => (
                                         <div key={contact.id} className="flex items-center space-x-4 p-4 border rounded-lg">
                                             <div className="flex-shrink-0">
-                                                {contact.type === 'email' ? (
+                                                {(contact.type || 'email') === 'email' ? (
                                                     <Mail className="w-5 h-5 text-blue-500" />
                                                 ) : (
                                                     <Phone className="w-5 h-5 text-green-500" />
                                                 )}
                                             </div>
                                             <div className="flex-1">
-                                                <h4 className="font-medium">{contact.subject}</h4>
+                                                <h4 className="font-medium">{contact.subject || 'No subject'}</h4>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {new Date(contact.date).toLocaleDateString()}
+                                                    {contact.date ? new Date(contact.date).toLocaleDateString() : 'Not set'}
                                                 </p>
                                             </div>
-                                            <Badge variant="outline">{contact.status}</Badge>
+                                            <Badge variant="outline">{contact.status || 'unknown'}</Badge>
                                         </div>
                                     ))}
                                 </div>

@@ -52,13 +52,7 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('analytics');
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
-    Route::get('/clients', function () {
-        return Inertia::render('Clients', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-        ]);
-    })->name('clients');
+    Route::get('/clients', [App\Http\Controllers\ClientController::class, 'index'])->name('clients');
     Route::get('/clients/create', function () {
         return Inertia::render('CreateClient', [
             'auth' => [
@@ -66,6 +60,15 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('clients.create');
+    Route::post('/clients', [App\Http\Controllers\ClientController::class, 'store'])->name('clients.store');
+    Route::get('/clients/{id}/edit', function ($id) {
+        return Inertia::render('EditClient', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'clientId' => $id,
+        ]);
+    })->name('clients.edit');
     Route::get('/clients/{id}', function ($id) {
         return Inertia::render('ClientDetails', [
             'auth' => [
@@ -74,6 +77,8 @@ Route::middleware(['auth'])->group(function () {
             'clientId' => $id,
         ]);
     })->name('clients.show');
+    Route::put('/clients/{id}', [App\Http\Controllers\ClientController::class, 'update'])->name('clients.update');
+    Route::delete('/clients/{id}', [App\Http\Controllers\ClientController::class, 'destroy'])->name('clients.destroy');
     Route::get('/proposals/{id}', function ($id) {
         return Inertia::render('ProposalDetails', [
             'auth' => [
