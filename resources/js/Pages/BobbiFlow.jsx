@@ -40,83 +40,59 @@ import {
     Circle
 } from 'lucide-react';
 
-export default function BobbiFlow({ auth }) {
+export default function BobbiFlow({ auth, tasks = [] }) {
     const [clientMode, setClientMode] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Mock data for tasks
-    const tasks = [
-        {
-            id: 1,
-            title: 'Design homepage mockups',
-            client: 'Acme Corp',
-            project: 'Website Redesign',
-            priority: 'high',
-            status: 'in-progress',
-            dueDate: '2024-02-15',
-            estimatedTime: '4h',
-            tags: ['Design', 'UI/UX'],
-            subtasks: [
-                { id: 1, text: 'Create wireframes', completed: true },
-                { id: 2, text: 'Design desktop version', completed: true },
-                { id: 3, text: 'Design mobile version', completed: false }
-            ],
-            comments: 3,
-            assignee: 'client'
-        },
-        {
-            id: 2,
-            title: 'Review SEO content',
-            client: 'TechStart',
-            project: 'Content Strategy',
-            priority: 'medium',
-            status: 'waiting',
-            dueDate: '2024-02-20',
-            estimatedTime: '2h',
-            tags: ['SEO', 'Content'],
-            subtasks: [
-                { id: 1, text: 'Review blog posts', completed: false },
-                { id: 2, text: 'Update meta descriptions', completed: false }
-            ],
-            comments: 1,
-            assignee: 'me'
-        },
-        {
-            id: 3,
-            title: 'Setup analytics tracking',
-            client: 'RetailPlus',
-            project: 'E-commerce Platform',
-            priority: 'high',
-            status: 'todo',
-            dueDate: '2024-02-18',
-            estimatedTime: '3h',
-            tags: ['Analytics', 'Setup'],
-            subtasks: [
-                { id: 1, text: 'Install Google Analytics', completed: false },
-                { id: 2, text: 'Configure conversion tracking', completed: false }
-            ],
-            comments: 0,
-            assignee: 'me'
-        },
-        {
-            id: 4,
-            title: 'Client feedback review',
-            client: 'Acme Corp',
-            project: 'Website Redesign',
-            priority: 'low',
-            status: 'review',
-            dueDate: '2024-02-25',
-            estimatedTime: '1h',
-            tags: ['Review', 'Feedback'],
-            subtasks: [
-                { id: 1, text: 'Review client comments', completed: false },
-                { id: 2, text: 'Update design files', completed: false }
-            ],
-            comments: 5,
-            assignee: 'me'
-        }
-    ];
+    // Debug logging
+    console.log('BobbiFlow received tasks:', tasks);
+    console.log('Tasks count:', tasks.length);
+
+    // Map database status values to frontend status values
+    const mapStatus = (dbStatus) => {
+        const statusMap = {
+            'todo': 'todo',
+            'in_progress': 'in-progress',
+            'done': 'done'
+        };
+        return statusMap[dbStatus] || 'todo';
+    };
+
+    // Map frontend status values back to database values for filtering
+    const mapStatusToDb = (frontendStatus) => {
+        const reverseStatusMap = {
+            'todo': 'todo',
+            'in-progress': 'in_progress',
+            'done': 'done',
+            'inbox': 'todo',
+            'waiting': 'todo',
+            'review': 'in_progress'
+        };
+        return reverseStatusMap[frontendStatus] || 'todo';
+    };
+
+    // Transform database tasks to match the expected format
+    const transformedTasks = tasks.map(task => ({
+        id: task.id,
+        title: task.title,
+        client: task.project?.client?.name || 'No Client',
+        project: task.project?.name || 'No Project',
+        priority: task.priority || 'medium',
+        status: mapStatus(task.status) || 'todo',
+        dueDate: task.due_date ? task.due_date.split('T')[0] : null,
+        estimatedTime: task.estimated_hours ? `${task.estimated_hours}h` : null,
+        tags: task.tags || [],
+        subtasks: task.subtasks?.map(subtask => ({
+            id: subtask.id,
+            text: subtask.description,
+            completed: subtask.status === 'done'
+        })) || [],
+        comments: 0, // TODO: Add comments functionality
+        assignee: task.assigned_to ? 'me' : 'client'
+    }));
+
+    console.log('Transformed tasks:', transformedTasks);
 
     const lanes = [
         { id: 'inbox', name: 'Inbox', icon: Inbox, clientName: 'New' },
@@ -168,7 +144,7 @@ export default function BobbiFlow({ auth }) {
         }
     };
 
-    const filteredTasks = tasks.filter(task => {
+    const filteredTasks = transformedTasks.filter(task => {
         if (selectedFilter !== 'all' && task.status !== selectedFilter) return false;
         if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
         return true;
@@ -176,7 +152,13 @@ export default function BobbiFlow({ auth }) {
 
     const tasksByLane = lanes.map(lane => ({
         ...lane,
-        tasks: filteredTasks.filter(task => task.status === lane.id)
+        tasks: filteredTasks.filter(task => {
+            // Map the task's frontend status to database status for comparison
+            const taskDbStatus = mapStatusToDb(task.status);
+            const laneDbStatus = mapStatusToDb(lane.id);
+            console.log(`Task ${task.id} (${task.title}): status=${task.status}, taskDbStatus=${taskDbStatus}, lane=${lane.id}, laneDbStatus=${laneDbStatus}, match=${taskDbStatus === laneDbStatus}`);
+            return taskDbStatus === laneDbStatus;
+        })
     }));
 
         return (
@@ -215,15 +197,15 @@ export default function BobbiFlow({ auth }) {
                         {/* Quick Stats */}
                         <div className="flex items-center space-x-6 text-sm">
                             <div className="text-center">
-                                <div className="font-semibold text-foreground">{tasks.length}</div>
+                                <div className="font-semibold text-foreground">{transformedTasks.length}</div>
                                 <div className="text-muted-foreground">Total</div>
                             </div>
                             <div className="text-center">
-                                <div className="font-semibold text-blue-600">{tasks.filter(t => t.status === 'in-progress').length}</div>
+                                <div className="font-semibold text-blue-600">{transformedTasks.filter(t => t.status === 'in-progress').length}</div>
                                 <div className="text-muted-foreground">Active</div>
                             </div>
                             <div className="text-center">
-                                <div className="font-semibold text-orange-600">{tasks.filter(t => t.status === 'waiting').length}</div>
+                                <div className="font-semibold text-orange-600">{transformedTasks.filter(t => t.status === 'waiting').length}</div>
                                 <div className="text-muted-foreground">Waiting</div>
                             </div>
                         </div>
@@ -234,35 +216,31 @@ export default function BobbiFlow({ auth }) {
 
                                 {/* Kanban Board - Full Height */}
                 <div className="flex-1 overflow-hidden">
-                    <div className="h-full flex gap-8 p-6 overflow-x-auto">
+                    <div className="h-full flex space-x-6 p-6 overflow-x-auto">
                         {tasksByLane.map((lane) => (
-                            <div key={lane.id} className="flex flex-col min-w-[320px] w-[320px]">
-                                {/* Lane Header */}
-                                <div className="flex-shrink-0 mb-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                                                <lane.icon className="w-4 h-4 text-muted-foreground" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-semibold text-base text-foreground">
-                                                    {clientMode ? lane.clientName : lane.name}
-                                                </h3>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {lane.tasks.length} task{lane.tasks.length !== 1 ? 's' : ''}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        {lane.id === 'in-progress' && (
-                                            <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
-                                                {lane.tasks.length}/5
-                                            </Badge>
-                                        )}
+                            <div key={lane.id} className="flex-shrink-0 w-80">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center space-x-2">
+                                        <lane.icon className="w-4 h-4 text-muted-foreground" />
+                                        <h3 className="font-medium text-foreground">{clientMode ? lane.clientName : lane.name}</h3>
+                                        <Badge variant="secondary" className="text-xs">
+                                            {lane.tasks.length}
+                                        </Badge>
                                     </div>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                        <MoreHorizontal className="w-3 h-3" />
+                                    </Button>
                                 </div>
 
-                                {/* Tasks Container */}
-                                <div className="flex-1 space-y-4 overflow-y-auto">
+                                <div className="space-y-3">
+                                    {lane.tasks.length === 0 && (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <div className="text-sm">No tasks in this lane</div>
+                                            <Link href="/tasks/create" className="text-xs text-blue-600 hover:text-blue-800 underline mt-2 block">
+                                                Create your first task →
+                                            </Link>
+                                        </div>
+                                    )}
                                     {lane.tasks.map((task) => (
                                         <Link key={task.id} href={`/tasks/${task.id}`} className="group cursor-pointer block">
                                             <Card className="border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-200 bg-background">
@@ -275,9 +253,12 @@ export default function BobbiFlow({ auth }) {
                                                         <span className="flex-shrink-0 ml-2">{getPriorityIcon(task.priority)}</span>
                                                     </div>
 
-                                                    {/* Client & Time */}
+                                                    {/* Project & Time */}
                                                     <div className="flex items-center justify-between text-sm mb-3">
-                                                        <span className="text-muted-foreground font-medium">{task.client}</span>
+                                                        <div className="flex items-center space-x-2 text-muted-foreground">
+                                                            <Building className="w-3 h-3" />
+                                                            <span>{task.project}</span>
+                                                        </div>
                                                         <span className="text-muted-foreground">{task.estimatedTime}</span>
                                                     </div>
 
@@ -335,7 +316,7 @@ export default function BobbiFlow({ auth }) {
                                                                 </div>
                                                             )}
                                                             <span className="text-sm text-muted-foreground">
-                                                                {new Date(task.dueDate).toLocaleDateString()}
+                                                                {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -352,7 +333,7 @@ export default function BobbiFlow({ auth }) {
                 </div>
 
                 {/* Floating AI Insights */}
-                {tasks.filter(t => t.status === 'in-progress').length > 5 && (
+                {transformedTasks.filter(t => t.status === 'in-progress').length > 5 && (
                     <div className="fixed bottom-6 right-6 z-50">
                         <Card className="w-80 shadow-lg border-amber-200 bg-amber-50/90 backdrop-blur">
                             <CardContent className="p-4">
@@ -361,7 +342,7 @@ export default function BobbiFlow({ auth }) {
                                     <div className="flex-1">
                                         <h4 className="font-medium text-amber-800 text-sm mb-1">Workload Alert</h4>
                                         <p className="text-xs text-amber-700 mb-2">
-                                            You have {tasks.filter(t => t.status === 'in-progress').length} active tasks. Consider rescheduling some.
+                                            You have {transformedTasks.filter(t => t.status === 'in-progress').length} active tasks. Consider rescheduling some.
                                         </p>
                                         <Button variant="outline" size="sm" className="h-7 text-xs bg-white/50 border-amber-300 text-amber-700 hover:bg-amber-100">
                                             Review

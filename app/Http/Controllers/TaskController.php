@@ -8,9 +8,134 @@ use App\Models\Subtask;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class TaskController extends Controller
 {
+    /**
+     * Show the BobbiFlow kanban board
+     */
+    public function bobbiFlow()
+    {
+        Log::info('Loading BobbiFlow page', ['user_id' => auth()->id()]);
+
+        try {
+            // Fetch tasks for the current user
+            $tasks = Task::with(['project.client', 'assignedUser', 'subtasks'])
+                ->where('user_id', auth()->id())
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            Log::info('BobbiFlow page loaded successfully', [
+                'user_id' => auth()->id(),
+                'tasks_count' => $tasks->count(),
+                'tasks' => $tasks->toArray()
+            ]);
+
+            return Inertia::render('BobbiFlow', [
+                'auth' => ['user' => auth()->user()],
+                'tasks' => $tasks
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to load BobbiFlow page', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return Inertia::render('BobbiFlow', [
+                'auth' => ['user' => auth()->user()],
+                'tasks' => collect([]),
+                'error' => 'Failed to load tasks'
+            ]);
+        }
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        Log::info('Loading task creation form', ['user_id' => auth()->id()]);
+
+        try {
+            // Fetch projects for the current user
+            $projects = Project::where('user_id', auth()->id())
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'name', 'description']);
+
+            Log::info('Task creation form loaded successfully', [
+                'user_id' => auth()->id(),
+                'projects_count' => $projects->count(),
+                'projects' => $projects->toArray()
+            ]);
+
+            return Inertia::render('CreateTask', [
+                'auth' => ['user' => auth()->user()],
+                'projects' => $projects
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to load task creation form', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return Inertia::render('CreateTask', [
+                'auth' => ['user' => auth()->user()],
+                'projects' => collect([]),
+                'error' => 'Failed to load projects'
+            ]);
+        }
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Task $task)
+    {
+        Log::info('Loading task edit form', ['task_id' => $task->id, 'user_id' => auth()->id()]);
+
+        try {
+            // Load task with relationships
+            $task->load(['project.client', 'assignedUser', 'subtasks', 'user']);
+
+            // Fetch projects for the current user
+            $projects = Project::where('user_id', auth()->id())
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'name', 'description']);
+
+            Log::info('Task edit form loaded successfully', [
+                'task_id' => $task->id,
+                'user_id' => auth()->id(),
+                'projects_count' => $projects->count()
+            ]);
+
+            return Inertia::render('EditTask', [
+                'auth' => ['user' => auth()->user()],
+                'task' => $task,
+                'projects' => $projects
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to load task edit form', [
+                'task_id' => $task->id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return Inertia::render('EditTask', [
+                'auth' => ['user' => auth()->user()],
+                'task' => null,
+                'projects' => collect([]),
+                'error' => 'Failed to load task data'
+            ]);
+        }
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -33,9 +158,9 @@ class TaskController extends Controller
             'project_id' => 'required|exists:projects,id',
             'phase_id' => 'nullable|integer',
             'title' => 'required|string|max:255',
-            'status' => 'required|in:todo,in_progress,done',
+            'status' => 'required|in:todo,in_progress,done,inbox,in-progress,waiting,review',
             'due_date' => 'nullable|date',
-            'assigned_to' => 'nullable|exists:users,id',
+            'assigned_to' => 'nullable|integer',
             'description' => 'nullable|string',
             'priority' => 'nullable|in:low,medium,high',
             'tags' => 'nullable|array',
@@ -46,6 +171,11 @@ class TaskController extends Controller
 
         if ($validator->fails()) {
             Log::warning('Task creation validation failed', ['errors' => $validator->errors()->toArray()]);
+
+            if (request()->header('X-Inertia')) {
+                return back()->withErrors($validator->errors());
+            }
+
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
@@ -65,6 +195,33 @@ class TaskController extends Controller
         try {
             // Create the task first
             $taskData = $request->except(['subtasks']);
+
+            // Handle empty estimated_hours
+            if (empty($taskData['estimated_hours'])) {
+                $taskData['estimated_hours'] = null;
+            }
+
+            // Handle empty assigned_to
+            if (empty($taskData['assigned_to'])) {
+                $taskData['assigned_to'] = null;
+            }
+
+            // Map frontend status values to database values
+            $statusMap = [
+                'inbox' => 'todo',
+                'in-progress' => 'in_progress',
+                'waiting' => 'todo',
+                'review' => 'in_progress',
+                'done' => 'done'
+            ];
+
+            if (isset($taskData['status']) && isset($statusMap[$taskData['status']])) {
+                $taskData['status'] = $statusMap[$taskData['status']];
+            }
+
+            // Add user_id to the task
+            $taskData['user_id'] = auth()->id();
+
             $task = Task::create($taskData);
             Log::info('Task created successfully', ['task_id' => $task->id]);
 
@@ -87,13 +244,24 @@ class TaskController extends Controller
                 ]);
             }
 
-            // Return the task with its subtasks
+            // Handle Inertia.js requests
+            if (request()->header('X-Inertia')) {
+                return redirect()->route('tasks.show', $task->id)
+                    ->with('success', 'Task created successfully!');
+            }
+
+            // Return the task with its subtasks for API requests
             return response()->json($task->load(['subtasks', 'project', 'assignedUser']), 201);
         } catch (\Exception $e) {
             Log::error('Failed to create task', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            if (request()->header('X-Inertia')) {
+                return back()->withErrors(['error' => 'Failed to create task']);
+            }
+
             return response()->json(['error' => 'Failed to create task'], 500);
         }
     }
@@ -104,7 +272,28 @@ class TaskController extends Controller
     public function show(Task $task)
     {
         Log::info('Fetching task details', ['task_id' => $task->id]);
-        return response()->json($task->load(['project', 'assignedUser']));
+
+        try {
+            // Load the task with all necessary relationships
+            $task->load(['project.client', 'assignedUser', 'subtasks', 'user']);
+
+            return Inertia::render('TaskDetails', [
+                'auth' => ['user' => auth()->user()],
+                'task' => $task
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to load task details', [
+                'task_id' => $task->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return Inertia::render('TaskDetails', [
+                'auth' => ['user' => auth()->user()],
+                'task' => null,
+                'error' => 'Failed to load task details'
+            ]);
+        }
     }
 
     /**
@@ -123,7 +312,7 @@ class TaskController extends Controller
             'title' => 'sometimes|required|string|max:255',
             'status' => 'sometimes|required|in:todo,in_progress,done',
             'due_date' => 'nullable|date',
-            'assigned_to' => 'nullable|exists:users,id',
+            'assigned_to' => 'nullable|integer',
             'description' => 'nullable|string',
             'priority' => 'nullable|in:low,medium,high',
             'tags' => 'nullable|array',
@@ -152,15 +341,27 @@ class TaskController extends Controller
         }
 
         try {
-        $task->update($request->all());
+            $task->update($request->all());
             Log::info('Task updated successfully', ['task_id' => $task->id]);
-        return response()->json($task->load(['project', 'assignedUser']));
+
+            // Handle Inertia.js requests
+            if (request()->header('X-Inertia')) {
+                return redirect()->route('tasks.show', $task->id)
+                    ->with('success', 'Task updated successfully!');
+            }
+
+            return response()->json($task->load(['project', 'assignedUser']));
         } catch (\Exception $e) {
             Log::error('Failed to update task', [
                 'task_id' => $task->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            if (request()->header('X-Inertia')) {
+                return back()->withErrors(['error' => 'Failed to update task']);
+            }
+
             return response()->json(['error' => 'Failed to update task'], 500);
         }
     }
@@ -171,16 +372,31 @@ class TaskController extends Controller
     public function destroy(Task $task)
     {
         Log::info('Deleting task', ['task_id' => $task->id]);
+
+        // Store task name for success message
+        $taskName = $task->title;
+
         try {
-        $task->delete();
+            $task->delete();
             Log::info('Task deleted successfully', ['task_id' => $task->id]);
-        return response()->json(null, 204);
+
+            // Handle Inertia.js requests
+            if (request()->header('X-Inertia')) {
+                return Inertia::location(route('bobbi-flow'));
+            }
+
+            return response()->json(null, 204);
         } catch (\Exception $e) {
             Log::error('Failed to delete task', [
                 'task_id' => $task->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            if (request()->header('X-Inertia')) {
+                return back()->withErrors(['error' => 'Failed to delete task']);
+            }
+
             return response()->json(['error' => 'Failed to delete task'], 500);
         }
     }

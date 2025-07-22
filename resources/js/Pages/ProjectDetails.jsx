@@ -289,25 +289,27 @@ export default function ProjectDetails({ auth, project }) {
                                     <div className="space-y-4">
                                         {projectData.tasks && projectData.tasks.length > 0 ? (
                                             projectData.tasks.slice(0, 3).map(task => (
-                                                <div key={task.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                                                    <div className="flex items-center space-x-3">
-                                                        {getTaskStatusIcon(task.status)}
-                                                        <div>
-                                                            <h3 className="font-medium text-foreground">{task.title}</h3>
-                                                            <p className="text-sm text-muted-foreground">{task.assignee || 'Unassigned'}</p>
+                                                <Link key={task.id} href={`/tasks/${task.id}`} className="block">
+                                                    <div className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                                        <div className="flex items-center space-x-3">
+                                                            {getTaskStatusIcon(task.status)}
+                                                            <div>
+                                                                <h3 className="font-medium text-foreground">{task.title}</h3>
+                                                                <p className="text-sm text-muted-foreground">{task.assignee || 'Unassigned'}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            {task.priority && (
+                                                                <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                                    {task.priority}
+                                                                </Badge>
+                                                            )}
+                                                            <span className="text-sm text-muted-foreground">
+                                                                {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
+                                                            </span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        {task.priority && (
-                                                            <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                                {task.priority}
-                                                            </Badge>
-                                                        )}
-                                                        <span className="text-sm text-muted-foreground">
-                                                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                </Link>
                                             ))
                                         ) : (
                                             <div className="text-center py-8">
@@ -425,30 +427,32 @@ export default function ProjectDetails({ auth, project }) {
                             <div className="space-y-4">
                                 {projectData.tasks && projectData.tasks.length > 0 ? (
                                     projectData.tasks.map(task => (
-                                        <div key={task.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                                            <div className="flex items-center space-x-3">
-                                                {getTaskStatusIcon(task.status)}
-                                                <div>
-                                                    <h3 className="font-medium text-foreground">{task.title}</h3>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Assigned to {task.assignee || 'Unassigned'}
-                                                    </p>
+                                        <Link key={task.id} href={`/tasks/${task.id}`} className="block">
+                                            <div className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                                <div className="flex items-center space-x-3">
+                                                    {getTaskStatusIcon(task.status)}
+                                                    <div>
+                                                        <h3 className="font-medium text-foreground">{task.title}</h3>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Assigned to {task.assignee || 'Unassigned'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    {task.priority && (
+                                                        <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                            {task.priority}
+                                                        </Badge>
+                                                    )}
+                                                    <span className="text-sm text-muted-foreground">
+                                                        Due {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
+                                                    </span>
+                                                    <Button variant="ghost" size="sm">
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center space-x-2">
-                                                {task.priority && (
-                                                    <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                        {task.priority}
-                                                    </Badge>
-                                                )}
-                                                <span className="text-sm text-muted-foreground">
-                                                    Due {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
-                                                </span>
-                                                <Button variant="ghost" size="sm">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
+                                        </Link>
                                     ))
                                 ) : (
                                     <div className="text-center py-12">

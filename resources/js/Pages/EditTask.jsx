@@ -10,62 +10,124 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Save, Target, Calendar, Clock, User, Building, Tag, Plus, X, MessageSquare, FileText, CheckCircle, AlertCircle, Circle } from 'lucide-react';
+import { ArrowLeft, Save, Target, Calendar, Clock, User, Building, Tag, Plus, X, MessageSquare, FileText, CheckCircle, AlertCircle, Circle, Flame, AlertTriangle, Minus, Inbox, Play, Eye, CheckCircle2, Flag, Trash2, ExternalLink } from 'lucide-react';
 
-export default function EditTask({ auth, taskId }) {
+export default function EditTask({ auth, task, projects = [], error }) {
     const [newTag, setNewTag] = useState('');
     const [newSubtask, setNewSubtask] = useState('');
 
-    // Mock task data - in real app this would come from props
-    const task = {
-        id: taskId,
-        title: 'Design homepage mockups',
-        description: 'Create modern, responsive homepage mockups for the new website redesign project. Focus on user experience and conversion optimization.',
-        client: 'acme-corp',
-        project: 'website-redesign',
-        priority: 'high',
-        status: 'in-progress',
-        dueDate: '2024-02-15',
-        estimatedTime: '4h',
-        assignee: 'client',
-        tags: ['Design', 'UI/UX', 'Homepage'],
-        subtasks: [
-            { id: 1, text: 'Create wireframes', completed: true },
-            { id: 2, text: 'Design desktop version', completed: true },
-            { id: 3, text: 'Design mobile version', completed: false },
-            { id: 4, text: 'Create responsive breakpoints', completed: false },
-            { id: 5, text: 'Design call-to-action buttons', completed: false }
-        ]
+    // Map database status to frontend status
+    const mapStatus = (dbStatus) => {
+        const statusMap = {
+            'todo': 'inbox',
+            'in_progress': 'in-progress',
+            'done': 'done'
+        };
+        return statusMap[dbStatus] || dbStatus;
     };
 
-    const { data, setData, put, processing, errors } = useForm({
+    // Map frontend status to database status
+    const mapStatusToDb = (frontendStatus) => {
+        const statusMap = {
+            'inbox': 'todo',
+            'in-progress': 'in_progress',
+            'waiting': 'todo',
+            'review': 'in_progress',
+            'done': 'done'
+        };
+        return statusMap[frontendStatus] || frontendStatus;
+    };
+
+    // Transform task data to match component expectations
+    const transformedTask = task ? {
+        id: task.id,
         title: task.title,
-        description: task.description,
-        client: task.client,
-        project: task.project,
-        priority: task.priority,
-        status: task.status,
-        dueDate: task.dueDate,
-        estimatedTime: task.estimatedTime,
-        assignee: task.assignee,
-        tags: task.tags,
-        subtasks: task.subtasks
+        description: task.description || '',
+        project_id: task.project_id,
+        priority: task.priority || 'medium',
+        status: mapStatus(task.status),
+        due_date: task.due_date ? task.due_date.split('T')[0] : '',
+        estimated_hours: task.estimated_hours || '',
+        assigned_to: task.assigned_to || '',
+        tags: task.tags || [],
+        subtasks: task.subtasks?.map(subtask => ({
+            id: subtask.id,
+            text: subtask.description,
+            completed: subtask.status === 'done'
+        })) || []
+    } : null;
+
+    // Handle error case
+    if (error || !transformedTask) {
+        return (
+            <AuthenticatedLayout user={auth.user}>
+                <Head title="Task Not Found" />
+                <div className="space-y-6">
+                    <div className="flex items-center space-x-4">
+                        <Link href="/bobbi-flow">
+                            <Button variant="outline" size="icon">
+                                <ArrowLeft className="w-4 h-4" />
+                            </Button>
+                        </Link>
+                        <div>
+                            <h1 className="text-2xl font-bold text-foreground">Task Not Found</h1>
+                            <p className="text-muted-foreground">The task you're looking for doesn't exist or you don't have permission to edit it.</p>
+                        </div>
+                    </div>
+                </div>
+            </AuthenticatedLayout>
+        );
+    }
+
+    const { data, setData, put, processing, errors } = useForm({
+        title: transformedTask.title,
+        description: transformedTask.description,
+        project_id: transformedTask.project_id,
+        priority: transformedTask.priority,
+        status: transformedTask.status,
+        due_date: transformedTask.due_date,
+        estimated_hours: transformedTask.estimated_hours,
+        assigned_to: transformedTask.assigned_to,
+        tags: transformedTask.tags,
+        subtasks: transformedTask.subtasks
     });
 
-    // Mock data for dropdowns
-    const clients = [
-        { id: 'acme-corp', name: 'Acme Corporation' },
-        { id: 'techstart', name: 'TechStart Inc' },
-        { id: 'retailplus', name: 'RetailPlus' }
+    // Mock users for assignee dropdown (TODO: Fetch from API)
+    const users = [
+        { id: 1, name: 'You' },
+        { id: 2, name: 'Client' }
     ];
 
-    const projects = [
-        { id: 'website-redesign', name: 'Website Redesign', client: 'acme-corp' },
-        { id: 'content-strategy', name: 'Content Strategy', client: 'techstart' },
-        { id: 'ecommerce-platform', name: 'E-commerce Platform', client: 'retailplus' }
-    ];
+    const getPriorityIcon = (priority) => {
+        switch (priority) {
+            case 'high': return <Flame className="w-4 h-4 text-red-500" />;
+            case 'medium': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+            case 'low': return <Minus className="w-4 h-4 text-green-500" />;
+            default: return <Minus className="w-4 h-4 text-green-500" />;
+        }
+    };
 
-    const filteredProjects = projects.filter(project => project.client === data.client);
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 'inbox': return <Inbox className="w-4 h-4 text-blue-500" />;
+            case 'in-progress': return <Play className="w-4 h-4 text-orange-500" />;
+            case 'waiting': return <Clock className="w-4 h-4 text-yellow-500" />;
+            case 'review': return <Eye className="w-4 h-4 text-purple-500" />;
+            case 'done': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+            default: return <Circle className="w-4 h-4 text-gray-500" />;
+        }
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'inbox': return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+            case 'in-progress': return 'bg-orange-100 text-orange-800 hover:bg-orange-200';
+            case 'waiting': return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+            case 'review': return 'bg-purple-100 text-purple-800 hover:bg-purple-200';
+            case 'done': return 'bg-green-100 text-green-800 hover:bg-green-200';
+            default: return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+        }
+    };
 
     const addTag = () => {
         if (newTag.trim() && !data.tags.includes(newTag.trim())) {
@@ -104,7 +166,7 @@ export default function EditTask({ auth, taskId }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        put(`/tasks/${taskId}`, {
+        put(`/tasks/${transformedTask.id}`, {
             onSuccess: () => {
                 console.log('Task updated successfully');
             },
@@ -116,32 +178,30 @@ export default function EditTask({ auth, taskId }) {
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Edit Task" />
+            <Head title={`Edit ${transformedTask.title}`} />
 
-            <div className="max-w-4xl mx-auto">
+            <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex justify-between items-start">
                     <div className="flex items-center space-x-4">
-                        <Link href={`/tasks/${taskId}`}>
-                            <Button variant="outline" size="sm">
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to Task
+                        <Link href={`/tasks/${transformedTask.id}`}>
+                            <Button variant="outline" size="icon">
+                                <ArrowLeft className="w-4 h-4" />
                             </Button>
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold text-foreground">Edit Task</h1>
-                            <p className="text-sm text-muted-foreground">Update task details and settings</p>
+                            <p className="text-muted-foreground">Update task details and settings</p>
                         </div>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit}>
                     <Tabs defaultValue="overview" className="space-y-6">
-                        <TabsList className="grid w-full grid-cols-4">
+                        <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
                             <TabsTrigger value="comments">Comments</TabsTrigger>
-                            <TabsTrigger value="attachments">Attachments</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="overview" className="space-y-6">
@@ -180,38 +240,21 @@ export default function EditTask({ auth, taskId }) {
                                                 {errors.description && <p className="text-sm text-red-500 mt-1">{errors.description}</p>}
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <Label htmlFor="client">Client</Label>
-                                                    <Select value={data.client} onValueChange={(value) => setData('client', value)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select client" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {clients.map((client) => (
-                                                                <SelectItem key={client.id} value={client.id}>
-                                                                    {client.name}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                <div>
-                                                    <Label htmlFor="project">Project</Label>
-                                                    <Select value={data.project} onValueChange={(value) => setData('project', value)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select project" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {filteredProjects.map((project) => (
-                                                                <SelectItem key={project.id} value={project.id}>
-                                                                    {project.name}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
+                                            <div>
+                                                <Label htmlFor="project">Project</Label>
+                                                <Select value={data.project_id ? data.project_id.toString() : ''} onValueChange={(value) => setData('project_id', parseInt(value))}>
+                                                    <SelectTrigger className={errors.project_id ? 'border-red-500' : ''}>
+                                                        <SelectValue placeholder="Select project" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {projects.map((project) => (
+                                                            <SelectItem key={project.id} value={project.id.toString()}>
+                                                                {project.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors.project_id && <p className="text-sm text-red-500 mt-1">{errors.project_id}</p>}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -220,7 +263,7 @@ export default function EditTask({ auth, taskId }) {
                                     <Card>
                                         <CardHeader>
                                             <CardTitle>Task Settings</CardTitle>
-                                            <CardDescription>Configure priority, status, and timing</CardDescription>
+                                            <CardDescription>Configure priority, status, and scheduling</CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4">
@@ -231,9 +274,24 @@ export default function EditTask({ auth, taskId }) {
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="low">Low</SelectItem>
-                                                            <SelectItem value="medium">Medium</SelectItem>
-                                                            <SelectItem value="high">High</SelectItem>
+                                                            <SelectItem value="low">
+                                                                <div className="flex items-center">
+                                                                    <Minus className="w-4 h-4 mr-2 text-green-500" />
+                                                                    Low
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value="medium">
+                                                                <div className="flex items-center">
+                                                                    <AlertTriangle className="w-4 h-4 mr-2 text-yellow-500" />
+                                                                    Medium
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value="high">
+                                                                <div className="flex items-center">
+                                                                    <Flame className="w-4 h-4 mr-2 text-red-500" />
+                                                                    High
+                                                                </div>
+                                                            </SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -245,11 +303,36 @@ export default function EditTask({ auth, taskId }) {
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="todo">To Do</SelectItem>
-                                                            <SelectItem value="in-progress">In Progress</SelectItem>
-                                                            <SelectItem value="waiting">Waiting on Client</SelectItem>
-                                                            <SelectItem value="review">Ready for Review</SelectItem>
-                                                            <SelectItem value="done">Done</SelectItem>
+                                                            <SelectItem value="inbox">
+                                                                <div className="flex items-center">
+                                                                    <Inbox className="w-4 h-4 mr-2" />
+                                                                    Inbox
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value="in-progress">
+                                                                <div className="flex items-center">
+                                                                    <Play className="w-4 h-4 mr-2" />
+                                                                    In Progress
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value="waiting">
+                                                                <div className="flex items-center">
+                                                                    <Clock className="w-4 h-4 mr-2" />
+                                                                    Waiting on Client
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value="review">
+                                                                <div className="flex items-center">
+                                                                    <Eye className="w-4 h-4 mr-2" />
+                                                                    Review
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value="done">
+                                                                <div className="flex items-center">
+                                                                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                                                                    Done
+                                                                </div>
+                                                            </SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -261,31 +344,41 @@ export default function EditTask({ auth, taskId }) {
                                                     <Input
                                                         id="dueDate"
                                                         type="date"
-                                                        value={data.dueDate}
-                                                        onChange={(e) => setData('dueDate', e.target.value)}
+                                                        value={data.due_date}
+                                                        onChange={(e) => setData('due_date', e.target.value)}
                                                     />
                                                 </div>
 
                                                 <div>
-                                                    <Label htmlFor="estimatedTime">Estimated Time</Label>
+                                                    <Label htmlFor="estimatedTime">Estimated Hours</Label>
                                                     <Input
                                                         id="estimatedTime"
-                                                        value={data.estimatedTime}
-                                                        onChange={(e) => setData('estimatedTime', e.target.value)}
-                                                        placeholder="e.g., 2h, 1.5h"
+                                                        type="number"
+                                                        step="0.5"
+                                                        min="0"
+                                                        max="999.99"
+                                                        value={data.estimated_hours}
+                                                        onChange={(e) => setData('estimated_hours', e.target.value ? parseFloat(e.target.value) : '')}
+                                                        placeholder="e.g., 2, 1.5"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div>
                                                 <Label htmlFor="assignee">Assignee</Label>
-                                                <Select value={data.assignee} onValueChange={(value) => setData('assignee', value)}>
+                                                <Select value={data.assigned_to ? data.assigned_to.toString() : ''} onValueChange={(value) => setData('assigned_to', parseInt(value))}>
                                                     <SelectTrigger>
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="me">You</SelectItem>
-                                                        <SelectItem value="client">Client</SelectItem>
+                                                        {users.map((user) => (
+                                                            <SelectItem key={user.id} value={user.id.toString()}>
+                                                                <div className="flex items-center">
+                                                                    {user.id === 1 ? (<User className="w-4 h-4 mr-2" />) : (<Building className="w-4 h-4 mr-2" />)}
+                                                                    {user.name}
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -296,26 +389,12 @@ export default function EditTask({ auth, taskId }) {
                                     <Card>
                                         <CardHeader>
                                             <CardTitle>Tags</CardTitle>
-                                            <CardDescription>Add tags to categorize the task</CardDescription>
+                                            <CardDescription>Add tags to help organize and categorize this task</CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
-                                            <div className="flex flex-wrap gap-2">
-                                                {data.tags.map((tag, index) => (
-                                                    <Badge key={index} variant="outline" className="bg-muted/30">
-                                                        {tag}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeTag(tag)}
-                                                            className="ml-2 hover:text-red-500"
-                                                        >
-                                                            <X className="w-3 h-3" />
-                                                        </button>
-                                                    </Badge>
-                                                ))}
-                                            </div>
                                             <div className="flex space-x-2">
                                                 <Input
-                                                    placeholder="Add new tag..."
+                                                    placeholder="Add a tag..."
                                                     value={newTag}
                                                     onChange={(e) => setNewTag(e.target.value)}
                                                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
@@ -323,6 +402,20 @@ export default function EditTask({ auth, taskId }) {
                                                 <Button type="button" onClick={addTag} disabled={!newTag.trim()}>
                                                     <Plus className="w-4 h-4" />
                                                 </Button>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {data.tags.map((tag, index) => (
+                                                    <Badge key={index} variant="outline" className="bg-muted/30">
+                                                        {tag}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeTag(tag)}
+                                                            className="ml-1 hover:text-red-500"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </Badge>
+                                                ))}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -335,12 +428,12 @@ export default function EditTask({ auth, taskId }) {
                                         <CardHeader>
                                             <CardTitle>Save Changes</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="space-y-3">
+                                        <CardContent className="space-y-2">
                                             <Button type="submit" className="w-full" disabled={processing}>
                                                 <Save className="w-4 h-4 mr-2" />
                                                 {processing ? 'Saving...' : 'Save Changes'}
                                             </Button>
-                                            <Link href={`/tasks/${taskId}`}>
+                                            <Link href={`/tasks/${transformedTask.id}`}>
                                                 <Button variant="outline" className="w-full">
                                                     Cancel
                                                 </Button>
@@ -354,21 +447,20 @@ export default function EditTask({ auth, taskId }) {
                                             <CardTitle>Task Preview</CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-3">
-                                            <div>
-                                                <h3 className="font-medium text-sm text-foreground">{data.title}</h3>
-                                                <p className="text-xs text-muted-foreground line-clamp-2">{data.description}</p>
-                                            </div>
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                                <span>Due: {data.dueDate}</span>
-                                                <span>{data.estimatedTime}</span>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Badge variant="outline" className="text-xs">
-                                                    {data.priority}
-                                                </Badge>
-                                                <Badge variant="outline" className="text-xs">
-                                                    {data.status.replace('-', ' ')}
-                                                </Badge>
+                                            <div className="p-3 border rounded-lg">
+                                                <h3 className="font-medium text-foreground">{data.title}</h3>
+                                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{data.description}</p>
+                                                <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                                                    <span>Due: {data.due_date}</span>
+                                                    <span>{data.estimated_hours}h</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2 mt-2">
+                                                    {getPriorityIcon(data.priority)}
+                                                    <Badge className={getStatusColor(data.status)}>
+                                                        {getStatusIcon(data.status)}
+                                                        <span className="ml-1 capitalize">{data.status.replace('-', ' ')}</span>
+                                                    </Badge>
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -379,33 +471,29 @@ export default function EditTask({ auth, taskId }) {
                         <TabsContent value="subtasks" className="space-y-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center justify-between">
-                                        <span>Subtasks</span>
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-sm text-muted-foreground">
-                                                {data.subtasks.filter(st => st.completed).length} of {data.subtasks.length} completed
-                                            </span>
-                                            <div className="w-20 bg-muted rounded-full h-2">
-                                                <div
-                                                    className="bg-primary h-2 rounded-full transition-all duration-300"
-                                                    style={{
-                                                        width: `${(data.subtasks.filter(st => st.completed).length / data.subtasks.length) * 100}%`
-                                                    }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    </CardTitle>
-                                    <CardDescription>Break down the task into smaller steps</CardDescription>
+                                    <CardTitle>Subtasks</CardTitle>
+                                    <CardDescription>Break down the task into smaller, manageable steps</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="space-y-3">
-                                        {data.subtasks.map((subtask) => (
-                                            <div key={subtask.id} className="flex items-center space-x-3">
+                                    <div className="flex space-x-2">
+                                        <Input
+                                            placeholder="Add a subtask..."
+                                            value={newSubtask}
+                                            onChange={(e) => setNewSubtask(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
+                                        />
+                                        <Button type="button" onClick={addSubtask} disabled={!newSubtask.trim()}>
+                                            <Plus className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {data.subtasks.map((subtask, index) => (
+                                            <div key={subtask.id} className="flex items-center space-x-2 p-2 border rounded-md">
                                                 <Checkbox
                                                     checked={subtask.completed}
                                                     onCheckedChange={() => toggleSubtask(subtask.id)}
                                                 />
-                                                <span className={`flex-1 ${subtask.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                                                <span className={`flex-1 ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
                                                     {subtask.text}
                                                 </span>
                                                 <Button
@@ -418,17 +506,13 @@ export default function EditTask({ auth, taskId }) {
                                                 </Button>
                                             </div>
                                         ))}
-                                    </div>
-                                    <div className="flex space-x-2">
-                                        <Input
-                                            placeholder="Add new subtask..."
-                                            value={newSubtask}
-                                            onChange={(e) => setNewSubtask(e.target.value)}
-                                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
-                                        />
-                                        <Button type="button" onClick={addSubtask} disabled={!newSubtask.trim()}>
-                                            <Plus className="w-4 h-4" />
-                                        </Button>
+                                        {data.subtasks.length === 0 && (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">No subtasks yet</p>
+                                                <p className="text-xs">Add subtasks to break down this task into smaller steps</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -437,18 +521,27 @@ export default function EditTask({ auth, taskId }) {
                         <TabsContent value="comments" className="space-y-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        <MessageSquare className="w-5 h-5" />
-                                        <span>Comments</span>
-                                    </CardTitle>
-                                    <CardDescription>Add comments and notes to the task</CardDescription>
+                                    <CardTitle>Comments</CardTitle>
+                                    <CardDescription>Add notes and comments about this task</CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Textarea
+                                            placeholder="Add a comment..."
+                                            rows={3}
+                                        />
+                                        <div className="flex justify-end">
+                                            <Button type="button" size="sm">
+                                                <MessageSquare className="w-4 h-4 mr-2" />
+                                                Add Comment
+                                            </Button>
+                                        </div>
+                                    </div>
                                     <div className="space-y-4">
-                                        <div className="p-4 border rounded-md bg-muted/30">
-                                            <p className="text-sm text-muted-foreground">
-                                                Comments functionality will be available in the full version.
-                                            </p>
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                            <p className="text-sm">No comments yet</p>
+                                            <p className="text-xs">Add comments to discuss this task with your team</p>
                                         </div>
                                     </div>
                                 </CardContent>

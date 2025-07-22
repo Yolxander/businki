@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,69 +32,87 @@ import {
     FileText,
     Link as LinkIcon,
     Flag,
-    Star
+    Star,
+    Target
 } from 'lucide-react';
 
-export default function TaskDetails({ auth, taskId }) {
+export default function TaskDetails({ auth, task, error }) {
     const [newComment, setNewComment] = useState('');
     const [newSubtask, setNewSubtask] = useState('');
 
-    // Mock task data - in real app this would come from props
-    const task = {
-        id: taskId,
-        title: 'Design homepage mockups',
-        description: 'Create modern, responsive homepage mockups for the new website redesign project. Focus on user experience and conversion optimization.',
-        client: 'Acme Corporation',
-        project: 'Website Redesign',
-        priority: 'high',
-        status: 'in-progress',
-        dueDate: '2024-02-15',
-        estimatedTime: '4h',
-        actualTime: '2.5h',
-        tags: ['Design', 'UI/UX', 'Homepage'],
-        assignee: 'client',
-        createdBy: 'John Smith',
-        createdAt: '2024-02-01',
-        updatedAt: '2024-02-10',
-        subtasks: [
-            { id: 1, text: 'Create wireframes', completed: true, completedAt: '2024-02-05' },
-            { id: 2, text: 'Design desktop version', completed: true, completedAt: '2024-02-08' },
-            { id: 3, text: 'Design mobile version', completed: false },
-            { id: 4, text: 'Create responsive breakpoints', completed: false },
-            { id: 5, text: 'Design call-to-action buttons', completed: false }
-        ],
-        comments: [
-            {
-                id: 1,
-                author: 'John Smith',
-                content: 'Initial wireframes are ready for review. Please check the desktop layout.',
-                timestamp: '2024-02-05 10:30 AM',
-                avatar: 'JS'
-            },
-            {
-                id: 2,
-                author: 'Client',
-                content: 'The layout looks great! Can we add more emphasis to the hero section?',
-                timestamp: '2024-02-06 02:15 PM',
-                avatar: 'C'
-            },
-            {
-                id: 3,
-                author: 'John Smith',
-                content: 'Updated the hero section with better visual hierarchy. Mobile version is next.',
-                timestamp: '2024-02-08 11:45 AM',
-                avatar: 'JS'
-            }
-        ],
-        attachments: [
-            { id: 1, name: 'wireframes.pdf', size: '2.4 MB', type: 'pdf' },
-            { id: 2, name: 'design-specs.fig', size: '1.8 MB', type: 'figma' },
-            { id: 3, name: 'brand-guidelines.pdf', size: '3.1 MB', type: 'pdf' }
-        ],
-        relatedTasks: [
-            { id: 2, title: 'Review SEO content', status: 'waiting', priority: 'medium' },
-            { id: 3, title: 'Setup analytics tracking', status: 'todo', priority: 'high' }
-        ]
+    // Map database status to frontend status
+    const mapStatus = (dbStatus) => {
+        const statusMap = {
+            'todo': 'todo',
+            'in_progress': 'in-progress',
+            'done': 'done'
+        };
+        return statusMap[dbStatus] || 'todo';
+    };
+
+    const handleDeleteTask = () => {
+        if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+            router.delete(`/tasks/${transformedTask.id}`, {
+                onSuccess: () => {
+                    router.visit('/bobbi-flow');
+                }
+            });
+        }
+    };
+
+    // If there's an error or no task, show error state
+    if (error || !task) {
+        return (
+            <AuthenticatedLayout user={auth.user}>
+                <Head title="Task Details" />
+                <div className="py-12">
+                    <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                        <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                            <div className="p-6 text-gray-900">
+                                <h2 className="text-xl font-semibold mb-4">Task Not Found</h2>
+                                <p className="text-gray-600 mb-4">
+                                    {error || 'The requested task could not be found.'}
+                                </p>
+                                <Link href="/bobbi-flow">
+                                    <Button variant="outline">
+                                        <ArrowLeft className="w-4 h-4 mr-2" />
+                                        Back to Bobbi Flow
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </AuthenticatedLayout>
+        );
+    }
+
+    // Transform database task to match component expectations
+    const transformedTask = {
+        id: task.id,
+        title: task.title,
+        description: task.description || '',
+        client: task.project?.client?.name || 'No Client',
+        project: task.project?.name || 'No Project',
+        priority: task.priority || 'medium',
+        status: mapStatus(task.status),
+        dueDate: task.due_date ? task.due_date.split('T')[0] : null,
+        estimatedTime: task.estimated_hours ? `${task.estimated_hours}h` : null,
+        actualTime: null, // Not in database yet
+        tags: task.tags || [],
+        assignee: task.assigned_to ? 'me' : 'client',
+        createdBy: task.user?.name || task.created_by || 'Unknown',
+        createdAt: task.created_at ? task.created_at.split('T')[0] : null,
+        updatedAt: task.updated_at ? task.updated_at.split('T')[0] : null,
+        subtasks: task.subtasks?.map(subtask => ({
+            id: subtask.id,
+            text: subtask.description,
+            completed: subtask.status === 'done',
+            completedAt: subtask.status === 'done' ? subtask.updated_at : null
+        })) || [],
+        comments: [], // Not implemented yet
+        attachments: [], // Not implemented yet
+        relatedTasks: [] // Not implemented yet
     };
 
     const getPriorityColor = (priority) => {
@@ -153,111 +171,299 @@ export default function TaskDetails({ auth, taskId }) {
         }
     };
 
-    const progressPercentage = (task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100;
+    const progressPercentage = (transformedTask.subtasks.filter(st => st.completed).length / transformedTask.subtasks.length) * 100;
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title={`${task.title} - Task Details`} />
+            <Head title={`${transformedTask.title} - Task Details`} />
 
-            <div className="max-w-6xl mx-auto">
+            <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex justify-between items-start">
                     <div className="flex items-center space-x-4">
                         <Link href="/bobbi-flow">
-                            <Button variant="outline" size="sm">
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to Flow
+                            <Button variant="outline" size="icon">
+                                <ArrowLeft className="w-4 h-4" />
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold text-foreground">{task.title}</h1>
-                            <p className="text-sm text-muted-foreground">
-                                {task.client} • {task.project}
+                            <h1 className="text-2xl font-bold text-foreground">{transformedTask.title}</h1>
+                            <p className="text-muted-foreground">
+                                {transformedTask.client} • {transformedTask.project}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Link href={`/tasks/${taskId}/edit`}>
-                            <Button variant="outline" size="sm">
+                        <Link href={`/tasks/${transformedTask.id}/edit`}>
+                            <Button variant="outline">
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
                             </Button>
                         </Link>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline">
                             <MoreHorizontal className="w-4 h-4" />
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Task Overview */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center justify-between">
-                                    <span>Task Overview</span>
-                                    <div className="flex items-center space-x-2">
-                                        {getPriorityIcon(task.priority)}
-                                        <Badge className={getStatusColor(task.status)}>
-                                            {getStatusIcon(task.status)}
-                                            <span className="ml-1 capitalize">{task.status.replace('-', ' ')}</span>
-                                        </Badge>
-                                    </div>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div>
-                                    <h3 className="font-medium text-foreground mb-2">Description</h3>
-                                    <p className="text-muted-foreground leading-relaxed">{task.description}</p>
-                                </div>
+                {/* Task Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <Card className="bg-card border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Status</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center space-x-2">
+                                {getStatusIcon(transformedTask.status)}
+                                <span className="text-lg font-semibold text-foreground capitalize">{transformedTask.status.replace('-', ' ')}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex items-center space-x-2">
-                                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">Due: {task.dueDate}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Clock className="w-4 h-4 text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">
-                                            {task.actualTime} / {task.estimatedTime}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <User className="w-4 h-4 text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">
-                                            {task.assignee === 'client' ? 'Client' : 'You'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Building className="w-4 h-4 text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">{task.client}</span>
-                                    </div>
-                                </div>
+                    <Card className="bg-card border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Priority</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center space-x-2">
+                                {getPriorityIcon(transformedTask.priority)}
+                                <span className="text-lg font-semibold text-foreground capitalize">{transformedTask.priority}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                                {task.tags.length > 0 && (
-                                    <div>
-                                        <h3 className="font-medium text-foreground mb-2">Tags</h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {task.tags.map((tag, index) => (
-                                                <Badge key={index} variant="outline" className="bg-muted/30">
-                                                    {tag}
+                    <Card className="bg-card border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Progress</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-lg font-semibold text-foreground">
+                                {transformedTask.subtasks.filter(st => st.completed).length}/{transformedTask.subtasks.length}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Subtasks completed</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-card border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Time</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-lg font-semibold text-foreground">{transformedTask.estimatedTime || 'Not set'}</div>
+                            <p className="text-xs text-muted-foreground">Estimated</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Main Content */}
+                <Tabs defaultValue="overview" className="space-y-6">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
+                        <TabsTrigger value="comments">Comments</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="overview" className="space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Main Content */}
+                            <div className="lg:col-span-2 space-y-6">
+                                {/* Task Overview */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center justify-between">
+                                            <span>Task Overview</span>
+                                            <div className="flex items-center space-x-2">
+                                                {getPriorityIcon(transformedTask.priority)}
+                                                <Badge className={getStatusColor(transformedTask.status)}>
+                                                    {getStatusIcon(transformedTask.status)}
+                                                    <span className="ml-1 capitalize">{transformedTask.status.replace('-', ' ')}</span>
                                                 </Badge>
-                                            ))}
+                                            </div>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div>
+                                            <h3 className="font-medium text-foreground mb-2">Description</h3>
+                                            <p className="text-muted-foreground leading-relaxed">{transformedTask.description}</p>
                                         </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
 
-                        {/* Subtasks */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="flex items-center space-x-2">
+                                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                                <span className="text-sm text-muted-foreground">Due: {transformedTask.dueDate}</span>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                                <span className="text-sm text-muted-foreground">
+                                                    {transformedTask.actualTime} / {transformedTask.estimatedTime}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <User className="w-4 h-4 text-muted-foreground" />
+                                                <span className="text-sm text-muted-foreground">
+                                                    {transformedTask.assignee === 'client' ? 'Client' : 'You'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Building className="w-4 h-4 text-muted-foreground" />
+                                                <span className="text-sm text-muted-foreground">{transformedTask.client}</span>
+                                            </div>
+                                        </div>
+
+                                        {transformedTask.tags.length > 0 && (
+                                            <div>
+                                                <h3 className="font-medium text-foreground mb-2">Tags</h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {transformedTask.tags.map((tag, index) => (
+                                                        <Badge key={index} variant="outline" className="bg-muted/30">
+                                                            {tag}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* Attachments */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Attachments</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {transformedTask.attachments.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {transformedTask.attachments.map((attachment) => (
+                                                    <div key={attachment.id} className="flex items-center justify-between p-2 border rounded-md">
+                                                        <div className="flex items-center space-x-2">
+                                                            <FileText className="w-4 h-4 text-muted-foreground" />
+                                                            <div>
+                                                                <p className="text-sm font-medium">{attachment.name}</p>
+                                                                <p className="text-xs text-muted-foreground">{attachment.size}</p>
+                                                            </div>
+                                                        </div>
+                                                        <Button variant="ghost" size="sm">
+                                                            <ExternalLink className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">No attachments</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* Related Tasks */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Related Tasks</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {transformedTask.relatedTasks.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {transformedTask.relatedTasks.map((relatedTask) => (
+                                                    <Link key={relatedTask.id} href={`/tasks/${relatedTask.id}`}>
+                                                        <div className="p-2 border rounded-md hover:bg-muted/50 transition-colors cursor-pointer">
+                                                            <p className="text-sm font-medium">{relatedTask.title}</p>
+                                                            <div className="flex items-center space-x-2 mt-1">
+                                                                <Badge className={getStatusColor(relatedTask.status)}>
+                                                                    {getStatusIcon(relatedTask.status)}
+                                                                    <span className="ml-1 capitalize">{relatedTask.status.replace('-', ' ')}</span>
+                                                                </Badge>
+                                                                {getPriorityIcon(relatedTask.priority)}
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">No related tasks</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Sidebar */}
+                            <div className="space-y-6">
+                                {/* Quick Actions */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Quick Actions</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                        <Link href={`/tasks/${transformedTask.id}/start-work`}>
+                                            <Button variant="outline" className="w-full justify-start">
+                                                <Play className="w-4 h-4 mr-2" />
+                                                Start Work
+                                            </Button>
+                                        </Link>
+                                        <Button variant="outline" className="w-full justify-start">
+                                            <Eye className="w-4 h-4 mr-2" />
+                                            Mark for Review
+                                        </Button>
+                                        <Button variant="outline" className="w-full justify-start">
+                                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                                            Mark Complete
+                                        </Button>
+                                        <Button variant="outline" className="w-full justify-start">
+                                            <Flag className="w-4 h-4 mr-2" />
+                                            Flag Task
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            onClick={handleDeleteTask}
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Delete Task
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Task Info */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Task Info</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Created by:</span>
+                                            <span>{transformedTask.createdBy}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Created:</span>
+                                            <span>{transformedTask.createdAt}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Updated:</span>
+                                            <span>{transformedTask.updatedAt}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Task ID:</span>
+                                            <span className="font-mono">#{transformedTask.id}</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* Subtasks */}
+                    <TabsContent value="subtasks" className="space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between">
                                     <span>Subtasks</span>
                                     <div className="flex items-center space-x-2">
                                         <span className="text-sm text-muted-foreground">
-                                            {task.subtasks.filter(st => st.completed).length} of {task.subtasks.length} completed
+                                            {transformedTask.subtasks.filter(st => st.completed).length} of {transformedTask.subtasks.length} completed
                                         </span>
                                         <div className="w-20 bg-muted rounded-full h-2">
                                             <div
@@ -270,7 +476,7 @@ export default function TaskDetails({ auth, taskId }) {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
-                                    {task.subtasks.map((subtask) => (
+                                    {transformedTask.subtasks.map((subtask) => (
                                         <div key={subtask.id} className="flex items-center space-x-3">
                                             <Checkbox
                                                 checked={subtask.completed}
@@ -302,18 +508,20 @@ export default function TaskDetails({ auth, taskId }) {
                                 </div>
                             </CardContent>
                         </Card>
+                    </TabsContent>
 
-                        {/* Comments */}
+                    {/* Comments */}
+                    <TabsContent value="comments" className="space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center space-x-2">
                                     <MessageSquare className="w-5 h-5" />
-                                    <span>Comments ({task.comments.length})</span>
+                                    <span>Comments ({transformedTask.comments.length})</span>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {task.comments.map((comment) => (
+                                    {transformedTask.comments.map((comment) => (
                                         <div key={comment.id} className="flex space-x-3">
                                             <div className="flex-shrink-0">
                                                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
@@ -349,113 +557,8 @@ export default function TaskDetails({ auth, taskId }) {
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-
-                    {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Quick Actions */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Quick Actions</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                <Link href={`/tasks/${taskId}/start-work`}>
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Play className="w-4 h-4 mr-2" />
-                                    Start Work
-                                </Button>
-                                </Link>
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    Mark for Review
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start">
-                                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                                    Mark Complete
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Flag className="w-4 h-4 mr-2" />
-                                    Flag Task
-                                </Button>
-                            </CardContent>
-                        </Card>
-
-                        {/* Attachments */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Attachments</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-2">
-                                    {task.attachments.map((attachment) => (
-                                        <div key={attachment.id} className="flex items-center justify-between p-2 border rounded-md">
-                                            <div className="flex items-center space-x-2">
-                                                <FileText className="w-4 h-4 text-muted-foreground" />
-                                                <div>
-                                                    <p className="text-sm font-medium">{attachment.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{attachment.size}</p>
-                                                </div>
-                                            </div>
-                                            <Button variant="ghost" size="sm">
-                                                <ExternalLink className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Related Tasks */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Related Tasks</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-2">
-                                    {task.relatedTasks.map((relatedTask) => (
-                                        <Link key={relatedTask.id} href={`/tasks/${relatedTask.id}`}>
-                                            <div className="p-2 border rounded-md hover:bg-muted/50 transition-colors cursor-pointer">
-                                                <p className="text-sm font-medium">{relatedTask.title}</p>
-                                                <div className="flex items-center space-x-2 mt-1">
-                                                    <Badge className={getStatusColor(relatedTask.status)}>
-                                                        {getStatusIcon(relatedTask.status)}
-                                                        <span className="ml-1 capitalize">{relatedTask.status.replace('-', ' ')}</span>
-                                                    </Badge>
-                                                    {getPriorityIcon(relatedTask.priority)}
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Task Info */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Task Info</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Created by:</span>
-                                    <span>{task.createdBy}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Created:</span>
-                                    <span>{task.createdAt}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Updated:</span>
-                                    <span>{task.updatedAt}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Task ID:</span>
-                                    <span className="font-mono">#{task.id}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
+                    </TabsContent>
+                </Tabs>
             </div>
         </AuthenticatedLayout>
     );

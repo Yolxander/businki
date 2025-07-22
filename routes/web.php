@@ -116,13 +116,7 @@ Route::middleware(['auth'])->group(function () {
             'subscriptionId' => $id,
         ]);
     })->name('subscriptions.show');
-    Route::get('/bobbi-flow', function () {
-        return Inertia::render('BobbiFlow', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-        ]);
-    })->name('bobbi-flow');
+    Route::get('/bobbi-flow', [App\Http\Controllers\TaskController::class, 'bobbiFlow'])->name('bobbi-flow');
     Route::get('/tasks', function () {
         return Inertia::render('Tasks', [
             'auth' => [
@@ -130,31 +124,11 @@ Route::middleware(['auth'])->group(function () {
             ],
         ]);
     })->name('tasks.index');
-    Route::get('/tasks/create', function () {
-    return Inertia::render('CreateTask', [
-        'auth' => [
-            'user' => Auth::user(),
-        ],
-    ]);
-})->name('tasks.create');
+    Route::get('/tasks/create', [App\Http\Controllers\TaskController::class, 'create'])->name('tasks.create');
 
-Route::get('/tasks/{id}', function ($id) {
-    return Inertia::render('TaskDetails', [
-        'auth' => [
-            'user' => Auth::user(),
-        ],
-        'taskId' => $id,
-    ]);
-})->name('tasks.show');
+Route::get('/tasks/{task}', [App\Http\Controllers\TaskController::class, 'show'])->name('tasks.show');
 
-Route::get('/tasks/{id}/edit', function ($id) {
-    return Inertia::render('EditTask', [
-        'auth' => [
-            'user' => Auth::user(),
-        ],
-        'taskId' => $id,
-    ]);
-})->name('tasks.edit');
+Route::get('/tasks/{task}/edit', [App\Http\Controllers\TaskController::class, 'edit'])->name('tasks.edit');
 
 Route::get('/tasks/{id}/start-work', function ($id) {
     return Inertia::render('StartWork', [
@@ -165,6 +139,10 @@ Route::get('/tasks/{id}/start-work', function ($id) {
     ]);
 })->name('tasks.start-work');
 
+    // Task web routes for Inertia.js
+    Route::post('/tasks', [App\Http\Controllers\TaskController::class, 'store'])->name('tasks.store');
+    Route::put('/tasks/{task}', [App\Http\Controllers\TaskController::class, 'update'])->name('tasks.update');
+    Route::delete('/tasks/{task}', [App\Http\Controllers\TaskController::class, 'destroy'])->name('tasks.destroy');
 
     Route::get('/calendar', [App\Http\Controllers\CalendarController::class, 'index'])->name('calendar');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');

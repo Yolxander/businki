@@ -8,20 +8,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Save, Target, Calendar, Clock, User, Building, Tag, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Target, Calendar, Clock, User, Building, Tag, Plus, X, Flame, Circle, Inbox, CheckSquare, Zap, Clock as ClockIcon, Eye, CheckCircle, User as UserIcon, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
-export default function CreateTask({ auth }) {
+export default function CreateTask({ auth, projects = [] }) {
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         description: '',
-        client: '',
-        project: '',
+        project_id: '',
         priority: 'medium',
         status: 'todo',
-        dueDate: '',
-        estimatedTime: '',
-        assignee: 'me',
+        due_date: '',
+        estimated_hours: '',
+        assigned_to: '',
         tags: [],
         subtasks: [],
         newTag: '',
@@ -31,18 +30,10 @@ export default function CreateTask({ auth }) {
     const [showTagInput, setShowTagInput] = useState(false);
     const [showSubtaskInput, setShowSubtaskInput] = useState(false);
 
-    const clients = [
-        { id: 1, name: 'Acme Corp' },
-        { id: 2, name: 'TechStart' },
-        { id: 3, name: 'RetailPlus' },
-        { id: 4, name: 'InnovateLab' }
-    ];
-
-    const projects = [
-        { id: 1, name: 'Website Redesign', client: 'Acme Corp' },
-        { id: 2, name: 'Content Strategy', client: 'TechStart' },
-        { id: 3, name: 'E-commerce Platform', client: 'RetailPlus' },
-        { id: 4, name: 'Brand Identity', client: 'Acme Corp' }
+    // Users for assignment (TODO: Fetch from API)
+    const users = [
+        { id: 1, name: 'You' },
+        { id: 2, name: 'Client' }
     ];
 
     const availableTags = ['Design', 'UI/UX', 'SEO', 'Content', 'Analytics', 'Setup', 'Review', 'Feedback', 'Development', 'Testing'];
@@ -50,9 +41,6 @@ export default function CreateTask({ auth }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         post('/tasks', {
-            onSuccess: () => {
-                console.log('Task created successfully');
-            },
             onError: (errors) => {
                 console.error('Task creation failed', errors);
             }
@@ -73,14 +61,14 @@ export default function CreateTask({ auth }) {
 
     const addSubtask = () => {
         if (data.newSubtask) {
-            setData('subtasks', [...data.subtasks, { id: Date.now(), text: data.newSubtask, completed: false }]);
+            setData('subtasks', [...data.subtasks, data.newSubtask]);
             setData('newSubtask', '');
             setShowSubtaskInput(false);
         }
     };
 
-    const removeSubtask = (subtaskId) => {
-        setData('subtasks', data.subtasks.filter(subtask => subtask.id !== subtaskId));
+    const removeSubtask = (subtaskIndex) => {
+        setData('subtasks', data.subtasks.filter((_, index) => index !== subtaskIndex));
     };
 
     const getPriorityColor = (priority) => {
@@ -99,13 +87,13 @@ export default function CreateTask({ auth }) {
     const getPriorityIcon = (priority) => {
         switch (priority) {
             case 'high':
-                return '🔥';
+                return <Flame className="w-4 h-4 text-red-500" />;
             case 'medium':
-                return '🟡';
+                return <Circle className="w-4 h-4 text-yellow-500" />;
             case 'low':
-                return '🟢';
+                return <Circle className="w-4 h-4 text-green-500" />;
             default:
-                return '⚪';
+                return <Circle className="w-4 h-4 text-gray-500" />;
         }
     };
 
@@ -127,6 +115,19 @@ export default function CreateTask({ auth }) {
                             <h1 className="text-2xl font-bold text-foreground">Create New Task</h1>
                             <p className="text-muted-foreground">Add a new task to your workflow</p>
                         </div>
+                    </div>
+
+                    {/* Form Actions - Moved to top */}
+                    <div className="flex space-x-4">
+                        <Link href="/bobbi-flow">
+                            <Button variant="outline" type="button">
+                                Cancel
+                            </Button>
+                        </Link>
+                        <Button type="submit" disabled={processing} onClick={handleSubmit}>
+                            <Save className="w-4 h-4 mr-2" />
+                            {processing ? 'Creating...' : 'Create Task'}
+                        </Button>
                     </div>
                 </div>
 
@@ -168,41 +169,29 @@ export default function CreateTask({ auth }) {
                                 {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="client">Client</Label>
-                                    <Select value={data.client} onValueChange={(value) => setData('client', value)}>
-                                        <SelectTrigger className={errors.client ? 'border-red-500' : ''}>
-                                            <SelectValue placeholder="Select client" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {clients.map((client) => (
-                                                <SelectItem key={client.id} value={client.name}>
-                                                    {client.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.client && <p className="text-red-500 text-sm mt-1">{errors.client}</p>}
-                                </div>
-                                <div>
-                                    <Label htmlFor="project">Project</Label>
-                                    <Select value={data.project} onValueChange={(value) => setData('project', value)}>
-                                        <SelectTrigger className={errors.project ? 'border-red-500' : ''}>
-                                            <SelectValue placeholder="Select project" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {projects
-                                                .filter(project => !data.client || project.client === data.client)
-                                                .map((project) => (
-                                                    <SelectItem key={project.id} value={project.name}>
-                                                        {project.name}
-                                                    </SelectItem>
-                                                ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.project && <p className="text-red-500 text-sm mt-1">{errors.project}</p>}
-                                </div>
+                            <div>
+                                <Label htmlFor="project">Project</Label>
+                                <Select value={data.project_id ? data.project_id.toString() : ''} onValueChange={(value) => setData('project_id', parseInt(value))} disabled={projects.length === 0}>
+                                    <SelectTrigger className={errors.project_id ? 'border-red-500' : ''}>
+                                        <SelectValue placeholder={projects.length === 0 ? "No projects available" : "Select project"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {projects.map((project) => (
+                                            <SelectItem key={project.id} value={project.id.toString()}>
+                                                {project.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {projects.length === 0 && (
+                                    <div className="text-amber-600 text-sm mt-1 space-y-2">
+                                        <p>No projects found. You need to create a project first before creating tasks.</p>
+                                        <Link href="/projects/create" className="text-blue-600 hover:text-blue-800 underline">
+                                            Create your first project →
+                                        </Link>
+                                    </div>
+                                )}
+                                {errors.project_id && <p className="text-red-500 text-sm mt-1">{errors.project_id}</p>}
                             </div>
                         </CardContent>
                     </Card>
@@ -229,19 +218,19 @@ export default function CreateTask({ auth }) {
                                         <SelectContent>
                                             <SelectItem value="high">
                                                 <div className="flex items-center">
-                                                    <span className="mr-2">🔥</span>
+                                                    <Flame className="w-4 h-4 mr-2 text-red-500" />
                                                     High Priority
                                                 </div>
                                             </SelectItem>
                                             <SelectItem value="medium">
                                                 <div className="flex items-center">
-                                                    <span className="mr-2">🟡</span>
+                                                    <Circle className="w-4 h-4 mr-2 text-yellow-500" />
                                                     Medium Priority
                                                 </div>
                                             </SelectItem>
                                             <SelectItem value="low">
                                                 <div className="flex items-center">
-                                                    <span className="mr-2">🟢</span>
+                                                    <Circle className="w-4 h-4 mr-2 text-green-500" />
                                                     Low Priority
                                                 </div>
                                             </SelectItem>
@@ -255,12 +244,42 @@ export default function CreateTask({ auth }) {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="inbox">📥 Inbox</SelectItem>
-                                            <SelectItem value="todo">📋 To Do</SelectItem>
-                                            <SelectItem value="in-progress">⚡ In Progress</SelectItem>
-                                            <SelectItem value="waiting">⏳ Waiting on Client</SelectItem>
-                                            <SelectItem value="review">👀 Ready for Review</SelectItem>
-                                            <SelectItem value="done">✅ Done</SelectItem>
+                                            <SelectItem value="inbox">
+                                                <div className="flex items-center">
+                                                    <Inbox className="w-4 h-4 mr-2" />
+                                                    Inbox
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="todo">
+                                                <div className="flex items-center">
+                                                    <CheckSquare className="w-4 h-4 mr-2" />
+                                                    To Do
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="in-progress">
+                                                <div className="flex items-center">
+                                                    <Zap className="w-4 h-4 mr-2" />
+                                                    In Progress
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="waiting">
+                                                <div className="flex items-center">
+                                                    <ClockIcon className="w-4 h-4 mr-2" />
+                                                    Waiting on Client
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="review">
+                                                <div className="flex items-center">
+                                                    <Eye className="w-4 h-4 mr-2" />
+                                                    Ready for Review
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="done">
+                                                <div className="flex items-center">
+                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                    Done
+                                                </div>
+                                            </SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -272,34 +291,48 @@ export default function CreateTask({ auth }) {
                                     <Input
                                         id="dueDate"
                                         type="date"
-                                        value={data.dueDate}
-                                        onChange={(e) => setData('dueDate', e.target.value)}
-                                        className={errors.dueDate ? 'border-red-500' : ''}
+                                        value={data.due_date}
+                                        onChange={(e) => setData('due_date', e.target.value)}
+                                        className={errors.due_date ? 'border-red-500' : ''}
                                     />
-                                    {errors.dueDate && <p className="text-red-500 text-sm mt-1">{errors.dueDate}</p>}
+                                    {errors.due_date && <p className="text-red-500 text-sm mt-1">{errors.due_date}</p>}
                                 </div>
                                 <div>
-                                    <Label htmlFor="estimatedTime">Estimated Time</Label>
+                                    <Label htmlFor="estimatedTime">Estimated Time (hours)</Label>
                                     <Input
                                         id="estimatedTime"
-                                        value={data.estimatedTime}
-                                        onChange={(e) => setData('estimatedTime', e.target.value)}
-                                        placeholder="e.g., 2h, 1.5h"
-                                        className={errors.estimatedTime ? 'border-red-500' : ''}
+                                        type="number"
+                                        step="0.5"
+                                        min="0"
+                                        max="999.99"
+                                        value={data.estimated_hours}
+                                        onChange={(e) => setData('estimated_hours', e.target.value ? parseFloat(e.target.value) : '')}
+                                        placeholder="e.g., 2, 1.5"
+                                        className={errors.estimated_hours ? 'border-red-500' : ''}
                                     />
-                                    {errors.estimatedTime && <p className="text-red-500 text-sm mt-1">{errors.estimatedTime}</p>}
+                                    {errors.estimated_hours && <p className="text-red-500 text-sm mt-1">{errors.estimated_hours}</p>}
                                 </div>
                             </div>
 
                             <div>
                                 <Label htmlFor="assignee">Assignee</Label>
-                                <Select value={data.assignee} onValueChange={(value) => setData('assignee', value)}>
+                                <Select value={data.assigned_to ? data.assigned_to.toString() : ''} onValueChange={(value) => setData('assigned_to', parseInt(value))}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="me">👤 You</SelectItem>
-                                        <SelectItem value="client">👥 Client</SelectItem>
+                                        {users.map((user) => (
+                                            <SelectItem key={user.id} value={user.id.toString()}>
+                                                <div className="flex items-center">
+                                                    {user.id === 1 ? (
+                                                        <UserIcon className="w-4 h-4 mr-2" />
+                                                    ) : (
+                                                        <Users className="w-4 h-4 mr-2" />
+                                                    )}
+                                                    {user.name}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -408,14 +441,14 @@ export default function CreateTask({ auth }) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                {data.subtasks.map((subtask) => (
-                                    <div key={subtask.id} className="flex items-center space-x-2">
-                                        <Checkbox checked={subtask.completed} />
-                                        <span className="flex-1">{subtask.text}</span>
+                                {data.subtasks.map((subtask, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                        <Checkbox checked={false} /> {/* Subtasks are now just text, no completion status */}
+                                        <span className="flex-1">{subtask}</span>
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => removeSubtask(subtask.id)}
+                                            onClick={() => removeSubtask(index)}
                                             className="h-6 w-6 p-0"
                                         >
                                             <X className="w-3 h-3" />
@@ -458,18 +491,8 @@ export default function CreateTask({ auth }) {
                         </CardContent>
                     </Card>
 
-                    {/* Form Actions */}
-                    <div className="flex justify-end space-x-4">
-                        <Link href="/bobbi-flow">
-                            <Button variant="outline" type="button">
-                                Cancel
-                            </Button>
-                        </Link>
-                        <Button type="submit" disabled={processing}>
-                            <Save className="w-4 h-4 mr-2" />
-                            {processing ? 'Creating...' : 'Create Task'}
-                        </Button>
-                    </div>
+                    {/* Form Actions - Moved to end of page */}
+                    {/* The buttons are now moved to the top */}
                 </form>
             </div>
         </AuthenticatedLayout>
