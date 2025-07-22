@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,8 @@ import { ArrowLeft, Save, Target, Calendar, Clock, User, Building, Tag, Plus, X,
 import { Badge } from '@/components/ui/badge';
 
 export default function CreateTask({ auth, projects = [] }) {
+    const [selectedProject, setSelectedProject] = useState(null);
+
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         description: '',
@@ -29,6 +31,36 @@ export default function CreateTask({ auth, projects = [] }) {
 
     const [showTagInput, setShowTagInput] = useState(false);
     const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+
+    // Handle project_id from URL parameters
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project_id');
+
+        if (projectId && projects.length > 0) {
+            const project = projects.find(p => p.id.toString() === projectId);
+            if (project) {
+                setSelectedProject(project);
+                setData('project_id', project.id);
+                console.log('Project pre-selected:', project.name, 'ID:', project.id);
+            }
+        }
+    }, [projects, setData]);
+
+    // Additional effect to handle project_id when projects are loaded
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project_id');
+
+        if (projectId && projects.length > 0 && !selectedProject) {
+            const project = projects.find(p => p.id.toString() === projectId);
+            if (project) {
+                setSelectedProject(project);
+                setData('project_id', project.id);
+                console.log('Project pre-selected (fallback):', project.name, 'ID:', project.id);
+            }
+        }
+    }, [projects, selectedProject, setData]);
 
     // Users for assignment (TODO: Fetch from API)
     const users = [
@@ -99,20 +131,22 @@ export default function CreateTask({ auth, projects = [] }) {
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Create Task" />
+            <Head title={selectedProject ? `Create New Task for ${selectedProject.name}` : "Create Task"} />
 
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                        <Link href="/bobbi-flow">
+                        <Link href={selectedProject ? `/projects/${selectedProject.id}` : "/bobbi-flow"}>
                             <Button variant="outline" size="sm">
                                 <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to Bobbi Flow
+                                {selectedProject ? `Back to ${selectedProject.name}` : "Back to Bobbi Flow"}
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold text-foreground">Create New Task</h1>
+                            <h1 className="text-2xl font-bold text-foreground">
+                                {selectedProject ? `Create New Task for ${selectedProject.name}` : "Create New Task"}
+                            </h1>
                             <p className="text-muted-foreground">Add a new task to your workflow</p>
                         </div>
                     </div>
@@ -171,7 +205,16 @@ export default function CreateTask({ auth, projects = [] }) {
 
                             <div>
                                 <Label htmlFor="project">Project</Label>
-                                <Select value={data.project_id ? data.project_id.toString() : ''} onValueChange={(value) => setData('project_id', parseInt(value))} disabled={projects.length === 0}>
+                                <Select
+                                    value={data.project_id ? data.project_id.toString() : ''}
+                                    onValueChange={(value) => {
+                                        const project = projects.find(p => p.id.toString() === value);
+                                        setSelectedProject(project);
+                                        setData('project_id', parseInt(value));
+                                        console.log('Project selected:', project?.name, 'ID:', value);
+                                    }}
+                                    disabled={projects.length === 0}
+                                >
                                     <SelectTrigger className={errors.project_id ? 'border-red-500' : ''}>
                                         <SelectValue placeholder={projects.length === 0 ? "No projects available" : "Select project"} />
                                     </SelectTrigger>
@@ -183,6 +226,11 @@ export default function CreateTask({ auth, projects = [] }) {
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {data.project_id && selectedProject && (
+                                    <p className="text-sm text-green-600 mt-1">
+                                        ✓ Selected: {selectedProject.name}
+                                    </p>
+                                )}
                                 {projects.length === 0 && (
                                     <div className="text-amber-600 text-sm mt-1 space-y-2">
                                         <p>No projects found. You need to create a project first before creating tasks.</p>

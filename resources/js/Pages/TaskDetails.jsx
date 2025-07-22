@@ -191,7 +191,7 @@ export default function TaskDetails({ auth, task, error }) {
         id: task.id,
         title: task.title,
         description: task.description || '',
-        client: task.project?.client?.name || 'No Client',
+        client: task.project?.client ? `${task.project.client.first_name} ${task.project.client.last_name}`.trim() : 'No Client',
         project: task.project?.name || 'No Project',
         priority: task.priority || 'medium',
         status: mapStatus(task.status),

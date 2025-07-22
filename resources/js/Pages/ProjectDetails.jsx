@@ -14,6 +14,9 @@ import {
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog';
+import {
     ArrowLeft,
     Edit,
     Calendar,
@@ -43,12 +46,16 @@ import {
     Download,
     Share,
     MoreVertical,
-    Trash2 as Trash2Icon
+    Trash2 as Trash2Icon,
+    Brain,
+    PenTool,
+    Users
 } from 'lucide-react';
 
 export default function ProjectDetails({ auth, project }) {
     const [activeTab, setActiveTab] = useState('overview');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showTaskCreationModal, setShowTaskCreationModal] = useState(false);
 
     // Use real project data or fallback to mock data for development
     const projectData = project || {
@@ -126,6 +133,77 @@ export default function ProjectDetails({ auth, project }) {
         });
     };
 
+    const handleManualTaskCreation = () => {
+        setShowTaskCreationModal(false);
+        // Navigate to task creation with project pre-selected
+        router.visit(`/tasks/create?project_id=${projectData.id}`);
+    };
+
+    const handleAITaskGeneration = () => {
+        setShowTaskCreationModal(false);
+        // TODO: Implement AI task generation
+        toast.info('AI task generation coming soon!');
+    };
+
+    // Task Creation Modal Component
+    const TaskCreationModal = () => (
+        <Dialog open={showTaskCreationModal} onOpenChange={setShowTaskCreationModal}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader className="space-y-3">
+                    <DialogTitle className="flex items-center space-x-3 text-xl">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                            <Plus className="w-6 h-6 text-primary" />
+                        </div>
+                        <span>Create New Task</span>
+                    </DialogTitle>
+                    <DialogDescription className="text-base leading-relaxed">
+                        Choose how you'd like to create a task for <span className="font-semibold text-foreground">"{projectData.name}"</span>
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-6">
+                    <div className="grid grid-cols-1 gap-4">
+                        <Button
+                            onClick={handleManualTaskCreation}
+                            className="h-auto p-6 flex items-start space-x-4 hover:bg-muted/50 transition-all duration-200 border-2 hover:border-primary/20"
+                            variant="outline"
+                        >
+                            <div className="p-3 bg-blue-500/10 rounded-lg">
+                                <PenTool className="w-6 h-6 text-blue-500" />
+                            </div>
+                            <div className="text-left flex-1">
+                                <h3 className="font-semibold text-lg mb-1">Manual Creation</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Create a task manually with full control
+                                </p>
+                            </div>
+                        </Button>
+
+                        <Button
+                            onClick={handleAITaskGeneration}
+                            className="h-auto p-6 flex items-start space-x-4 hover:bg-muted/50 transition-all duration-200 border-2 hover:border-primary/20"
+                            variant="outline"
+                        >
+                            <div className="p-3 bg-purple-500/10 rounded-lg">
+                                <Brain className="w-6 h-6 text-purple-500" />
+                            </div>
+                            <div className="text-left flex-1">
+                                <h3 className="font-semibold text-lg mb-1">AI Generation</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Let AI generate tasks for you
+                                </p>
+                            </div>
+                        </Button>
+                    </div>
+                </div>
+                <DialogFooter className="pt-4">
+                    <Button variant="outline" onClick={() => setShowTaskCreationModal(false)} className="px-6">
+                        Cancel
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+
     return (
         <AuthenticatedLayout user={auth.user}>
             <Head title={`${projectData.name} - Project Details`} />
@@ -157,7 +235,7 @@ export default function ProjectDetails({ auth, project }) {
                                 Edit
                             </Button>
                         </Link>
-                        <Button>
+                        <Button onClick={() => setShowTaskCreationModal(true)}>
                             <Plus className="w-4 h-4 mr-2" />
                             Add Task
                         </Button>
@@ -324,7 +402,7 @@ export default function ProjectDetails({ auth, project }) {
                                         ) : (
                                             <div className="text-center py-8">
                                                 <p className="text-muted-foreground">No tasks yet</p>
-                                                <Button className="mt-2" size="sm">
+                                                <Button className="mt-2" size="sm" onClick={() => setShowTaskCreationModal(true)}>
                                                     <Plus className="w-4 h-4 mr-2" />
                                                     Add First Task
                                                 </Button>
@@ -342,7 +420,7 @@ export default function ProjectDetails({ auth, project }) {
                                     <CardTitle className="text-foreground">Quick Actions</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
-                                    <Button className="w-full justify-start" variant="outline">
+                                    <Button className="w-full justify-start" variant="outline" onClick={() => setShowTaskCreationModal(true)}>
                                         <Plus className="w-4 h-4 mr-2" />
                                         Add Task
                                     </Button>
@@ -422,15 +500,9 @@ export default function ProjectDetails({ auth, project }) {
                 {activeTab === 'tasks' && (
                     <Card className="bg-card border-border">
                         <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle className="text-foreground">Project Tasks</CardTitle>
-                                    <CardDescription className="text-muted-foreground">Manage and track project tasks</CardDescription>
-                                </div>
-                                <Button>
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Add Task
-                                </Button>
+                            <div>
+                                <CardTitle className="text-foreground">Project Tasks</CardTitle>
+                                <CardDescription className="text-muted-foreground">Manage and track project tasks</CardDescription>
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -473,7 +545,7 @@ export default function ProjectDetails({ auth, project }) {
                                         <p className="text-muted-foreground mb-4">
                                             Get started by creating your first task
                                         </p>
-                                        <Button>
+                                        <Button onClick={() => setShowTaskCreationModal(true)}>
                                             <Plus className="w-4 h-4 mr-2" />
                                             Create Task
                                         </Button>
@@ -583,6 +655,7 @@ export default function ProjectDetails({ auth, project }) {
                     </Card>
                 )}
             </div>
+            <TaskCreationModal />
         </AuthenticatedLayout>
     );
 }
