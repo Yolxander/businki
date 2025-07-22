@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from 'sonner';
 import {
     ArrowLeft,
@@ -23,7 +24,9 @@ import {
     DollarSign,
     FileText,
     Target as TargetIcon,
-    AlertCircle as AlertCircleIcon
+    AlertCircle as AlertCircleIcon,
+    Plus,
+    Users
 } from 'lucide-react';
 
 export default function CreateProject({ auth, clients }) {
