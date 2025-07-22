@@ -77,6 +77,8 @@ function ShortcutsModal({ open, onClose }) {
 
 export default function StartWork({ auth, task, error }) {
     const [loading, setLoading] = useState(false);
+    const [generatingSubtasks, setGeneratingSubtasks] = useState(false);
+    const [visibleSubtasks, setVisibleSubtasks] = useState(new Set());
     const [workSession, setWorkSession] = useState({
         isActive: false,
         startTime: null,
@@ -109,12 +111,17 @@ export default function StartWork({ auth, task, error }) {
     // Initialize subtasks from task data
     React.useEffect(() => {
         if (task && task.subtasks) {
-            setSubtasks(task.subtasks.map(subtask => ({
+            const initialSubtasks = task.subtasks.map(subtask => ({
                 id: subtask.id,
                 text: subtask.description,
                 completed: subtask.status === 'done',
                 completedAt: subtask.status === 'done' ? subtask.updated_at : null
-            })));
+            }));
+            setSubtasks(initialSubtasks);
+
+            // Make existing subtasks visible immediately
+            const existingSubtaskIds = new Set(initialSubtasks.map(st => st.id));
+            setVisibleSubtasks(existingSubtaskIds);
         }
     }, [task]);
 
@@ -319,6 +326,9 @@ export default function StartWork({ auth, task, error }) {
                 };
                 setSubtasks(prev => [...prev, newSubtaskItem]);
 
+                // Make the new subtask visible
+                setVisibleSubtasks(prev => new Set([...prev, newSubtaskItem.id]));
+
                 toast.success("Subtask added successfully!");
                 setNewSubtask('');
             } else {
@@ -330,8 +340,8 @@ export default function StartWork({ auth, task, error }) {
         }
     };
 
-    const generateSubtasks = async () => {
-        setLoading(true);
+            const generateSubtasks = async () => {
+        setGeneratingSubtasks(true);
         try {
             const response = await fetch(`/api/tasks/${transformedTask.id}/generate-subtasks`, {
                 method: 'POST',
@@ -358,6 +368,15 @@ export default function StartWork({ auth, task, error }) {
 
                 // Add new subtasks to the existing list
                 setSubtasks(prev => [...prev, ...transformedSubtasks]);
+
+                // Staggered fade-in animation for each subtask
+                const newSubtaskIds = transformedSubtasks.map(st => st.id);
+                newSubtaskIds.forEach((subtaskId, index) => {
+                    setTimeout(() => {
+                        setVisibleSubtasks(prev => new Set([...prev, subtaskId]));
+                    }, index * 200); // 200ms delay between each subtask
+                });
+
                 toast.success(`Generated ${newSubtasks.length} subtasks successfully`);
             } else {
                 const error = await response.json();
@@ -367,7 +386,41 @@ export default function StartWork({ auth, task, error }) {
             console.error('Error generating subtasks:', error);
             toast.error('Failed to generate subtasks');
         } finally {
-            setLoading(false);
+            setGeneratingSubtasks(false);
+        }
+    };
+
+    const deleteSubtask = async (subtaskId) => {
+        try {
+            const response = await fetch(`/api/subtasks/${subtaskId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+
+            if (response.ok) {
+                // Remove from visible subtasks first for fade-out effect
+                setVisibleSubtasks(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(subtaskId);
+                    return newSet;
+                });
+
+                // Remove from subtasks list after fade-out
+                setTimeout(() => {
+                    setSubtasks(prev => prev.filter(st => st.id !== subtaskId));
+                }, 300);
+
+                toast.success('Subtask deleted successfully');
+            } else {
+                const error = await response.json();
+                toast.error(error.message || 'Failed to delete subtask');
+            }
+        } catch (error) {
+            console.error('Error deleting subtask:', error);
+            toast.error('Failed to delete subtask');
         }
     };
 
@@ -689,14 +742,14 @@ export default function StartWork({ auth, task, error }) {
                                                 <CardTitle>Subtasks</CardTitle>
                                                 <CardDescription>Manage your task breakdown</CardDescription>
                                             </div>
-                                            <Button
+                                                                                        <Button
                                                 onClick={generateSubtasks}
-                                                disabled={loading}
+                                                disabled={generatingSubtasks}
                                                 variant="outline"
                                                 size="sm"
                                                 className="flex items-center space-x-2"
                                             >
-                                                {loading ? (
+                                                {generatingSubtasks ? (
                                                     <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                                                 ) : (
                                                     <Zap className="w-4 h-4" />
@@ -707,8 +760,15 @@ export default function StartWork({ auth, task, error }) {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="space-y-3">
-                                            {subtasks.map((subtask) => (
-                                                <div key={subtask.id} className="flex items-center space-x-3 p-2 border rounded-lg">
+                                                                                        {subtasks.map((subtask) => (
+                                                <div
+                                                    key={subtask.id}
+                                                    className={`flex items-center space-x-3 p-2 border rounded-lg transition-all duration-300 ease-out ${
+                                                        visibleSubtasks.has(subtask.id)
+                                                            ? 'opacity-100 translate-y-0'
+                                                            : 'opacity-0 translate-y-2'
+                                                    }`}
+                                                >
                                                     <Checkbox
                                                         checked={subtask.completed}
                                                         onCheckedChange={() => toggleSubtask(subtask.id)}
@@ -721,13 +781,35 @@ export default function StartWork({ auth, task, error }) {
                                                             {subtask.completedAt ? new Date(subtask.completedAt).toLocaleDateString() : 'Completed'}
                                                         </span>
                                                     )}
+                                                    <button
+                                                        onClick={() => deleteSubtask(subtask.id)}
+                                                        className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded transition-colors duration-200"
+                                                        title="Delete subtask"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             ))}
 
-                                            {subtasks.length === 0 && (
+                                            {subtasks.length === 0 && !generatingSubtasks && (
                                                 <div className="text-center py-8 text-muted-foreground">
                                                     <p className="text-sm">No subtasks yet</p>
                                                     <p className="text-xs">Add a subtask to break down this task</p>
+                                                </div>
+                                            )}
+
+                                            {generatingSubtasks && (
+                                                <div className="text-center py-8 text-muted-foreground">
+                                                    <div className="flex flex-col items-center space-y-3">
+                                                        <div className="relative">
+                                                            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                                            <div className="absolute inset-0 w-8 h-8 border-2 border-primary/20 rounded-full"></div>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-sm font-medium">Generating subtasks...</p>
+                                                            <p className="text-xs">AI is analyzing your task and creating actionable steps</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
