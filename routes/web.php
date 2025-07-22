@@ -172,13 +172,7 @@ Route::get('/projects/{id}/edit', function ($id) {
         'projectId' => $id,
     ]);
 })->name('projects.edit');
-    Route::get('/calendar', function () {
-        return Inertia::render('Calendar', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-        ]);
-    })->name('calendar');
+    Route::get('/calendar', [App\Http\Controllers\CalendarController::class, 'index'])->name('calendar');
     Route::get('/projects/create', function () {
         return Inertia::render('CreateProject', [
             'auth' => [

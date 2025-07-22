@@ -14,61 +14,29 @@ import {
     Users,
     CheckCircle,
     AlertCircle,
-    FileText
+    FileText,
+    DollarSign,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 
-export default function Calendar({ auth }) {
+export default function Calendar({ auth, events, upcomingEvents }) {
+    // Ensure events and upcomingEvents are arrays
+    const safeEvents = Array.isArray(events) ? events : [];
+    const safeUpcomingEvents = Array.isArray(upcomingEvents) ? upcomingEvents : [];
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
 
-    // Sample events data
-    const events = [
-        {
-            id: 1,
-            title: 'Website Redesign Deadline',
-            type: 'project',
-            date: '2024-02-15',
-            client: 'Acme Corp',
-            priority: 'high',
-            status: 'in-progress'
-        },
-        {
-            id: 2,
-            title: 'Brand Identity Review',
-            type: 'task',
-            date: '2024-02-10',
-            client: 'TechStart',
-            priority: 'medium',
-            status: 'completed'
-        },
-        {
-            id: 3,
-            title: 'Mobile App Kickoff',
-            type: 'project',
-            date: '2024-02-20',
-            client: 'InnovateLab',
-            priority: 'high',
-            status: 'planned'
-        },
-        {
-            id: 4,
-            title: 'Client Meeting',
-            type: 'meeting',
-            date: '2024-02-12',
-            client: 'RetailPlus',
-            priority: 'medium',
-            status: 'scheduled'
-        },
-        {
-            id: 5,
-            title: 'Proposal Submission',
-            type: 'proposal',
-            date: '2024-02-18',
-            client: 'Global Solutions',
-            priority: 'high',
-            status: 'pending'
+    // Initialize showMonthSummary from localStorage, default to false (hidden)
+    const [showMonthSummary, setShowMonthSummary] = useState(() => {
+        try {
+            const saved = localStorage.getItem('calendar-show-summary');
+            return saved !== null ? JSON.parse(saved) : false;
+        } catch (error) {
+            // Fallback to false if localStorage is not available
+            return false;
         }
-    ];
+    });
 
     const getDaysInMonth = (date) => {
         const year = date.getFullYear();
@@ -83,7 +51,7 @@ export default function Calendar({ auth }) {
 
     const getEventsForDate = (date) => {
         const dateString = date.toISOString().split('T')[0];
-        return events.filter(event => event.date === dateString);
+        return safeEvents.filter(event => event.date === dateString);
     };
 
     const getEventIcon = (type) => {
@@ -95,7 +63,7 @@ export default function Calendar({ auth }) {
             case 'meeting':
                 return <Users className="w-3 h-3" />;
             case 'proposal':
-                return <FileText className="w-3 h-3" />;
+                return <DollarSign className="w-3 h-3" />;
             default:
                 return <CalendarIcon className="w-3 h-3" />;
         }
@@ -117,13 +85,32 @@ export default function Calendar({ auth }) {
     const getStatusIcon = (status) => {
         switch (status) {
             case 'completed':
+            case 'done':
                 return <CheckCircle className="w-3 h-3 text-green-600" />;
             case 'in-progress':
+            case 'in_progress':
                 return <Clock className="w-3 h-3 text-blue-600" />;
             case 'pending':
+            case 'todo':
                 return <AlertCircle className="w-3 h-3 text-orange-600" />;
             default:
                 return <AlertCircle className="w-3 h-3 text-gray-600" />;
+        }
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'completed':
+            case 'done':
+                return 'bg-green-100 text-green-800';
+            case 'in-progress':
+            case 'in_progress':
+                return 'bg-blue-100 text-blue-800';
+            case 'pending':
+            case 'todo':
+                return 'bg-gray-100 text-gray-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -155,6 +142,17 @@ export default function Calendar({ auth }) {
         return date.toDateString() === selectedDate.toDateString();
     };
 
+    const handleToggleSummary = () => {
+        const newState = !showMonthSummary;
+        setShowMonthSummary(newState);
+        try {
+            localStorage.setItem('calendar-show-summary', JSON.stringify(newState));
+        } catch (error) {
+            // Silently fail if localStorage is not available
+            console.warn('Could not save calendar preference to localStorage');
+        }
+    };
+
     const { daysInMonth, startingDay } = getDaysInMonth(currentDate);
     const days = [];
 
@@ -183,15 +181,58 @@ export default function Calendar({ auth }) {
                         <p className="text-muted-foreground">Manage your schedule and deadlines</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Button variant="outline">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Event
+                                                                        <Button
+                            variant="outline"
+                            onClick={handleToggleSummary}
+                        >
+                            {showMonthSummary ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                            {showMonthSummary ? 'Hide' : 'Show'} Summary
                         </Button>
-                        <Button>
+                        <Link href="/tasks/create">
+                            <Button variant="outline">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Task
+                            </Button>
+                        </Link>
+                        <Button onClick={() => setCurrentDate(new Date())}>
                             <CalendarIcon className="w-4 h-4 mr-2" />
                             Today
                         </Button>
                     </div>
+                </div>
+
+                                {/* Month Summary */}
+                <div className={`transition-all duration-300 ease-in-out ${showMonthSummary ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                    <Card className="bg-card border-border">
+                        <CardContent className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                                <div>
+                                    <div className="text-2xl font-bold text-foreground">
+                                        {safeEvents.filter(e => new Date(e.date).getMonth() === currentDate.getMonth() && new Date(e.date).getFullYear() === currentDate.getFullYear()).length}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">Total Events</div>
+                                </div>
+                                <div>
+                                    <div className="text-2xl font-bold text-blue-600">
+                                        {safeEvents.filter(e => e.type === 'project' && new Date(e.date).getMonth() === currentDate.getMonth() && new Date(e.date).getFullYear() === currentDate.getFullYear()).length}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">Projects</div>
+                                </div>
+                                <div>
+                                    <div className="text-2xl font-bold text-orange-600">
+                                        {safeEvents.filter(e => e.type === 'task' && new Date(e.date).getMonth() === currentDate.getMonth() && new Date(e.date).getFullYear() === currentDate.getFullYear()).length}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">Tasks</div>
+                                </div>
+                                <div>
+                                    <div className="text-2xl font-bold text-green-600">
+                                        {safeEvents.filter(e => e.type === 'proposal' && new Date(e.date).getMonth() === currentDate.getMonth() && new Date(e.date).getFullYear() === currentDate.getFullYear()).length}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">Proposals</div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Calendar Navigation */}
@@ -217,12 +258,23 @@ export default function Calendar({ auth }) {
                                     <ChevronRight className="w-4 h-4" />
                                 </Button>
                             </div>
-                            <Button
-                                variant="outline"
-                                onClick={() => setCurrentDate(new Date())}
-                            >
-                                Today
-                            </Button>
+                            <div className="flex items-center space-x-4">
+                                {/* Legend */}
+                                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                                    <div className="flex items-center space-x-1">
+                                        <FileText className="w-3 h-3" />
+                                        <span>Projects</span>
+                                    </div>
+                                    <div className="flex items-center space-x-1">
+                                        <Target className="w-3 h-3" />
+                                        <span>Tasks</span>
+                                    </div>
+                                    <div className="flex items-center space-x-1">
+                                        <DollarSign className="w-3 h-3" />
+                                        <span>Proposals</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -305,24 +357,34 @@ export default function Calendar({ auth }) {
                             ) : (
                                 <div className="space-y-4">
                                     {selectedDateEvents.map(event => (
-                                        <div key={event.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                                            <div className="flex items-center space-x-3">
-                                                {getEventIcon(event.type)}
-                                                <div>
-                                                    <h3 className="font-medium text-foreground">{event.title}</h3>
-                                                    <p className="text-sm text-muted-foreground">{event.client}</p>
+                                        <Link key={event.id} href={event.url}>
+                                            <div className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                                <div className="flex items-center space-x-3">
+                                                    {getEventIcon(event.type)}
+                                                    <div>
+                                                        <h3 className="font-medium text-foreground">{event.title}</h3>
+                                                        <p className="text-sm text-muted-foreground">{event.client}</p>
+                                                        {event.description && (
+                                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                                                {event.description}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <Badge className={getPriorityColor(event.priority)} size="sm">
+                                                        {event.priority}
+                                                    </Badge>
+                                                    <Badge className={getStatusColor(event.status)} size="sm">
+                                                        {event.status}
+                                                    </Badge>
+                                                    {getStatusIcon(event.status)}
+                                                    <Button variant="outline" size="sm">
+                                                        View
+                                                    </Button>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Badge className={getPriorityColor(event.priority)} size="sm">
-                                                    {event.priority}
-                                                </Badge>
-                                                {getStatusIcon(event.status)}
-                                                <Button variant="outline" size="sm">
-                                                    View
-                                                </Button>
-                                            </div>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
@@ -339,36 +401,43 @@ export default function Calendar({ auth }) {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {events
-                                .filter(event => {
-                                    const eventDate = new Date(event.date);
-                                    const today = new Date();
-                                    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-                                    return eventDate >= today && eventDate <= nextWeek;
-                                })
-                                .sort((a, b) => new Date(a.date) - new Date(b.date))
-                                .slice(0, 5)
-                                .map(event => (
-                                    <div key={event.id} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                                        <div className="flex items-center space-x-3">
-                                            {getEventIcon(event.type)}
-                                            <div>
-                                                <h3 className="font-medium text-foreground">{event.title}</h3>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {event.client} • {new Date(event.date).toLocaleDateString()}
-                                                </p>
+                        {safeUpcomingEvents.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No upcoming events in the next 7 days
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {safeUpcomingEvents.map(event => (
+                                    <Link key={event.id} href={event.url}>
+                                        <div className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                            <div className="flex items-center space-x-3">
+                                                {getEventIcon(event.type)}
+                                                <div>
+                                                    <h3 className="font-medium text-foreground">{event.title}</h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {event.client} • {new Date(event.date).toLocaleDateString()}
+                                                    </p>
+                                                    {event.description && (
+                                                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                                            {event.description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Badge className={getPriorityColor(event.priority)} size="sm">
+                                                    {event.priority}
+                                                </Badge>
+                                                <Badge className={getStatusColor(event.status)} size="sm">
+                                                    {event.status}
+                                                </Badge>
+                                                {getStatusIcon(event.status)}
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-2">
-                                            <Badge className={getPriorityColor(event.priority)} size="sm">
-                                                {event.priority}
-                                            </Badge>
-                                            {getStatusIcon(event.status)}
-                                        </div>
-                                    </div>
+                                    </Link>
                                 ))}
-                        </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
