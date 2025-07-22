@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DatePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Save, Target, Calendar, Clock, User, Building, Tag, Plus, X, Flame, Circle, Inbox, CheckSquare, Zap, Clock as ClockIcon, Eye, CheckCircle, User as UserIcon, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -31,6 +32,7 @@ export default function CreateTask({ auth, projects = [] }) {
 
     const [showTagInput, setShowTagInput] = useState(false);
     const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+    const [dueDate, setDueDate] = useState(null);
 
     // Handle project_id from URL parameters
     useEffect(() => {
@@ -101,6 +103,15 @@ export default function CreateTask({ auth, projects = [] }) {
 
     const removeSubtask = (subtaskIndex) => {
         setData('subtasks', data.subtasks.filter((_, index) => index !== subtaskIndex));
+    };
+
+    const handleDateChange = (date) => {
+        setDueDate(date);
+        if (date) {
+            setData('due_date', date.toISOString().split('T')[0]);
+        } else {
+            setData('due_date', '');
+        }
     };
 
     const getPriorityColor = (priority) => {
@@ -336,11 +347,10 @@ export default function CreateTask({ auth, projects = [] }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <Label htmlFor="dueDate">Due Date</Label>
-                                    <Input
-                                        id="dueDate"
-                                        type="date"
-                                        value={data.due_date}
-                                        onChange={(e) => setData('due_date', e.target.value)}
+                                    <DatePicker
+                                        date={dueDate}
+                                        onDateChange={handleDateChange}
+                                        placeholder="Select due date"
                                         className={errors.due_date ? 'border-red-500' : ''}
                                     />
                                     {errors.due_date && <p className="text-red-500 text-sm mt-1">{errors.due_date}</p>}

@@ -193,6 +193,7 @@ export default function TaskDetails({ auth, task, error }) {
         description: task.description || '',
         client: task.project?.client ? `${task.project.client.first_name} ${task.project.client.last_name}`.trim() : 'No Client',
         project: task.project?.name || 'No Project',
+        projectId: task.project?.id || null,
         priority: task.priority || 'medium',
         status: mapStatus(task.status),
         dueDate: task.due_date ? task.due_date.split('T')[0] : null,
@@ -288,7 +289,16 @@ export default function TaskDetails({ auth, task, error }) {
                         <div>
                             <h1 className="text-2xl font-bold text-foreground">{transformedTask.title}</h1>
                             <p className="text-muted-foreground">
-                                {transformedTask.client} • {transformedTask.project}
+                                {transformedTask.client} • {transformedTask.projectId ? (
+                                    <Link
+                                        href={`/projects/${transformedTask.projectId}`}
+                                        className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                                    >
+                                        {transformedTask.project}
+                                    </Link>
+                                ) : (
+                                    transformedTask.project
+                                )}
                             </p>
                         </div>
                     </div>

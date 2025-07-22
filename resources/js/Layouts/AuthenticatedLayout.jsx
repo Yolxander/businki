@@ -89,6 +89,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
             '/analytics': 'Analytics',
             '/proposals': 'Proposals',
             '/proposals/create': 'Create Proposal',
+            '/tasks/create': 'Task Create',
             '/subscriptions': 'Subscriptions'
         };
 
