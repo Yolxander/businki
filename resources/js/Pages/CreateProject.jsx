@@ -4,6 +4,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { DatePicker } from '@/components/ui/date-picker';
+import { useToast } from '@/components/ui/toast';
 import {
     ArrowLeft,
     Save,
@@ -17,27 +19,23 @@ import {
 } from 'lucide-react';
 
 export default function CreateProject({ auth, clients }) {
+    const { toast } = useToast();
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         client_id: '',
         status: 'planned',
         priority: 'medium',
-        start_date: '',
-        due_date: '',
+        start_date: null,
+        due_date: null,
         budget: '',
         team_members: []
     });
 
     const [errors, setErrors] = useState({});
 
-    // Sample clients data (in real app, this would come from props)
-    const clientsData = clients || [
-        { id: 1, name: 'Acme Corp', email: 'contact@acme.com' },
-        { id: 2, name: 'TechStart', email: 'hello@techstart.com' },
-        { id: 3, name: 'InnovateLab', email: 'info@innovatelab.com' },
-        { id: 4, name: 'RetailPlus', email: 'support@retailplus.com' }
-    ];
+    // Use real clients data from props
+    const clientsData = clients || [];
 
     // Sample team members data
     const teamMembers = [
@@ -63,6 +61,21 @@ export default function CreateProject({ auth, clients }) {
         }
     };
 
+    const handleDateChange = (name, date) => {
+        setFormData(prev => ({
+            ...prev,
+            [name]: date
+        }));
+
+        // Clear error when user selects a date
+        if (errors[name]) {
+            setErrors(prev => ({
+                ...prev,
+                [name]: ''
+            }));
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
 
@@ -73,7 +86,7 @@ export default function CreateProject({ auth, clients }) {
         if (!formData.client_id) newErrors.client_id = 'Please select a client';
         if (!formData.start_date) newErrors.start_date = 'Start date is required';
         if (!formData.due_date) newErrors.due_date = 'Due date is required';
-        if (formData.start_date && formData.due_date && new Date(formData.start_date) > new Date(formData.due_date)) {
+        if (formData.start_date && formData.due_date && formData.start_date > formData.due_date) {
             newErrors.due_date = 'Due date must be after start date';
         }
 
@@ -89,9 +102,9 @@ export default function CreateProject({ auth, clients }) {
             client_id: formData.client_id,
             status: formData.status,
             priority: formData.priority,
-            kickoff_date: formData.start_date,
-            start_date: formData.start_date,
-            due_date: formData.due_date,
+            kickoff_date: formData.start_date ? formData.start_date.toISOString().split('T')[0] : null,
+            start_date: formData.start_date ? formData.start_date.toISOString().split('T')[0] : null,
+            due_date: formData.due_date ? formData.due_date.toISOString().split('T')[0] : null,
             current_phase: 'Planning', // Default phase
             progress: 0, // Default progress
             notes: '', // Default notes
@@ -101,10 +114,14 @@ export default function CreateProject({ auth, clients }) {
         // Submit to the ProjectController@store method
         router.post('/projects', projectData, {
             onSuccess: () => {
+                // Show success toast
+                toast.success(`${formData.name} has been created successfully!`);
                 // Success will be handled by the controller redirect
             },
             onError: (errors) => {
                 setErrors(errors);
+                // Show error toast
+                toast.error("Failed to create project. Please check the form and try again.");
             }
         });
     };
@@ -230,7 +247,7 @@ export default function CreateProject({ auth, clients }) {
                                             <option value="">Select a client</option>
                                             {clientsData.map(client => (
                                                 <option key={client.id} value={client.id}>
-                                                    {client.name}
+                                                    {client.first_name} {client.last_name}
                                                 </option>
                                             ))}
                                         </select>
@@ -289,14 +306,11 @@ export default function CreateProject({ auth, clients }) {
                                             <label className="block text-sm font-medium text-foreground mb-2">
                                                 Start Date *
                                             </label>
-                                            <input
-                                                type="date"
-                                                name="start_date"
-                                                value={formData.start_date}
-                                                onChange={handleInputChange}
-                                                className={`w-full px-3 py-2 border rounded-md bg-background text-foreground ${
-                                                    errors.start_date ? 'border-red-500' : 'border-input'
-                                                }`}
+                                            <DatePicker
+                                                date={formData.start_date}
+                                                onDateChange={(date) => handleDateChange('start_date', date)}
+                                                placeholder="Select start date"
+                                                className={errors.start_date ? 'border-red-500' : ''}
                                             />
                                             {errors.start_date && (
                                                 <p className="text-sm text-red-600 mt-1">{errors.start_date}</p>
@@ -307,14 +321,11 @@ export default function CreateProject({ auth, clients }) {
                                             <label className="block text-sm font-medium text-foreground mb-2">
                                                 Due Date *
                                             </label>
-                                            <input
-                                                type="date"
-                                                name="due_date"
-                                                value={formData.due_date}
-                                                onChange={handleInputChange}
-                                                className={`w-full px-3 py-2 border rounded-md bg-background text-foreground ${
-                                                    errors.due_date ? 'border-red-500' : 'border-input'
-                                                }`}
+                                            <DatePicker
+                                                date={formData.due_date}
+                                                onDateChange={(date) => handleDateChange('due_date', date)}
+                                                placeholder="Select due date"
+                                                className={errors.due_date ? 'border-red-500' : ''}
                                             />
                                             {errors.due_date && (
                                                 <p className="text-sm text-red-600 mt-1">{errors.due_date}</p>
@@ -368,7 +379,10 @@ export default function CreateProject({ auth, clients }) {
                                             <div className="flex items-center space-x-2">
                                                 <Users className="w-4 h-4 text-muted-foreground" />
                                                 <span className="text-sm text-muted-foreground">
-                                                    {clientsData.find(c => c.id == formData.client_id)?.name}
+                                                    {clientsData.find(c => c.id == formData.client_id) ?
+                                                        `${clientsData.find(c => c.id == formData.client_id).first_name} ${clientsData.find(c => c.id == formData.client_id).last_name}` :
+                                                        'Unknown Client'
+                                                    }
                                                 </span>
                                             </div>
                                         )}
@@ -377,7 +391,7 @@ export default function CreateProject({ auth, clients }) {
                                             <div className="flex items-center space-x-2">
                                                 <Calendar className="w-4 h-4 text-muted-foreground" />
                                                 <span className="text-sm text-muted-foreground">
-                                                    {new Date(formData.start_date).toLocaleDateString()} - {new Date(formData.due_date).toLocaleDateString()}
+                                                    {formData.start_date.toLocaleDateString()} - {formData.due_date.toLocaleDateString()}
                                                 </span>
                                             </div>
                                         )}

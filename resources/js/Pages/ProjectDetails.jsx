@@ -22,9 +22,12 @@ import {
     MoreVertical,
     Trash2
 } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
 
 export default function ProjectDetails({ auth, project }) {
+    const { toast } = useToast();
     const [activeTab, setActiveTab] = useState('overview');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Use real project data or fallback to mock data for development
     const projectData = project || {
@@ -89,6 +92,20 @@ export default function ProjectDetails({ auth, project }) {
 
     const completedTasks = projectData.tasks ? projectData.tasks.filter(task => task.status === 'completed').length : 0;
     const totalTasks = projectData.tasks ? projectData.tasks.length : 0;
+
+    const handleDeleteProject = () => {
+        if (confirm(`Are you sure you want to delete "${projectData.name}"? This action cannot be undone.`)) {
+            router.delete(`/projects/${projectData.id}`, {
+                onSuccess: () => {
+                    toast.success(`Project "${projectData.name}" has been deleted successfully!`);
+                    router.visit('/projects');
+                },
+                onError: (errors) => {
+                    toast.error('Failed to delete project. Please try again.');
+                }
+            });
+        }
+    };
 
     return (
         <AuthenticatedLayout user={auth.user}>
@@ -315,6 +332,14 @@ export default function ProjectDetails({ auth, project }) {
                                     <Button className="w-full justify-start" variant="outline">
                                         <Download className="w-4 h-4 mr-2" />
                                         Export Report
+                                    </Button>
+                                    <Button
+                                        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        variant="outline"
+                                        onClick={handleDeleteProject}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete Project
                                     </Button>
                                 </CardContent>
                             </Card>
