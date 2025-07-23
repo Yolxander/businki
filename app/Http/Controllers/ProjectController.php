@@ -7,6 +7,8 @@ use App\Models\Client;
 use App\Models\IntakeResponse;
 use App\Models\Proposal;
 use App\Models\Intake;
+use App\Models\Task;
+use App\Services\OpenAIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -759,6 +761,199 @@ class ProjectController extends Controller
             ]);
 
             return back()->withErrors(['general' => 'Failed to connect client for project. Please try again.'])->withInput();
+        }
+    }
+
+        /**
+     * Generate a project with AI and create 3 associated tasks
+     */
+    public function generateProjectWithAI(Request $request)
+    {
+        $requestId = uniqid('ai_generate_project_');
+
+        try {
+            Log::info("[$requestId] Starting AI project generation", [
+                'user_id' => auth()->id(),
+                'user_email' => auth()->user()?->email,
+                'timestamp' => now()->toISOString()
+            ]);
+
+            $openaiService = new OpenAIService();
+
+            // Get form data from request
+            $formData = $request->all();
+
+            // Generate project data using AI with required fields
+            $projectData = [
+                'project_type' => $formData['projectType'] === 'client' ? 'Client Project' : 'Personal Project',
+                'description' => $formData['projectDescription'],
+                'include_in_portfolio' => $formData['projectType'] === 'personal'
+            ];
+
+            // Add client information if it's a client project
+            if ($formData['projectType'] === 'client' && !empty($formData['clientId'])) {
+                $client = Client::find($formData['clientId']);
+                if ($client) {
+                    $projectData['client_name'] = $client->first_name . ' ' . $client->last_name;
+                    $projectData['client_company'] = $client->company_name;
+                    $projectData['description'] .= "\n\nClient: " . $client->first_name . ' ' . $client->last_name;
+                    if ($client->company_name) {
+                        $projectData['description'] .= "\nCompany: " . $client->company_name;
+                    }
+                }
+            }
+
+            // Use AI to generate project details
+            $aiResponse = $openaiService->generatePersonalProject($projectData);
+
+            if (!isset($aiResponse['title'])) {
+                throw new \Exception('AI failed to generate valid project data');
+            }
+
+            // Create the project
+            $projectData = [
+                'user_id' => auth()->id(),
+                'name' => $aiResponse['title'],
+                'description' => $aiResponse['notes'] ?? $projectData['description'],
+                'status' => 'in-progress',
+                'current_phase' => $aiResponse['current_phase'] ?? 'Planning',
+                'kickoff_date' => $aiResponse['kickoff_date'] ?? now()->toDateString(),
+                'start_date' => $aiResponse['kickoff_date'] ?? now(),
+                'due_date' => $aiResponse['expected_delivery'] ?? now()->addWeeks(4),
+                'progress' => 0,
+                'notes' => $aiResponse['notes'] ?? ''
+            ];
+
+            // Add client_id if it's a client project
+            if ($formData['projectType'] === 'client' && !empty($formData['clientId'])) {
+                $projectData['client_id'] = $formData['clientId'];
+            }
+
+            $project = Project::create($projectData);
+
+            Log::info("[$requestId] Project created successfully", [
+                'user_id' => auth()->id(),
+                'project_id' => $project->id,
+                'project_name' => $project->name,
+                'timestamp' => now()->toISOString()
+            ]);
+
+            // Generate tasks using AI with required fields
+            $taskData = [
+                'project_type' => $formData['projectType'] === 'client' ? 'Client Project' : 'Personal Project',
+                'project_title' => $project->name,
+                'description' => $project->description
+            ];
+
+            // Add time or task count information
+            if ($formData['useTimeEstimate'] && !empty($formData['timeValue'])) {
+                $taskData['time_estimate'] = $formData['timeValue'] . ' ' . $formData['timeFrame'];
+                $taskData['max_tasks'] = $this->calculateTaskCountFromTime($formData['timeValue'], $formData['timeFrame']);
+            } else {
+                $taskData['max_tasks'] = $formData['taskCount'] ?? 3;
+            }
+
+            $aiTaskResponse = $openaiService->generatePersonalTasks($taskData);
+
+            if (!isset($aiTaskResponse['tasks']) || !is_array($aiTaskResponse['tasks'])) {
+                throw new \Exception('AI failed to generate valid task data');
+            }
+
+            // Create tasks
+            $createdTasks = [];
+            foreach ($aiTaskResponse['tasks'] as $taskData) {
+                $task = Task::create([
+                    'project_id' => $project->id,
+                    'user_id' => auth()->id(),
+                    'title' => $taskData['title'] ?? 'AI Generated Task',
+                    'description' => $taskData['description'] ?? 'Task generated by AI',
+                    'status' => 'todo',
+                    'priority' => $taskData['priority'] ?? 'medium',
+                    'due_date' => now()->addDays(rand(1, 14)), // Random due date within 2 weeks
+                    'estimated_hours' => $taskData['estimated_hours'] ?? rand(2, 8),
+                    'tags' => $taskData['tags'] ?? []
+                ]);
+
+                $createdTasks[] = $task;
+            }
+
+            Log::info("[$requestId] Tasks created successfully", [
+                'user_id' => auth()->id(),
+                'project_id' => $project->id,
+                'tasks_count' => count($createdTasks),
+                'timestamp' => now()->toISOString()
+            ]);
+
+            // For AJAX requests, return JSON
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'project' => [
+                        'id' => $project->id,
+                        'name' => $project->name,
+                        'description' => $project->description,
+                        'status' => $project->status,
+                        'tasks_count' => count($createdTasks)
+                    ],
+                    'message' => 'Project generated successfully with ' . count($createdTasks) . ' tasks'
+                ]);
+            }
+
+            // For Inertia requests, redirect to the project
+            return redirect()->route('projects.show', $project->id)
+                ->with('success', 'Project generated successfully with ' . count($createdTasks) . ' tasks');
+
+        } catch (\Exception $e) {
+            Log::error("[$requestId] Failed to generate project with AI", [
+                'user_id' => auth()->id(),
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toISOString()
+            ]);
+
+            // For AJAX requests, return JSON
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to generate project. Please try again.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+
+            // For Inertia requests, redirect back with error
+            return back()->withErrors(['ai_generation' => 'Failed to generate project. Please try again.']);
+        }
+    }
+
+    /**
+     * Calculate the number of tasks based on time estimate
+     */
+    private function calculateTaskCountFromTime($timeValue, $timeFrame)
+    {
+        $hours = 0;
+
+        switch ($timeFrame) {
+            case 'hours':
+                $hours = (int) $timeValue;
+                break;
+            case 'days':
+                $hours = (int) $timeValue * 8; // Assuming 8 hours per day
+                break;
+            case 'weeks':
+                $hours = (int) $timeValue * 40; // Assuming 40 hours per week
+                break;
+        }
+
+        // Calculate task count based on hours
+        // Assume average task takes 2-4 hours
+        if ($hours <= 8) {
+            return max(2, min(4, round($hours / 2)));
+        } elseif ($hours <= 20) {
+            return max(4, min(8, round($hours / 3)));
+        } else {
+            return max(8, min(15, round($hours / 4)));
         }
     }
 }

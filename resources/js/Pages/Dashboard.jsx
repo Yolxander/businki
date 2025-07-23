@@ -1,9 +1,18 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Plus,
     Users,
@@ -18,10 +27,36 @@ import {
     Target,
     Zap,
     Eye,
-    ArrowRight
+    ArrowRight,
+    Brain,
+    PenTool,
+    Loader2,
+    CheckCircle2,
+    ExternalLink,
+    User,
+    Building,
+    ArrowLeft,
+    ArrowRight as ArrowRightIcon
 } from 'lucide-react';
 
-export default function Dashboard({ auth, stats }) {
+export default function Dashboard({ auth, stats, clients = [] }) {
+    const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+    const [showAISetupModal, setShowAISetupModal] = useState(false);
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertState, setAlertState] = useState('loading'); // 'loading', 'success'
+    const [generatedProject, setGeneratedProject] = useState(null);
+
+    // AI Generation form state
+    const [aiFormData, setAiFormData] = useState({
+        projectType: 'personal', // 'personal' or 'client'
+        clientId: '',
+        projectDescription: '',
+        timeFrame: 'hours', // 'hours', 'days', 'weeks'
+        timeValue: '',
+        taskCount: 3,
+        useTimeEstimate: true // true for time-based, false for task count
+    });
+
     const defaultStats = {
         totalClients: 0,
         totalProjects: 0,
@@ -34,6 +69,87 @@ export default function Dashboard({ auth, stats }) {
     };
 
     const statsData = stats || defaultStats;
+
+    const handleManualCreation = () => {
+        setShowNewProjectModal(false);
+        router.visit('/projects/create');
+    };
+
+    const handleAIGeneration = () => {
+        setShowNewProjectModal(false);
+        setShowAISetupModal(true);
+    };
+
+    const handleAISetupSubmit = () => {
+        // Validate form data
+        if (!aiFormData.projectDescription.trim()) {
+            alert('Please enter a project description');
+            return;
+        }
+
+        if (aiFormData.projectType === 'client' && !aiFormData.clientId) {
+            alert('Please select a client');
+            return;
+        }
+
+        if (aiFormData.useTimeEstimate && !aiFormData.timeValue) {
+            alert('Please enter the time estimate');
+            return;
+        }
+
+        if (!aiFormData.useTimeEstimate && !aiFormData.taskCount) {
+            alert('Please enter the number of tasks');
+            return;
+        }
+
+        setShowAISetupModal(false);
+        setShowAlert(true);
+        setAlertState('loading');
+        setGeneratedProject(null);
+
+        // Start AI generation process using fetch for AJAX
+        fetch('/ai/generate-project', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(aiFormData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setAlertState('success');
+                setGeneratedProject(data.project);
+            } else {
+                setAlertState('error');
+                console.error('AI generation failed:', data.message);
+            }
+        })
+        .catch(error => {
+            setAlertState('error');
+            console.error('AI generation failed:', error);
+        });
+    };
+
+    const resetAIForm = () => {
+        setAiFormData({
+            projectType: 'personal',
+            clientId: '',
+            projectDescription: '',
+            timeFrame: 'hours',
+            timeValue: '',
+            taskCount: 3,
+            useTimeEstimate: true
+        });
+    };
+
+    const handleViewProject = () => {
+        if (generatedProject) {
+            router.visit(`/projects/${generatedProject.id}`);
+        }
+    };
 
     const quickStats = [
         {
@@ -144,12 +260,10 @@ export default function Dashboard({ auth, stats }) {
                                 View Calendar
                             </Button>
                         </Link>
-                        <Link href="/projects/create">
-                            <Button>
-                                <Plus className="w-4 h-4 mr-2" />
-                                New Project
-                            </Button>
-                        </Link>
+                        <Button onClick={() => setShowNewProjectModal(true)}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            New Project
+                        </Button>
                     </div>
                 </div>
 
@@ -266,12 +380,14 @@ export default function Dashboard({ auth, stats }) {
                                         Add New Client
                                     </Button>
                                 </Link>
-                                <Link href="/projects/create">
-                                    <Button className="w-full justify-start" variant="outline">
-                                        <FileText className="w-4 h-4 mr-2" />
-                                        Create Project
-                                    </Button>
-                                </Link>
+                                <Button
+                                    className="w-full justify-start"
+                                    variant="outline"
+                                    onClick={() => setShowNewProjectModal(true)}
+                                >
+                                    <FileText className="w-4 h-4 mr-2" />
+                                    Create Project
+                                </Button>
                                 <Link href="/tasks/create">
                                     <Button className="w-full justify-start" variant="outline">
                                         <Target className="w-4 h-4 mr-2" />
@@ -372,6 +488,309 @@ export default function Dashboard({ auth, stats }) {
                     </Card>
                 )}
             </div>
+
+                        {/* New Project Modal */}
+            <Dialog open={showNewProjectModal} onOpenChange={setShowNewProjectModal}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader className="space-y-3">
+                        <DialogTitle className="flex items-center space-x-3 text-xl">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <Plus className="w-6 h-6 text-primary" />
+                            </div>
+                            <span>Create New Project</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-base leading-relaxed">
+                            Choose how you'd like to create your new project
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-6">
+                        <div className="grid grid-cols-1 gap-4">
+                            <Button
+                                onClick={handleManualCreation}
+                                className="h-auto p-6 flex items-start space-x-4 hover:bg-muted/50 transition-all duration-200 border-2 hover:border-primary/20"
+                                variant="outline"
+                            >
+                                <div className="p-3 bg-blue-500/10 rounded-lg">
+                                    <PenTool className="w-6 h-6 text-blue-500" />
+                                </div>
+                                <div className="text-left flex-1">
+                                    <h3 className="font-semibold text-lg mb-1">Manual Creation</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        Create a project manually with full control
+                                    </p>
+                                </div>
+                            </Button>
+
+                            <Button
+                                onClick={handleAIGeneration}
+                                className="h-auto p-6 flex items-start space-x-4 hover:bg-muted/50 transition-all duration-200 border-2 hover:border-primary/20"
+                                variant="outline"
+                            >
+                                <div className="p-3 bg-purple-500/10 rounded-lg">
+                                    <Brain className="w-6 h-6 text-purple-500" />
+                                </div>
+                                <div className="text-left flex-1">
+                                    <h3 className="font-semibold text-lg mb-1">AI Generation</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        Let AI generate a project with tasks for you
+                                    </p>
+                                </div>
+                            </Button>
+                        </div>
+                    </div>
+                    <DialogFooter className="pt-4">
+                        <Button variant="outline" onClick={() => setShowNewProjectModal(false)} className="px-6">
+                            Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* AI Setup Modal */}
+            <Dialog open={showAISetupModal} onOpenChange={(open) => {
+                setShowAISetupModal(open);
+                if (!open) resetAIForm();
+            }}>
+                <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader className="space-y-3">
+                        <DialogTitle className="flex items-center space-x-3 text-xl">
+                            <div className="p-2 bg-purple-500/10 rounded-lg">
+                                <Brain className="w-6 h-6 text-purple-500" />
+                            </div>
+                            <span>AI Project Setup</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-base leading-relaxed">
+                            Tell us about your project and AI will generate it with tasks
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                                                {/* Project Type Selection */}
+                        <div className="space-y-2">
+                            <Label className="text-base font-medium">Project Type</Label>
+                            <RadioGroup
+                                value={aiFormData.projectType}
+                                onValueChange={(value) => setAiFormData({...aiFormData, projectType: value, clientId: ''})}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                            >
+                                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                    <RadioGroupItem value="personal" id="personal" />
+                                    <Label htmlFor="personal" className="flex items-center space-x-2 cursor-pointer">
+                                        <User className="w-5 h-5 text-blue-500" />
+                                        <div>
+                                            <div className="font-medium">Personal Project</div>
+                                            <div className="text-sm text-muted-foreground">For your own portfolio or learning</div>
+                                        </div>
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                    <RadioGroupItem value="client" id="client" />
+                                    <Label htmlFor="client" className="flex items-center space-x-2 cursor-pointer">
+                                        <Building className="w-5 h-5 text-green-500" />
+                                        <div>
+                                            <div className="font-medium">Client Project</div>
+                                            <div className="text-sm text-muted-foreground">For a specific client</div>
+                                        </div>
+                                    </Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+
+                        {/* Client Selection (if client project) */}
+                        {aiFormData.projectType === 'client' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="client-select" className="text-base font-medium">Select Client</Label>
+                                <Select
+                                    value={aiFormData.clientId}
+                                    onValueChange={(value) => setAiFormData({...aiFormData, clientId: value})}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choose a client" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {clients.map((client) => (
+                                            <SelectItem key={client.id} value={client.id.toString()}>
+                                                {client.first_name} {client.last_name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {/* Project Description */}
+                        <div className="space-y-2">
+                            <Label htmlFor="project-description" className="text-base font-medium">Project Description</Label>
+                            <Textarea
+                                id="project-description"
+                                placeholder="Describe what you want to build or accomplish..."
+                                value={aiFormData.projectDescription}
+                                onChange={(e) => setAiFormData({...aiFormData, projectDescription: e.target.value})}
+                                rows={4}
+                                className="resize-none"
+                            />
+                        </div>
+
+                        {/* Time/Task Configuration */}
+                        <div className="space-y-2">
+                            <Label className="text-base font-medium">Task Generation</Label>
+                            <RadioGroup
+                                value={aiFormData.useTimeEstimate ? 'time' : 'count'}
+                                onValueChange={(value) => setAiFormData({...aiFormData, useTimeEstimate: value === 'time'})}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                            >
+                                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                    <RadioGroupItem value="time" id="time-based" />
+                                    <Label htmlFor="time-based" className="flex items-center space-x-2 cursor-pointer">
+                                        <Clock className="w-5 h-5 text-orange-500" />
+                                        <div>
+                                            <div className="font-medium">Time-based</div>
+                                            <div className="text-sm text-muted-foreground">Generate tasks to fit your timeline</div>
+                                        </div>
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                    <RadioGroupItem value="count" id="count-based" />
+                                    <Label htmlFor="count-based" className="flex items-center space-x-2 cursor-pointer">
+                                        <Target className="w-5 h-5 text-purple-500" />
+                                        <div>
+                                            <div className="font-medium">Task count</div>
+                                            <div className="text-sm text-muted-foreground">Generate specific number of tasks</div>
+                                        </div>
+                                    </Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+
+                        {/* Time Estimate Input */}
+                        {aiFormData.useTimeEstimate && (
+                            <div className="space-y-2">
+                                <Label className="text-base font-medium">Time Estimate</Label>
+                                <div className="flex space-x-3">
+                                    <Input
+                                        type="number"
+                                        placeholder="Enter time value"
+                                        value={aiFormData.timeValue}
+                                        onChange={(e) => setAiFormData({...aiFormData, timeValue: e.target.value})}
+                                        className="flex-1"
+                                        min="1"
+                                    />
+                                    <Select
+                                        value={aiFormData.timeFrame}
+                                        onValueChange={(value) => setAiFormData({...aiFormData, timeFrame: value})}
+                                    >
+                                        <SelectTrigger className="w-32">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="hours">Hours</SelectItem>
+                                            <SelectItem value="days">Days</SelectItem>
+                                            <SelectItem value="weeks">Weeks</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Task Count Input */}
+                        {!aiFormData.useTimeEstimate && (
+                            <div className="space-y-2">
+                                <Label className="text-base font-medium">Number of Tasks</Label>
+                                <Input
+                                    type="number"
+                                    placeholder="Enter number of tasks"
+                                    value={aiFormData.taskCount}
+                                    onChange={(e) => setAiFormData({...aiFormData, taskCount: parseInt(e.target.value) || 3})}
+                                    className="w-32"
+                                    min="1"
+                                    max="20"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                                        <DialogFooter className="pt-3 space-x-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowAISetupModal(false);
+                                resetAIForm();
+                            }}
+                            className="px-4"
+                        >
+                            Cancel
+                        </Button>
+                                                <Button
+                            onClick={handleAISetupSubmit}
+                            className="px-4"
+                            style={{ backgroundColor: '#d1ff75', color: '#000' }}
+                        >
+                            <Brain className="w-4 h-4 mr-2" />
+                            Generate Project
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* AI Generation Alert */}
+            {showAlert && (
+                <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+                    <Alert className="border-l-4 border-l-primary">
+                        <div className="flex items-start space-x-3">
+                            {alertState === 'loading' ? (
+                                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                            ) : alertState === 'success' ? (
+                                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            ) : (
+                                <AlertCircle className="w-5 h-5 text-red-600" />
+                            )}
+                            <div className="flex-1">
+                                <AlertTitle>
+                                    {alertState === 'loading' ? 'Generating Project...' :
+                                     alertState === 'success' ? 'Project Generated!' :
+                                     'Generation Failed'}
+                                </AlertTitle>
+                                <AlertDescription className="mt-1">
+                                    {alertState === 'loading' ? (
+                                        <div>
+                                            <div>Creating project and 3 tasks...</div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                Press B + P to view when complete
+                                            </div>
+                                        </div>
+                                    ) : alertState === 'success' ? (
+                                        <div>
+                                            <div>Project generated with 3 tasks</div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                Press B + P to view
+                                            </div>
+                                            {generatedProject && (
+                                                <Button
+                                                    variant="link"
+                                                    className="p-0 h-auto text-primary mt-1"
+                                                    onClick={handleViewProject}
+                                                >
+                                                    {generatedProject.name} <ExternalLink className="w-3 h-3 ml-1" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div>Something went wrong. Please try again.</div>
+                                    )}
+                                </AlertDescription>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowAlert(false)}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                ×
+                            </Button>
+                        </div>
+                    </Alert>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }

@@ -29,11 +29,17 @@ class DashboardController extends Controller
             'recentProjects' => $this->getRecentProjects(),
         ];
 
+        // Get clients for AI project generation
+        $clients = Client::whereHas('users', function($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->get(['id', 'first_name', 'last_name', 'company_name']);
+
         return Inertia::render('Dashboard', [
             'auth' => [
                 'user' => $user,
             ],
             'stats' => $stats,
+            'clients' => $clients,
         ]);
     }
 

@@ -150,6 +150,7 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
     Route::post('/projects/new-client-project', [ProjectController::class, 'newClientProject'])->name('projects.new-client-project');
     Route::post('/projects/connect-client', [ProjectController::class, 'connectClientForProject'])->name('projects.connect-client');
+    Route::post('/ai/generate-project', [ProjectController::class, 'generateProjectWithAI'])->name('ai.generate-project');
     Route::get('/ai-settings', function () {
         return Inertia::render('AISettings', [
             'auth' => [

@@ -137,7 +137,7 @@ export function BrowserTabs({ tabs, activeTab, onTabClick, onTabClose, onCloseAl
                     title="Close all tabs"
                 >
                     <XCircle className="h-3 w-3 mr-1" />
-                    Close All
+                    Close Tabs
                 </Button>
             )}
 
