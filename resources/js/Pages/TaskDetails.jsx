@@ -49,6 +49,7 @@ export default function TaskDetails({ auth, task, error }) {
     const [subtasks, setSubtasks] = useState([]);
     const [generatingSubtasks, setGeneratingSubtasks] = useState(false);
     const [visibleSubtasks, setVisibleSubtasks] = useState(new Set());
+    const [relatedTasks, setRelatedTasks] = useState([]);
 
     // Map database status to frontend status
     const mapStatus = (dbStatus) => {
@@ -60,7 +61,7 @@ export default function TaskDetails({ auth, task, error }) {
         return statusMap[dbStatus] || 'todo';
     };
 
-    // Initialize subtasks from task data
+        // Initialize subtasks from task data
     React.useEffect(() => {
         if (task && task.subtasks) {
             const initialSubtasks = task.subtasks.map(subtask => ({
@@ -75,6 +76,35 @@ export default function TaskDetails({ auth, task, error }) {
             const existingSubtaskIds = new Set(initialSubtasks.map(st => st.id));
             setVisibleSubtasks(existingSubtaskIds);
         }
+    }, [task]);
+
+    // Fetch related tasks from the same project
+    React.useEffect(() => {
+        const fetchRelatedTasks = async () => {
+            if (task && task.project?.id) {
+                try {
+                    const response = await fetch(`/api/projects/${task.project.id}/tasks`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        // Filter out the current task and transform the data
+                        const otherTasks = data.tasks
+                            .filter(t => t.id !== task.id)
+                            .map(t => ({
+                                id: t.id,
+                                title: t.title,
+                                status: mapStatus(t.status),
+                                priority: t.priority || 'medium',
+                                due_date: t.due_date
+                            }));
+                        setRelatedTasks(otherTasks);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch related tasks:', error);
+                }
+            }
+        };
+
+        fetchRelatedTasks();
     }, [task]);
 
     const handleDeleteTask = () => {
@@ -308,7 +338,7 @@ export default function TaskDetails({ auth, task, error }) {
         })) || [],
         comments: [], // Not implemented yet
         attachments: [], // Not implemented yet
-        relatedTasks: [] // Not implemented yet
+        relatedTasks: relatedTasks
     };
 
     const getPriorityColor = (priority) => {

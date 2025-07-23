@@ -88,6 +88,9 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Subtask routes (nested under tasks)
         Route::get('/{task}/subtasks', [SubtaskController::class, 'index']);
         Route::post('/{task}/subtasks', [SubtaskController::class, 'store']);
+
+        // Get tasks by project
+        Route::get('/project/{projectId}/tasks', [TaskController::class, 'getByProject']);
     });
 
     // Subtask routes (direct access)

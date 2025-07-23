@@ -202,5 +202,30 @@ class TaskController extends Controller
         }
     }
 
-    // ... rest of the methods remain the same ...
+    /**
+     * Get tasks by project
+     */
+    public function getByProject($projectId)
+    {
+        try {
+            $tasks = Task::where('project_id', $projectId)
+                ->with(['project', 'assignedUser'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'tasks' => $tasks
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get tasks by project:', [
+                'project_id' => $projectId,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get tasks'
+            ], 500);
+        }
+    }
 }

@@ -526,11 +526,21 @@ Format your response as a numbered list, with each subtask on a new line startin
 
             // Match numbered lines (1. 2. 3. etc.)
             if (preg_match('/^\d+\.\s*(.+)$/', $line, $matches)) {
-                $subtasks[] = trim($matches[1]);
+                $subtaskText = trim($matches[1]);
+                // Clean up markdown formatting
+                $subtaskText = preg_replace('/\*\*(.*?)\*\*/', '$1', $subtaskText); // Remove **bold**
+                $subtaskText = preg_replace('/\*(.*?)\*/', '$1', $subtaskText); // Remove *italic*
+                $subtaskText = preg_replace('/`(.*?)`/', '$1', $subtaskText); // Remove `code`
+                $subtasks[] = $subtaskText;
             }
             // Also match lines that start with - or *
             elseif (preg_match('/^[-*]\s*(.+)$/', $line, $matches)) {
-                $subtasks[] = trim($matches[1]);
+                $subtaskText = trim($matches[1]);
+                // Clean up markdown formatting
+                $subtaskText = preg_replace('/\*\*(.*?)\*\*/', '$1', $subtaskText); // Remove **bold**
+                $subtaskText = preg_replace('/\*(.*?)\*/', '$1', $subtaskText); // Remove *italic*
+                $subtaskText = preg_replace('/`(.*?)`/', '$1', $subtaskText); // Remove `code`
+                $subtasks[] = $subtaskText;
             }
         }
 
