@@ -29,7 +29,8 @@ export default function Dashboard({ auth, stats }) {
         pendingTasks: 0,
         revenue: 0,
         recentProposals: [],
-        recentTasks: []
+        recentTasks: [],
+        recentProjects: []
     };
 
     const statsData = stats || defaultStats;
@@ -65,70 +66,16 @@ export default function Dashboard({ auth, stats }) {
         }
     ];
 
-    const recentProjects = [
-        {
-            id: 1,
-            name: 'Website Redesign',
-            client: 'Acme Corp',
-            status: 'in-progress',
-            progress: 65,
-            dueDate: '2024-02-15',
-            tasks: { completed: 8, total: 12 }
-        },
-        {
-            id: 2,
-            name: 'Brand Identity',
-            client: 'TechStart',
-            status: 'completed',
-            progress: 100,
-            dueDate: '2024-01-30',
-            tasks: { completed: 15, total: 15 }
-        },
-        {
-            id: 3,
-            name: 'Mobile App',
-            client: 'InnovateLab',
-            status: 'planned',
-            progress: 0,
-            dueDate: '2024-03-01',
-            tasks: { completed: 0, total: 20 }
-        }
-    ];
-
-    const recentTasks = [
-        {
-            id: 1,
-            title: 'Design homepage mockups',
-            project: 'Website Redesign',
-            status: 'in-progress',
-            priority: 'high',
-            dueDate: '2024-02-10'
-        },
-        {
-            id: 2,
-            title: 'Review client feedback',
-            project: 'Brand Identity',
-            status: 'completed',
-            priority: 'medium',
-            dueDate: '2024-01-28'
-        },
-        {
-            id: 3,
-            title: 'Setup development environment',
-            project: 'Mobile App',
-            status: 'todo',
-            priority: 'high',
-            dueDate: '2024-02-20'
-        }
-    ];
-
     const getStatusColor = (status) => {
         switch (status) {
             case 'completed':
+            case 'done':
                 return 'bg-green-500';
             case 'in-progress':
+            case 'in_progress':
                 return 'bg-blue-500';
             case 'planned':
+            case 'todo':
                 return 'bg-gray-500';
             default:
                 return 'bg-gray-500';
@@ -138,10 +85,13 @@ export default function Dashboard({ auth, stats }) {
     const getStatusText = (status) => {
         switch (status) {
             case 'completed':
+            case 'done':
                 return 'Completed';
             case 'in-progress':
+            case 'in_progress':
                 return 'In Progress';
             case 'planned':
+            case 'todo':
                 return 'Planned';
             default:
                 return 'Unknown';
@@ -164,8 +114,10 @@ export default function Dashboard({ auth, stats }) {
     const getTaskStatusIcon = (status) => {
         switch (status) {
             case 'completed':
+            case 'done':
                 return <CheckCircle className="w-4 h-4 text-green-600" />;
             case 'in-progress':
+            case 'in_progress':
                 return <Clock className="w-4 h-4 text-blue-600" />;
             case 'todo':
                 return <AlertCircle className="w-4 h-4 text-orange-600" />;
@@ -240,50 +192,60 @@ export default function Dashboard({ auth, stats }) {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {recentProjects.map((project) => (
-                                        <Link key={project.id} href={`/projects/${project.id}`}>
-                                            <div className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center space-x-3">
-                                                        <h3 className="font-medium text-foreground">{project.name}</h3>
-                                                        <div className="flex items-center">
-                                                            <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)} mr-2`}></div>
-                                                            <span className="text-sm text-muted-foreground">{getStatusText(project.status)}</span>
+                                    {statsData.recentProjects && statsData.recentProjects.length > 0 ? (
+                                        statsData.recentProjects.map((project) => (
+                                            <Link key={project.id} href={`/projects/${project.id}`}>
+                                                <div className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center space-x-3">
+                                                            <h3 className="font-medium text-foreground">{project.name}</h3>
+                                                            <div className="flex items-center">
+                                                                <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)} mr-2`}></div>
+                                                                <span className="text-sm text-muted-foreground">{getStatusText(project.status)}</span>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-sm text-muted-foreground mt-1">{project.client}</p>
+                                                        <div className="flex items-center space-x-4 mt-2">
+                                                            <div className="flex items-center space-x-2">
+                                                                <Target className="w-4 h-4 text-muted-foreground" />
+                                                                <span className="text-sm text-muted-foreground">
+                                                                    {project.tasks.completed}/{project.tasks.total} tasks
+                                                                </span>
+                                                            </div>
+                                                            {project.due_date && (
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                                                                    <span className="text-sm text-muted-foreground">
+                                                                        Due {new Date(project.due_date).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <p className="text-sm text-muted-foreground mt-1">{project.client}</p>
-                                                    <div className="flex items-center space-x-4 mt-2">
-                                                        <div className="flex items-center space-x-2">
-                                                            <Target className="w-4 h-4 text-muted-foreground" />
-                                                            <span className="text-sm text-muted-foreground">
-                                                                {project.tasks.completed}/{project.tasks.total} tasks
-                                                            </span>
+                                                    <div className="flex items-center space-x-2">
+                                                        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-primary transition-all duration-300"
+                                                                style={{ width: `${project.progress}%` }}
+                                                            ></div>
                                                         </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                                                            <span className="text-sm text-muted-foreground">
-                                                                Due {new Date(project.dueDate).toLocaleDateString()}
-                                                            </span>
-                                                        </div>
+                                                        <span className="text-sm font-medium text-muted-foreground">
+                                                            {project.progress}%
+                                                        </span>
+                                                        <Button variant="ghost" size="sm">
+                                                            <Eye className="w-4 h-4" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-primary transition-all duration-300"
-                                                            style={{ width: `${project.progress}%` }}
-                                                        ></div>
-                                                    </div>
-                                                    <span className="text-sm font-medium text-muted-foreground">
-                                                        {project.progress}%
-                                                    </span>
-                                                    <Button variant="ghost" size="sm">
-                                                        <Eye className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))}
+                                            </Link>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                            <p className="text-sm">No projects yet</p>
+                                            <p className="text-xs">Create your first project to get started</p>
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -332,28 +294,38 @@ export default function Dashboard({ auth, stats }) {
                                 <CardDescription className="text-muted-foreground">Latest task updates</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
-                                    {recentTasks.map((task) => (
-                                        <Link key={task.id} href={`/tasks/${task.id}`}>
-                                            <div className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                                                {getTaskStatusIcon(task.status)}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-foreground truncate">
-                                                        {task.title}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">{task.project}</p>
-                                                    <div className="flex items-center space-x-2 mt-1">
-                                                        <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                            {task.priority}
-                                                        </Badge>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            Due {new Date(task.dueDate).toLocaleDateString()}
-                                                        </span>
+                                <div className="space-y-4 max-h-80 overflow-y-auto">
+                                    {statsData.recentTasks && statsData.recentTasks.length > 0 ? (
+                                        statsData.recentTasks.map((task) => (
+                                            <Link key={task.id} href={`/tasks/${task.id}`}>
+                                                <div className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                                                    {getTaskStatusIcon(task.status)}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-foreground truncate">
+                                                            {task.title}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">{task.project_name}</p>
+                                                        <div className="flex items-center space-x-2 mt-1">
+                                                            <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                                {task.priority}
+                                                            </Badge>
+                                                            {task.due_date && (
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    Due {new Date(task.due_date).toLocaleDateString()}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </Link>
-                                    ))}
+                                            </Link>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                            <p className="text-sm">No tasks yet</p>
+                                            <p className="text-xs">Create your first task to get started</p>
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>

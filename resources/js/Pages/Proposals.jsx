@@ -181,7 +181,7 @@ export default function Proposals({ auth }) {
                                             </div>
                                             <div className="flex items-center space-x-1">
                                                 <DollarSign className="w-4 h-4" />
-                                                <span>${proposal.price.toLocaleString()}</span>
+                                                <span>${(proposal.price || 0).toLocaleString()}</span>
                                             </div>
                                             <div className="flex items-center space-x-1">
                                                 <Calendar className="w-4 h-4" />

@@ -279,20 +279,20 @@ export default function ProposalDetails({ auth, proposalId }) {
                                         <div className="flex items-center text-sm">
                                             <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
                                             <span className="font-medium">Total Price:</span>
-                                            <span className="ml-2 text-muted-foreground">${proposalData.price.toLocaleString()}</span>
+                                            <span className="ml-2 text-muted-foreground">${(proposalData.price || 0).toLocaleString()}</span>
                                         </div>
                                         <div className="flex items-center text-sm">
                                             <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                                             <span className="font-medium">Created:</span>
                                             <span className="ml-2 text-muted-foreground">
-                                                {new Date(proposalData.created_at).toLocaleDateString()}
+                                                {proposalData.created_at ? new Date(proposalData.created_at).toLocaleDateString() : 'Not set'}
                                             </span>
                                         </div>
                                         <div className="flex items-center text-sm">
                                             <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
                                             <span className="font-medium">Updated:</span>
                                             <span className="ml-2 text-muted-foreground">
-                                                {new Date(proposalData.updated_at).toLocaleDateString()}
+                                                {proposalData.updated_at ? new Date(proposalData.updated_at).toLocaleDateString() : 'Not set'}
                                             </span>
                                         </div>
                                     </div>
@@ -337,7 +337,7 @@ export default function ProposalDetails({ auth, proposalId }) {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-foreground">${proposalData.price.toLocaleString()}</div>
+                                    <div className="text-2xl font-bold text-foreground">${(proposalData.price || 0).toLocaleString()}</div>
                                     <div className="text-sm text-muted-foreground">Total Value</div>
                                 </div>
                                 <div className="text-center">
@@ -401,7 +401,7 @@ export default function ProposalDetails({ auth, proposalId }) {
                                                 </div>
                                                 <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                                                     <span>Duration: {phase.duration}</span>
-                                                    <span>Price: ${phase.price.toLocaleString()}</span>
+                                                    <span>Price: ${(phase.price || 0).toLocaleString()}</span>
                                                     {phase.start_date && (
                                                         <span>Start: {new Date(phase.start_date).toLocaleDateString()}</span>
                                                     )}
@@ -512,8 +512,8 @@ export default function ProposalDetails({ auth, proposalId }) {
                                                 </div>
                                                 <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                                                     <span>Phase: {proposalData.project.current_phase}</span>
-                                                    <span>Kickoff: {new Date(proposalData.project.kickoff_date).toLocaleDateString()}</span>
-                                                    <span>Delivery: {new Date(proposalData.project.expected_delivery).toLocaleDateString()}</span>
+                                                    <span>Kickoff: {proposalData.project.kickoff_date ? new Date(proposalData.project.kickoff_date).toLocaleDateString() : 'Not set'}</span>
+                                                    <span>Delivery: {proposalData.project.expected_delivery ? new Date(proposalData.project.expected_delivery).toLocaleDateString() : 'Not set'}</span>
                                                 </div>
                                             </div>
                                             <Link href={`/projects/${proposalData.project.id}`}>

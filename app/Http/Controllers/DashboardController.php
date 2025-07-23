@@ -22,10 +22,11 @@ class DashboardController extends Controller
             'totalProposals' => Proposal::count(),
             'totalProjects' => Project::count(),
             'totalTasks' => Task::where('status', 'completed')->count(),
-            'pendingTasks' => Task::where('status', 'pending')->count(),
+            'pendingTasks' => Task::whereIn('status', ['todo', 'in_progress'])->count(),
             'revenue' => $this->calculateRevenue(),
             'recentProposals' => $this->getRecentProposals(),
             'recentTasks' => $this->getRecentTasks(),
+            'recentProjects' => $this->getRecentProjects(),
         ];
 
         return Inertia::render('Dashboard', [
@@ -53,7 +54,7 @@ class DashboardController extends Controller
                 return [
                     'id' => $proposal->id,
                     'title' => $proposal->title,
-                    'client_name' => $proposal->client->name ?? 'Unknown Client',
+                    'client_name' => $proposal->client ? $proposal->client->full_name : 'Unknown Client',
                     'status' => $proposal->status ?? 'draft',
                     'created_at' => $proposal->created_at->diffForHumans(),
                 ];
@@ -62,7 +63,7 @@ class DashboardController extends Controller
 
     private function getRecentTasks()
     {
-        return Task::with('project')
+        return Task::with(['project', 'project.client'])
             ->latest()
             ->take(5)
             ->get()
@@ -72,7 +73,35 @@ class DashboardController extends Controller
                     'title' => $task->title,
                     'project_name' => $task->project->name ?? 'Unknown Project',
                     'status' => $task->status,
+                    'priority' => $task->priority ?? 'medium',
+                    'due_date' => $task->due_date ? $task->due_date->format('Y-m-d') : null,
                     'created_at' => $task->created_at->diffForHumans(),
+                ];
+            });
+    }
+
+        private function getRecentProjects()
+    {
+        return Project::with(['client', 'tasks'])
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($project) {
+                $totalTasks = $project->tasks->count();
+                $completedTasks = $project->tasks->where('status', 'done')->count();
+
+                return [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'client' => $project->client ? $project->client->full_name : 'Unknown Client',
+                    'status' => $project->status ?? 'planned',
+                    'progress' => $project->progress ?? 0,
+                    'due_date' => $project->due_date ? $project->due_date->format('Y-m-d') : null,
+                    'tasks' => [
+                        'completed' => $completedTasks,
+                        'total' => $totalTasks
+                    ],
+                    'created_at' => $project->created_at->diffForHumans(),
                 ];
             });
     }
