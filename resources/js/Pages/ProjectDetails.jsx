@@ -49,13 +49,18 @@ import {
     Trash2 as Trash2Icon,
     Brain,
     PenTool,
-    Users
+    Users,
+    Zap,
+    X
 } from 'lucide-react';
 
 export default function ProjectDetails({ auth, project }) {
     const [activeTab, setActiveTab] = useState('overview');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showTaskCreationModal, setShowTaskCreationModal] = useState(false);
+    const [generatingTasks, setGeneratingTasks] = useState(false);
+    const [visibleTasks, setVisibleTasks] = useState(new Set());
+    const [tasks, setTasks] = useState([]);
 
     // Use real project data or fallback to mock data for development
     const projectData = project || {
@@ -72,6 +77,17 @@ export default function ProjectDetails({ auth, project }) {
         milestones: [],
         team: []
     };
+
+    // Initialize tasks from project data
+    React.useEffect(() => {
+        if (projectData.tasks) {
+            setTasks(projectData.tasks);
+
+            // Make existing tasks visible immediately
+            const existingTaskIds = new Set(projectData.tasks.map(task => task.id));
+            setVisibleTasks(existingTaskIds);
+        }
+    }, [projectData.tasks]);
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -141,8 +157,87 @@ export default function ProjectDetails({ auth, project }) {
 
     const handleAITaskGeneration = () => {
         setShowTaskCreationModal(false);
-        // TODO: Implement AI task generation
-        toast.info('AI task generation coming soon!');
+        generateTasks();
+    };
+
+    const generateTasks = async () => {
+        setGeneratingTasks(true);
+        try {
+            const response = await fetch(`/api/projects/${projectData.id}/generate-tasks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    project_description: projectData.description || 'Project description not available',
+                    project_scope: projectData.description || 'Project scope not available',
+                    max_tasks: 2,
+                    timeline: [],
+                    include_subtasks: false
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                const newTasks = result.data;
+
+                // Add new tasks to the existing list
+                setTasks(prev => [...prev, ...newTasks]);
+
+                // Staggered fade-in animation for each task
+                const newTaskIds = newTasks.map(task => task.id);
+                newTaskIds.forEach((taskId, index) => {
+                    setTimeout(() => {
+                        setVisibleTasks(prev => new Set([...prev, taskId]));
+                    }, index * 200); // 200ms delay between each task
+                });
+
+                toast.success(`Generated ${newTasks.length} tasks successfully`);
+            } else {
+                const error = await response.json();
+                toast.error(error.message || 'Failed to generate tasks');
+            }
+        } catch (error) {
+            console.error('Error generating tasks:', error);
+            toast.error('Failed to generate tasks');
+        } finally {
+            setGeneratingTasks(false);
+        }
+    };
+
+    const deleteTask = async (taskId) => {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+
+            if (response.ok) {
+                // Remove from visible tasks first for fade-out effect
+                setVisibleTasks(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(taskId);
+                    return newSet;
+                });
+
+                // Remove from tasks list after fade-out
+                setTimeout(() => {
+                    setTasks(prev => prev.filter(task => task.id !== taskId));
+                }, 300);
+
+                toast.success('Task deleted successfully');
+            } else {
+                const error = await response.json();
+                toast.error(error.message || 'Failed to delete task');
+            }
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            toast.error('Failed to delete task');
+        }
     };
 
     // Task Creation Modal Component
@@ -500,43 +595,73 @@ export default function ProjectDetails({ auth, project }) {
                 {activeTab === 'tasks' && (
                     <Card className="bg-card border-border">
                         <CardHeader>
-                            <div>
-                                <CardTitle className="text-foreground">Project Tasks</CardTitle>
-                                <CardDescription className="text-muted-foreground">Manage and track project tasks</CardDescription>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-foreground">Project Tasks</CardTitle>
+                                    <CardDescription className="text-muted-foreground">Manage and track project tasks</CardDescription>
+                                </div>
+                                <Button
+                                    onClick={generateTasks}
+                                    disabled={generatingTasks}
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center space-x-2"
+                                >
+                                    {generatingTasks ? (
+                                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <Zap className="w-4 h-4" />
+                                    )}
+                                    <span>Generate with AI</span>
+                                </Button>
                             </div>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {projectData.tasks && projectData.tasks.length > 0 ? (
-                                    projectData.tasks.map(task => (
-                                        <Link key={task.id} href={`/tasks/${task.id}`} className="block">
-                                            <div className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                                                <div className="flex items-center space-x-3">
-                                                    {getTaskStatusIcon(task.status)}
-                                                    <div>
-                                                        <h3 className="font-medium text-foreground">{task.title}</h3>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            Assigned to {task.assignee || 'Unassigned'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    {task.priority && (
-                                                        <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                            {task.priority}
-                                                        </Badge>
-                                                    )}
-                                                    <span className="text-sm text-muted-foreground">
-                                                        Due {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
-                                                    </span>
-                                                    <Button variant="ghost" size="sm">
-                                                        <MoreVertical className="w-4 h-4" />
-                                                    </Button>
+                                {tasks.map(task => (
+                                    <div
+                                        key={task.id}
+                                        className={`flex items-center justify-between p-4 border border-border rounded-lg transition-all duration-300 ease-out ${
+                                            visibleTasks.has(task.id)
+                                                ? 'opacity-100 translate-y-0'
+                                                : 'opacity-0 translate-y-2'
+                                        }`}
+                                    >
+                                        <Link href={`/tasks/${task.id}`} className="flex-1">
+                                            <div className="flex items-center space-x-3">
+                                                {getTaskStatusIcon(task.status)}
+                                                <div>
+                                                    <h3 className="font-medium text-foreground">{task.title}</h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Assigned to {task.assignee || 'Unassigned'}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </Link>
-                                    ))
-                                ) : (
+                                        <div className="flex items-center space-x-2">
+                                            {task.priority && (
+                                                <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                    {task.priority}
+                                                </Badge>
+                                            )}
+                                            <span className="text-sm text-muted-foreground">
+                                                Due {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
+                                            </span>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    deleteTask(task.id);
+                                                }}
+                                                className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded transition-colors duration-200"
+                                                title="Delete task"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {tasks.length === 0 && !generatingTasks && (
                                     <div className="text-center py-12">
                                         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                                             <Target className="w-8 h-8 text-muted-foreground" />
@@ -549,6 +674,21 @@ export default function ProjectDetails({ auth, project }) {
                                             <Plus className="w-4 h-4 mr-2" />
                                             Create Task
                                         </Button>
+                                    </div>
+                                )}
+
+                                {generatingTasks && (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        <div className="flex flex-col items-center space-y-3">
+                                            <div className="relative">
+                                                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                                <div className="absolute inset-0 w-8 h-8 border-2 border-primary/20 rounded-full"></div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium">Generating tasks...</p>
+                                                <p className="text-xs">AI is analyzing your project and creating actionable tasks</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>

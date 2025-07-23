@@ -151,6 +151,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     // AI Generation routes
     Route::post('intake-responses/{id}/generate-proposal', [AIGenerationController::class, 'generateProposal']);
     Route::post('proposals/{id}/generate-project', [AIGenerationController::class, 'generateProject']);
+    Route::post('projects/{projectId}/generate-tasks', [AIGenerationController::class, 'generateTasks']);
     Route::post('tasks/{taskId}/generate-subtasks', [AIGenerationController::class, 'generateSubtasks']);
 
     // Context Engineering routes
