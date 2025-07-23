@@ -49,6 +49,15 @@ export default function BobbiFlow({ auth, tasks = [] }) {
     console.log('BobbiFlow received tasks:', tasks);
     console.log('Tasks count:', tasks.length);
 
+    // Check for duplicate task IDs
+    const taskIds = tasks.map(task => task.id);
+    const uniqueTaskIds = [...new Set(taskIds)];
+    if (taskIds.length !== uniqueTaskIds.length) {
+        console.warn('Duplicate task IDs detected:', taskIds.length - uniqueTaskIds.length, 'duplicates');
+        console.log('All task IDs:', taskIds);
+        console.log('Unique task IDs:', uniqueTaskIds);
+    }
+
     // Map database status values to frontend status values
     const mapStatus = (dbStatus) => {
         const statusMap = {
@@ -57,19 +66,6 @@ export default function BobbiFlow({ auth, tasks = [] }) {
             'done': 'done'
         };
         return statusMap[dbStatus] || 'todo';
-    };
-
-    // Map frontend status values back to database values for filtering
-    const mapStatusToDb = (frontendStatus) => {
-        const reverseStatusMap = {
-            'todo': 'todo',
-            'in-progress': 'in_progress',
-            'done': 'done',
-            'inbox': 'todo',
-            'waiting': 'todo',
-            'review': 'in_progress'
-        };
-        return reverseStatusMap[frontendStatus] || 'todo';
     };
 
     // Transform database tasks to match the expected format
@@ -93,14 +89,24 @@ export default function BobbiFlow({ auth, tasks = [] }) {
     }));
 
     console.log('Transformed tasks:', transformedTasks);
+    console.log('Transformed tasks count:', transformedTasks.length);
+
+    // Check for duplicate transformed task IDs
+    const transformedTaskIds = transformedTasks.map(task => task.id);
+    const uniqueTransformedTaskIds = [...new Set(transformedTaskIds)];
+    if (transformedTaskIds.length !== uniqueTransformedTaskIds.length) {
+        console.error('Duplicate transformed task IDs detected:', transformedTaskIds.length - uniqueTransformedTaskIds.length, 'duplicates');
+        console.log('All transformed task IDs:', transformedTaskIds);
+        console.log('Unique transformed task IDs:', uniqueTransformedTaskIds);
+    }
 
     const lanes = [
-        { id: 'inbox', name: 'Inbox', icon: Inbox, clientName: 'New' },
-        { id: 'todo', name: 'To Do', icon: ListTodo, clientName: 'Planned' },
-        { id: 'in-progress', name: 'In Progress', icon: Play, clientName: 'Doing' },
-        { id: 'waiting', name: 'Waiting on Client', icon: Pause, clientName: 'Waiting for You' },
-        { id: 'review', name: 'Ready for Review', icon: EyeIcon, clientName: 'Review' },
-        { id: 'done', name: 'Done', icon: CheckCircle2, clientName: 'Done' }
+        { id: 'inbox', name: 'Inbox', icon: Inbox, clientName: 'New', dbStatus: 'todo' },
+        { id: 'todo', name: 'To Do', icon: ListTodo, clientName: 'Planned', dbStatus: 'todo' },
+        { id: 'in-progress', name: 'In Progress', icon: Play, clientName: 'Doing', dbStatus: 'in_progress' },
+        { id: 'waiting', name: 'Waiting on Client', icon: Pause, clientName: 'Waiting for You', dbStatus: 'todo' },
+        { id: 'review', name: 'Ready for Review', icon: EyeIcon, clientName: 'Review', dbStatus: 'in_progress' },
+        { id: 'done', name: 'Done', icon: CheckCircle2, clientName: 'Done', dbStatus: 'done' }
     ];
 
     const getPriorityColor = (priority) => {
@@ -150,16 +156,60 @@ export default function BobbiFlow({ auth, tasks = [] }) {
         return true;
     });
 
-    const tasksByLane = lanes.map(lane => ({
-        ...lane,
-        tasks: filteredTasks.filter(task => {
-            // Map the task's frontend status to database status for comparison
-            const taskDbStatus = mapStatusToDb(task.status);
-            const laneDbStatus = mapStatusToDb(lane.id);
-            console.log(`Task ${task.id} (${task.title}): status=${task.status}, taskDbStatus=${taskDbStatus}, lane=${lane.id}, laneDbStatus=${laneDbStatus}, match=${taskDbStatus === laneDbStatus}`);
-            return taskDbStatus === laneDbStatus;
-        })
-    }));
+    // Create a map to track which tasks have been assigned to lanes
+    const assignedTaskIds = new Set();
+
+    const tasksByLane = lanes.map(lane => {
+        const laneTasks = filteredTasks.filter(task => {
+            // Skip if task is already assigned to another lane
+            if (assignedTaskIds.has(task.id)) {
+                console.log(`Task ${task.id} (${task.title}) already assigned to another lane, skipping`);
+                return false;
+            }
+
+            // Check if task status matches lane's database status
+            const taskDbStatus = task.status === 'in-progress' ? 'in_progress' : task.status;
+            const matches = taskDbStatus === lane.dbStatus;
+
+            if (matches) {
+                assignedTaskIds.add(task.id);
+                console.log(`Task ${task.id} (${task.title}) assigned to lane ${lane.id} with status ${taskDbStatus}`);
+            } else {
+                console.log(`Task ${task.id} (${task.title}) status ${taskDbStatus} does not match lane ${lane.id} status ${lane.dbStatus}`);
+            }
+
+            return matches;
+        });
+
+        console.log(`Lane ${lane.id} (${lane.name}) has ${laneTasks.length} tasks`);
+
+        return {
+            ...lane,
+            tasks: laneTasks
+        };
+    });
+
+    // Add any unassigned tasks to the inbox lane
+    const unassignedTasks = filteredTasks.filter(task => !assignedTaskIds.has(task.id));
+    if (unassignedTasks.length > 0) {
+        console.log(`Found ${unassignedTasks.length} unassigned tasks:`, unassignedTasks.map(t => `${t.id} (${t.title})`));
+        const inboxLaneIndex = tasksByLane.findIndex(lane => lane.id === 'inbox');
+        if (inboxLaneIndex !== -1) {
+            tasksByLane[inboxLaneIndex].tasks = [...tasksByLane[inboxLaneIndex].tasks, ...unassignedTasks];
+            console.log(`Added ${unassignedTasks.length} unassigned tasks to inbox lane`);
+        }
+    }
+
+    // Final verification - check for any remaining duplicates across all lanes
+    const allLaneTaskIds = tasksByLane.flatMap(lane => lane.tasks.map(task => task.id));
+    const uniqueLaneTaskIds = [...new Set(allLaneTaskIds)];
+    if (allLaneTaskIds.length !== uniqueLaneTaskIds.length) {
+        console.error('Duplicate tasks found across lanes:', allLaneTaskIds.length - uniqueLaneTaskIds.length, 'duplicates');
+        console.log('All lane task IDs:', allLaneTaskIds);
+        console.log('Unique lane task IDs:', uniqueLaneTaskIds);
+    } else {
+        console.log('No duplicate tasks found across lanes');
+    }
 
         return (
         <AuthenticatedLayout user={auth.user}>

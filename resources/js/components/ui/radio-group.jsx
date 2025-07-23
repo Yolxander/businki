@@ -1,51 +1,35 @@
 import * as React from "react"
+import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
 import { Circle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const RadioGroupContext = React.createContext()
-
-const RadioGroup = React.forwardRef(({ className, value, onValueChange, children, ...props }, ref) => {
+const RadioGroup = React.forwardRef(({ className, ...props }, ref) => {
   return (
-    <RadioGroupContext.Provider value={{ value, onValueChange }}>
-      <div
-        ref={ref}
-        className={cn("grid gap-2", className)}
-        {...props}
-      >
-        {children}
-      </div>
-    </RadioGroupContext.Provider>
+    <RadioGroupPrimitive.Root
+      className={cn("grid gap-2", className)}
+      {...props}
+      ref={ref}
+    />
   )
 })
-RadioGroup.displayName = "RadioGroup"
+RadioGroup.displayName = RadioGroupPrimitive.Root.displayName
 
-const RadioGroupItem = React.forwardRef(({ className, value, id, children, ...props }, ref) => {
-  const { value: selectedValue, onValueChange } = React.useContext(RadioGroupContext)
-  const isSelected = selectedValue === value
-
+const RadioGroupItem = React.forwardRef(({ className, ...props }, ref) => {
   return (
-    <div
+    <RadioGroupPrimitive.Item
       ref={ref}
       className={cn(
-        "flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
-        isSelected && "border-primary bg-primary/5",
+        "aspect-square h-4 w-4 rounded-full border border-primary text-primary ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
-      onClick={() => onValueChange(value)}
       {...props}
     >
-      <div className={cn(
-        "aspect-square h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors",
-        isSelected
-          ? "border-primary bg-primary"
-          : "border-muted-foreground/25 hover:border-primary/50"
-      )}>
-        {isSelected && <Circle className="h-2.5 w-2.5 fill-current text-primary-foreground" />}
-      </div>
-      {children}
-    </div>
+      <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
+        <Circle className="h-2.5 w-2.5 fill-current text-current" />
+      </RadioGroupPrimitive.Indicator>
+    </RadioGroupPrimitive.Item>
   )
 })
-RadioGroupItem.displayName = "RadioGroupItem"
+RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName
 
 export { RadioGroup, RadioGroupItem }

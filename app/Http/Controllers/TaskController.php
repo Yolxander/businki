@@ -20,15 +20,38 @@ class TaskController extends Controller
         Log::info('Loading BobbiFlow page', ['user_id' => auth()->id()]);
 
         try {
-            // Fetch tasks for the current user
-            $tasks = Task::with(['project.client', 'assignedUser', 'subtasks'])
-                ->where('user_id', auth()->id())
-                ->orderBy('created_at', 'desc')
+            // Fetch tasks for the current user with explicit distinct clause
+            $tasks = Task::select('tasks.*')
+                ->with(['project.client', 'assignedUser', 'subtasks'])
+                ->where('tasks.user_id', auth()->id())
+                ->distinct()
+                ->orderBy('tasks.created_at', 'desc')
                 ->get();
+
+            // Check for duplicate task IDs in the database result
+            $taskIds = $tasks->pluck('id')->toArray();
+            $uniqueTaskIds = array_unique($taskIds);
+            if (count($taskIds) !== count($uniqueTaskIds)) {
+                Log::warning('Duplicate task IDs found in database query', [
+                    'user_id' => auth()->id(),
+                    'total_tasks' => count($taskIds),
+                    'unique_tasks' => count($uniqueTaskIds),
+                    'duplicates' => count($taskIds) - count($uniqueTaskIds),
+                    'all_task_ids' => $taskIds,
+                    'unique_task_ids' => $uniqueTaskIds
+                ]);
+
+                // Remove duplicates from the collection
+                $tasks = $tasks->unique('id');
+                Log::info('Removed duplicate tasks from collection', [
+                    'final_task_count' => $tasks->count()
+                ]);
+            }
 
             Log::info('BobbiFlow page loaded successfully', [
                 'user_id' => auth()->id(),
                 'tasks_count' => $tasks->count(),
+                'unique_tasks_count' => count($uniqueTaskIds),
                 'tasks' => $tasks->toArray()
             ]);
 
