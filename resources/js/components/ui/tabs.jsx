@@ -2,6 +2,7 @@ import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
+import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from './context-menu';
 
 const Tabs = TabsPrimitive.Root
 
@@ -46,85 +47,101 @@ export { Tabs, TabsList, TabsTrigger, TabsContent }
 // Browser-like tabs component for navigation
 import { X, XCircle, MoreHorizontal, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from './button';
-import { Popover, PopoverContent, PopoverTrigger } from './popover';
 
 export function BrowserTabs({ tabs, activeTab, onTabClick, onTabClose, onCloseAll, onCloseOther, onMoveTab }) {
-    const [contextMenuTab, setContextMenuTab] = React.useState(null);
-    const [contextMenuOpen, setContextMenuOpen] = React.useState(false);
-    const [contextMenuPosition, setContextMenuPosition] = React.useState({ x: 0, y: 0 });
+    const [contextMenuTabId, setContextMenuTabId] = React.useState(null);
 
-    const handleContextMenu = (e, tab) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        setContextMenuTab(tab);
-        setContextMenuPosition({ x: e.clientX, y: e.clientY });
-        setContextMenuOpen(true);
+    const handleContextMenu = (tabId) => {
+        setContextMenuTabId(tabId);
     };
 
     const handleCloseOther = () => {
-        if (contextMenuTab) {
-            onCloseOther(contextMenuTab.id);
+        if (contextMenuTabId) {
+            onCloseOther(contextMenuTabId);
         }
-        setContextMenuOpen(false);
     };
 
     const handleMoveUp = () => {
-        if (contextMenuTab) {
-            onMoveTab(contextMenuTab.id, 'up');
+        if (contextMenuTabId) {
+            onMoveTab(contextMenuTabId, 'up');
         }
-        setContextMenuOpen(false);
     };
 
     const handleMoveDown = () => {
-        if (contextMenuTab) {
-            onMoveTab(contextMenuTab.id, 'down');
+        if (contextMenuTabId) {
+            onMoveTab(contextMenuTabId, 'down');
         }
-        setContextMenuOpen(false);
     };
 
     const handleMoveToStart = () => {
-        if (contextMenuTab) {
-            onMoveTab(contextMenuTab.id, 'start');
+        if (contextMenuTabId) {
+            onMoveTab(contextMenuTabId, 'start');
         }
-        setContextMenuOpen(false);
     };
 
     const handleMoveToEnd = () => {
-        if (contextMenuTab) {
-            onMoveTab(contextMenuTab.id, 'end');
+        if (contextMenuTabId) {
+            onMoveTab(contextMenuTabId, 'end');
         }
-        setContextMenuOpen(false);
     };
 
     return (
         <div className="flex items-center space-x-1 overflow-x-auto">
             {tabs.map((tab, index) => (
-                <div
-                    key={tab.id}
-                    className={`group flex items-center space-x-2 px-3 py-2 rounded-t-lg border-b-2 transition-all duration-200 cursor-pointer min-w-0 flex-shrink-0 ${
-                        activeTab === tab.id
-                            ? 'bg-background border-primary text-foreground'
-                            : 'bg-muted/50 border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
-                    onClick={() => onTabClick(tab.id)}
-                    onContextMenu={(e) => handleContextMenu(e, tab)}
-                >
-                    <span className="text-sm font-medium truncate max-w-24">
-                        {tab.name}
-                    </span>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 transition-opacity"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onTabClose(tab.id);
-                        }}
-                    >
-                        <X className="h-3 w-3" />
-                    </Button>
-                </div>
+                <ContextMenu key={tab.id}>
+                    <ContextMenuTrigger asChild>
+                        <div
+                            className={`group flex items-center space-x-2 px-3 py-2 rounded-t-lg border-b-2 transition-all duration-200 cursor-pointer min-w-0 flex-shrink-0 ${
+                                activeTab === tab.id
+                                    ? 'bg-background border-primary text-foreground'
+                                    : 'bg-muted/50 border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                            }`}
+                            onClick={() => onTabClick(tab.id)}
+                            onContextMenu={() => handleContextMenu(tab.id)}
+                        >
+                            <span className="text-sm font-medium truncate max-w-24">
+                                {tab.name}
+                            </span>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 transition-opacity"
+                                onClick={e => {
+                                    e.stopPropagation();
+                                    onTabClose(tab.id);
+                                }}
+                            >
+                                <X className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                        <ContextMenuItem onClick={handleCloseOther}>
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Close Other
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                            Move Tab
+                        </div>
+                        <ContextMenuItem onClick={handleMoveToStart} disabled={tabs.findIndex(t => t.id === contextMenuTabId) === 0}>
+                            <ArrowUp className="h-4 w-4 mr-2" />
+                            Move to Start
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={handleMoveUp} disabled={tabs.findIndex(t => t.id === contextMenuTabId) === 0}>
+                            <ArrowUp className="h-4 w-4 mr-2" />
+                            Move Up
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={handleMoveDown} disabled={tabs.findIndex(t => t.id === contextMenuTabId) === tabs.length - 1}>
+                            <ArrowDown className="h-4 w-4 mr-2" />
+                            Move Down
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={handleMoveToEnd} disabled={tabs.findIndex(t => t.id === contextMenuTabId) === tabs.length - 1}>
+                            <ArrowDown className="h-4 w-4 mr-2" />
+                            Move to End
+                        </ContextMenuItem>
+                    </ContextMenuContent>
+                </ContextMenu>
             ))}
 
             {/* Close All Button */}
@@ -140,81 +157,6 @@ export function BrowserTabs({ tabs, activeTab, onTabClick, onTabClose, onCloseAl
                     Close Tabs
                 </Button>
             )}
-
-            {/* Context Menu */}
-            <Popover open={contextMenuOpen} onOpenChange={setContextMenuOpen}>
-                <PopoverContent
-                    className="w-48 p-1"
-                    style={{
-                        position: 'fixed',
-                        left: contextMenuPosition.x,
-                        top: contextMenuPosition.y,
-                        transform: 'none'
-                    }}
-                >
-                    <div className="space-y-1">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start text-sm"
-                            onClick={handleCloseOther}
-                        >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Close Other
-                        </Button>
-
-                        <div className="border-t border-border my-1" />
-
-                        <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
-                            Move Tab
-                        </div>
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start text-sm"
-                            onClick={handleMoveToStart}
-                            disabled={tabs.indexOf(contextMenuTab) === 0}
-                        >
-                            <ArrowUp className="h-4 w-4 mr-2" />
-                            Move to Start
-                        </Button>
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start text-sm"
-                            onClick={handleMoveUp}
-                            disabled={tabs.indexOf(contextMenuTab) === 0}
-                        >
-                            <ArrowUp className="h-4 w-4 mr-2" />
-                            Move Up
-                        </Button>
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start text-sm"
-                            onClick={handleMoveDown}
-                            disabled={tabs.indexOf(contextMenuTab) === tabs.length - 1}
-                        >
-                            <ArrowDown className="h-4 w-4 mr-2" />
-                            Move Down
-                        </Button>
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start text-sm"
-                            onClick={handleMoveToEnd}
-                            disabled={tabs.indexOf(contextMenuTab) === tabs.length - 1}
-                        >
-                            <ArrowDown className="h-4 w-4 mr-2" />
-                            Move to End
-                        </Button>
-                    </div>
-                </PopoverContent>
-            </Popover>
         </div>
     );
 }
