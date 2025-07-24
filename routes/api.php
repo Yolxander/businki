@@ -160,6 +160,9 @@ Route::middleware(['web', 'auth'])->group(function () {
     // AI Models routes
     Route::get('ai-models/default', [AISettingsController::class, 'getDefaultModel']);
 
+    // Prompt Engineering routes
+    Route::post('prompt-engineering/make-reusable', [App\Http\Controllers\Api\PromptEngineeringController::class, 'makeReusable']);
+
     // Context Engineering routes
     Route::prefix('context-engineering')->group(function () {
         Route::get('/documents', [App\Http\Controllers\Api\ContextEngineeringController::class, 'index']);

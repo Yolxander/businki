@@ -55,6 +55,8 @@ export default function PromptManagement({ auth }) {
   const [copiedPromptId, setCopiedPromptId] = useState(null);
   const [optimizingPromptId, setOptimizingPromptId] = useState(null);
   const [defaultModelId, setDefaultModelId] = useState(null);
+  const [reusableTemplate, setReusableTemplate] = useState(null);
+  const [isMakingReusable, setIsMakingReusable] = useState(false);
 
   // Fetch default model ID on component mount
   useEffect(() => {
@@ -138,6 +140,61 @@ export default function PromptManagement({ auth }) {
     }
   };
 
+  // Make prompt reusable function
+  const handleMakeReusable = async (content, promptData = null) => {
+    setIsMakingReusable(true);
+
+    toast.info('Converting prompt to reusable template...', {
+      duration: 2000,
+    });
+
+    try {
+      // Check if we have a default model ID
+      if (!defaultModelId) {
+        toast.error('No AI model available for template conversion');
+        return;
+      }
+
+      // Prepare the reusable request
+      const reusableData = {
+        prompt_content: content,
+        model_id: defaultModelId,
+        prompt_id: promptData?.id || null,
+        prompt_title: promptData?.title || '',
+        prompt_description: promptData?.description || '',
+        prompt_context: promptData?.context || '',
+        prompt_tags: promptData?.tags || []
+      };
+
+      const response = await fetch('/api/prompt-engineering/make-reusable', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify(reusableData)
+      });
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        setReusableTemplate(result.data);
+        toast.success('Prompt converted to reusable template!', {
+          description: 'Your prompt is now a flexible template with placeholders.',
+        });
+      } else {
+        throw new Error(result.message || 'Template conversion failed');
+      }
+    } catch (error) {
+      console.error('Make reusable error:', error);
+      toast.error('Failed to make prompt reusable', {
+        description: error.message || 'Please try again later.',
+      });
+    } finally {
+      setIsMakingReusable(false);
+    }
+  };
+
   // Copy prompt content function
   const handleCopyPrompt = async (prompt) => {
     try {
@@ -178,6 +235,7 @@ export default function PromptManagement({ auth }) {
   // Dummy edit
   const handleEditPrompt = (prompt) => {
     setSelectedPrompt(prompt);
+    setOptimizedContent(''); // Clear any previous optimization
     setShowEditModal(true);
   };
 
@@ -193,8 +251,7 @@ export default function PromptManagement({ auth }) {
       setConvertContent(prompt.content);
       setShowConvertModal(true);
     } else if (action === 'convert') {
-      setConvertContent(prompt.content);
-      setShowConvertModal(true);
+      handleMakeReusable(prompt.content, prompt);
     } else if (action === 'edit') {
       handleEditPrompt(prompt);
     }
@@ -476,10 +533,25 @@ export default function PromptManagement({ auth }) {
                       <Label className="block text-sm font-medium text-foreground">
                         AI Optimization
                       </Label>
-                                                                  <div className="flex gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        Enhance your prompt for better AI responses. The optimization considers your prompt's context, tags, and purpose.
+                      </p>
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
-                          onClick={() => handleOptimize(selectedPrompt.content, selectedPrompt)}
+                          onClick={() => {
+                            // Pass the current prompt data including any updated fields
+                            const currentPromptData = {
+                              ...selectedPrompt,
+                              title: document.getElementById('edit-prompt-title')?.value || selectedPrompt.title,
+                              description: document.getElementById('edit-prompt-description')?.value || selectedPrompt.description,
+                              context: document.getElementById('edit-prompt-context')?.value || selectedPrompt.context,
+                              tags: document.getElementById('edit-prompt-tags')?.value ?
+                                document.getElementById('edit-prompt-tags').value.split(',').map(t => t.trim()) :
+                                selectedPrompt.tags
+                            };
+                            handleOptimize(selectedPrompt.content, currentPromptData);
+                          }}
                           disabled={isOptimizing}
                         >
                           <Sparkles className="w-4 h-4 mr-2" />
@@ -493,7 +565,26 @@ export default function PromptManagement({ auth }) {
                             <Check className="w-4 h-4 mr-2" /> Use Optimized
                           </Button>
                         )}
+                        {optimizedContent && (
+                          <Button
+                            variant="ghost"
+                            onClick={() => setOptimizedContent('')}
+                            size="sm"
+                          >
+                            <X className="w-4 h-4 mr-1" /> Clear
+                          </Button>
+                        )}
                       </div>
+                      {optimizedContent && (
+                        <div className="mt-3">
+                          <Label className="block text-sm font-medium text-foreground mb-2">Optimized Version:</Label>
+                          <Textarea
+                            value={optimizedContent}
+                            readOnly
+                            className="min-h-[120px] bg-muted/50 border-muted"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TabsContent>
@@ -558,12 +649,179 @@ export default function PromptManagement({ auth }) {
             )}
 
             <DialogFooter className="mt-6">
-              <Button variant="ghost" onClick={() => setShowEditModal(false)}>
+              <Button variant="ghost" onClick={() => {
+                setShowEditModal(false);
+                setOptimizedContent(''); // Clear optimization when closing
+              }}>
                 <X className="w-4 h-4 mr-2" /> Cancel
               </Button>
               <Button onClick={handleSaveEdit}>
                 <Save className="w-4 h-4 mr-2" /> Update Prompt
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+                {/* Reusable Template Modal */}
+        <Dialog open={!!reusableTemplate} onOpenChange={() => setReusableTemplate(null)}>
+          <DialogContent className="sm:max-w-4xl">
+            <DialogHeader className="text-left">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Plus className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-semibold">Reusable Template Created</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Your prompt has been converted to a flexible template with placeholders for reuse across different contexts.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            {reusableTemplate && (
+              <Tabs defaultValue="comparison" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="comparison">Template Comparison</TabsTrigger>
+                  <TabsTrigger value="placeholders">Placeholders</TabsTrigger>
+                  <TabsTrigger value="instructions">Usage Guide</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="comparison" className="space-y-6 mt-6">
+                  {/* Original vs Template */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card className="bg-card border-border">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-foreground">Original Prompt</CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground">
+                          Your original prompt content
+                        </CardDescription>
+                      </CardHeader>
+                                            <CardContent>
+                                                <Textarea
+                          value={reusableTemplate.original}
+                          readOnly
+                          className="min-h-[120px] bg-black border-slate-600 resize-none text-sm leading-relaxed text-white focus:ring-0 focus:border-slate-500"
+                        />
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-card border-border">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">Template</Badge>
+                          Reusable Template
+                        </CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground">
+                          Flexible template with placeholders
+                        </CardDescription>
+                      </CardHeader>
+                                            <CardContent>
+                                                <Textarea
+                          value={reusableTemplate.reusable_template}
+                          readOnly
+                          className="min-h-[120px] bg-black border-purple-500 resize-none font-mono text-sm leading-relaxed text-white focus:ring-0 focus:border-purple-400 shadow-sm"
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="placeholders" className="space-y-6 mt-6">
+                  {/* Placeholders */}
+                  {reusableTemplate.placeholders && reusableTemplate.placeholders.length > 0 ? (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="block text-sm font-medium text-foreground mb-3">
+                          Template Placeholders
+                        </Label>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          These placeholders can be replaced with specific values to customize the template for different use cases.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {reusableTemplate.placeholders.map((placeholder, index) => (
+                          <Card key={index} className="bg-card border-border hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="flex items-start gap-3">
+                                <Badge variant="outline" className="shrink-0 bg-purple-50 border-purple-200 text-purple-700">
+                                  {placeholder.name}
+                                </Badge>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground mb-1">{placeholder.description}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    <span className="font-medium">Examples:</span> {placeholder.example}
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="p-3 bg-muted/30 rounded-full w-fit mx-auto mb-3">
+                        <Check className="w-6 h-6 text-green-600" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">This template has no placeholders and is ready to use as-is.</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="instructions" className="space-y-6 mt-6">
+                  {/* Usage Instructions */}
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="block text-sm font-medium text-foreground mb-3">
+                        How to Use This Template
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Follow these instructions to customize and use your template effectively.
+                      </p>
+                    </div>
+
+                    <Card className="bg-card border-border">
+                      <CardContent className="p-4">
+                                                                        <Textarea
+                          value={reusableTemplate.usage_instructions}
+                          readOnly
+                          className="min-h-[200px] bg-black border-blue-500 resize-none text-sm leading-relaxed text-white focus:ring-0 focus:border-blue-400 shadow-sm"
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
+
+            <DialogFooter className="mt-6">
+              <div className="flex gap-2 w-full">
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(reusableTemplate.reusable_template);
+                    toast.success('Template copied to clipboard!');
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Copy className="w-4 h-4 mr-2" /> Copy Template
+                </Button>
+                <Button
+                  onClick={() => {
+                    setConvertContent(reusableTemplate.reusable_template);
+                    setShowConvertModal(true);
+                    setReusableTemplate(null);
+                  }}
+                  className="flex-1"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Create New Prompt
+                </Button>
+                <Button variant="ghost" onClick={() => setReusableTemplate(null)}>
+                  <X className="w-4 h-4 mr-2" /> Close
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

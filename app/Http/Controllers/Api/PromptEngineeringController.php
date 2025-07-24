@@ -349,6 +349,51 @@ class PromptEngineeringController extends Controller
     }
 
         /**
+     * Make a prompt reusable by converting it to a template
+     */
+    public function makeReusable(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'prompt_content' => 'required|string|max:10000',
+                'model_id' => 'required|exists:ai_models,id',
+                'prompt_title' => 'nullable|string|max:255',
+                'prompt_description' => 'nullable|string|max:1000',
+                'prompt_context' => 'nullable|string|max:255',
+                'prompt_tags' => 'nullable|array'
+            ]);
+
+            // Convert prompt to reusable template using AI
+            $reusableTemplate = $this->makePromptReusable(
+                $request->prompt_content,
+                $request->only(['prompt_title', 'prompt_description', 'prompt_context', 'prompt_tags'])
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Prompt converted to reusable template successfully',
+                'data' => [
+                    'original' => $request->prompt_content,
+                    'reusable_template' => $reusableTemplate,
+                    'placeholders' => $this->extractPlaceholders($reusableTemplate),
+                    'usage_instructions' => $this->generateUsageInstructions($reusableTemplate),
+                    'created_at' => now()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to make prompt reusable', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to make prompt reusable: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Placeholder method for AI prompt optimization
      */
     private function optimizePromptWithAI(string $prompt, string $optimizationType, array $metadata = []): string
@@ -405,8 +450,195 @@ class PromptEngineeringController extends Controller
                 }
                 return "Please structure your response to: " . $prompt . "\n\nOrganize your answer with clear headings, logical flow, and easy-to-follow sections that build upon each other.";
 
-            default:
-                return $prompt;
+                            default:
+                    return $prompt;
         }
+    }
+
+    /**
+     * Convert a prompt to a reusable template with placeholders
+     */
+    private function makePromptReusable(string $prompt, array $metadata = []): string
+    {
+        // This would integrate with OpenAI or other AI service
+        // For now, return a smart template conversion
+
+        $lowerPrompt = strtolower($prompt);
+
+        // Branding prompts
+        if (strpos($lowerPrompt, 'branding') !== false && strpos($lowerPrompt, 'eco-friendly') !== false) {
+            return "Generate {number} unique {target_type} ideas for a new {product_type} product.";
+        }
+
+        // Email prompts
+        if (strpos($lowerPrompt, 'email') !== false || strpos($lowerPrompt, 'follow') !== false) {
+            return "Draft a {email_type} email to {recipient} about {subject}.";
+        }
+
+        // Checklist/Audit prompts
+        if (strpos($lowerPrompt, 'checklist') !== false || strpos($lowerPrompt, 'audit') !== false) {
+            return "Create a comprehensive {audit_type} checklist for {target_area}.";
+        }
+
+        // Content generation prompts
+        if (strpos($lowerPrompt, 'generate') !== false || strpos($lowerPrompt, 'create') !== false) {
+            if (strpos($lowerPrompt, '10') !== false) {
+                return "Generate {number} {content_type} for {target_subject}.";
+            }
+            return "Generate {content_type} for {target_subject}.";
+        }
+
+        // Project planning prompts
+        if (strpos($lowerPrompt, 'project') !== false || strpos($lowerPrompt, 'plan') !== false) {
+            return "Create a {project_type} plan for {project_name}.";
+        }
+
+        // Task generation prompts
+        if (strpos($lowerPrompt, 'task') !== false) {
+            return "Generate {number} {task_type} tasks for {project_context}.";
+        }
+
+        // Default template conversion
+        return $this->createGenericTemplate($prompt);
+    }
+
+    /**
+     * Create a generic template from any prompt
+     */
+    private function createGenericTemplate(string $prompt): string
+    {
+        // Replace specific nouns with placeholders
+        $template = $prompt;
+
+        // Replace numbers with {number}
+        $template = preg_replace('/\b\d+\b/', '{number}', $template);
+
+        // Replace specific product types
+        $template = preg_replace('/\b(eco-friendly|sustainable|digital|physical|online|offline)\s+product\b/i', '{product_type} product', $template);
+
+        // Replace specific content types
+        $template = preg_replace('/\b(branding|marketing|content|design|strategy|plan)\s+ideas?\b/i', '{content_type}', $template);
+
+        // Replace specific subjects
+        $template = preg_replace('/\b(branding|marketing|design|development|content|strategy)\b/i', '{target_type}', $template);
+
+        // Replace specific contexts
+        $template = preg_replace('/\b(new|existing|current|future)\b/i', '{context}', $template);
+
+        return $template;
+    }
+
+    /**
+     * Extract placeholders from a template
+     */
+    private function extractPlaceholders(string $template): array
+    {
+        preg_match_all('/\{([^}]+)\}/', $template, $matches);
+        $placeholders = array_unique($matches[1] ?? []);
+
+        $placeholderInfo = [];
+        foreach ($placeholders as $placeholder) {
+            $placeholderInfo[] = [
+                'name' => $placeholder,
+                'description' => $this->getPlaceholderDescription($placeholder),
+                'example' => $this->getPlaceholderExample($placeholder)
+            ];
+        }
+
+        return $placeholderInfo;
+    }
+
+    /**
+     * Get description for a placeholder
+     */
+    private function getPlaceholderDescription(string $placeholder): string
+    {
+        $descriptions = [
+            'number' => 'The quantity or amount needed',
+            'target_type' => 'The type of content or service',
+            'product_type' => 'The category of product',
+            'content_type' => 'The type of content to generate',
+            'target_subject' => 'The subject or topic to focus on',
+            'email_type' => 'The type of email (follow-up, introduction, etc.)',
+            'recipient' => 'The person or group to send the email to',
+            'subject' => 'The main topic or purpose of the email',
+            'audit_type' => 'The type of audit or review',
+            'target_area' => 'The area or component to audit',
+            'project_type' => 'The type of project',
+            'project_name' => 'The name or title of the project',
+            'task_type' => 'The type of tasks to generate',
+            'project_context' => 'The context or scope of the project',
+            'context' => 'The context or timeframe'
+        ];
+
+        return $descriptions[$placeholder] ?? 'A variable that can be customized';
+    }
+
+    /**
+     * Get example for a placeholder
+     */
+    private function getPlaceholderExample(string $placeholder): string
+    {
+        $examples = [
+            'number' => '5, 10, 20',
+            'target_type' => 'branding, marketing, design',
+            'product_type' => 'eco-friendly, digital, physical',
+            'content_type' => 'ideas, strategies, plans',
+            'target_subject' => 'website redesign, product launch',
+            'email_type' => 'follow-up, introduction, proposal',
+            'recipient' => 'client, team, stakeholder',
+            'subject' => 'project update, meeting request',
+            'audit_type' => 'UX, SEO, content',
+            'target_area' => 'website, mobile app, marketing',
+            'project_type' => 'web development, marketing campaign',
+            'project_name' => 'Acme Website Redesign',
+            'task_type' => 'development, design, content',
+            'project_context' => 'website redesign, product launch',
+            'context' => 'new, existing, current'
+        ];
+
+        return $examples[$placeholder] ?? 'custom value';
+    }
+
+    /**
+     * Generate usage instructions for a template
+     */
+    private function generateUsageInstructions(string $template): string
+    {
+        $placeholders = $this->extractPlaceholders($template);
+
+        if (empty($placeholders)) {
+            return "This template is ready to use as-is.";
+        }
+
+        $instructions = "To use this template, replace the following placeholders:\n\n";
+
+        foreach ($placeholders as $placeholder) {
+            $instructions .= "• {" . $placeholder['name'] . "}: " . $placeholder['description'] . " (e.g., " . $placeholder['example'] . ")\n";
+        }
+
+        $instructions .= "\nExample usage:\n";
+        $instructions .= "Original: " . $template . "\n";
+        $instructions .= "Filled: " . $this->createExampleUsage($template, $placeholders);
+
+        return $instructions;
+    }
+
+    /**
+     * Create an example usage of the template
+     */
+    private function createExampleUsage(string $template, array $placeholders): string
+    {
+        $example = $template;
+
+        foreach ($placeholders as $placeholder) {
+            $example = str_replace(
+                '{' . $placeholder['name'] . '}',
+                $placeholder['example'],
+                $example
+            );
+        }
+
+        return $example;
     }
 }
