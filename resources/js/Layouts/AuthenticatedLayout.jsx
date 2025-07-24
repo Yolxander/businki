@@ -83,6 +83,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
             '/ai-settings': 'AI Settings',
             '/playground': 'Playground',
             '/prompt-engineering': 'Prompt Engineering',
+            '/prompt-management': 'Prompt Management',
             '/context-engineering': 'Context Engineering',
             '/api-dashboard': 'API Dashboard',
             '/user-management': 'User Management',
