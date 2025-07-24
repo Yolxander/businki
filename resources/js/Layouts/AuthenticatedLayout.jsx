@@ -248,23 +248,24 @@ export default function AuthenticatedLayout({ user, header, children }) {
     const workNavigation = [
         { name: 'Projects', href: '/projects', icon: FileText },
         { name: 'Clients', href: '/clients', icon: Users },
-        { name: 'Proposals', href: '/proposals', icon: FileText },
-        { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
+        // { name: 'Proposals', href: '/proposals', icon: FileText },
+        // { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
         { name: 'Bobbi Flow', href: '/bobbi-flow', icon: Target },
         { name: 'Calendar', href: '/calendar', icon: Calendar },
     ];
 
     const systemNavigation = [
-        { name: 'API Dashboard', href: '/api-dashboard', icon: Server },
-        { name: 'User Management', href: '/user-management', icon: Users },
+        // { name: 'API Dashboard', href: '/api-dashboard', icon: Server },
+        // { name: 'User Management', href: '/user-management', icon: Users },
         { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     ];
 
     const aiNavigation = [
-        { name: 'AI Settings', href: '/ai-settings', icon: Brain },
-        { name: 'Playground', href: '/playground', icon: Play },
-        { name: 'Prompt Engineering', href: '/prompt-engineering', icon: BookOpen },
-        { name: 'Context Engineering', href: '/context-engineering', icon: Code },
+        // { name: 'AI Settings', href: '/ai-settings', icon: Brain },
+        // { name: 'Playground', href: '/playground', icon: Play },
+        // { name: 'Prompt Engineering', href: '/prompt-engineering', icon: BookOpen },
+        // { name: 'Context Engineering', href: '/context-engineering', icon: Code },
+        { name: 'Prompt Management', href: '/prompt-management', icon: BookOpen },
     ];
 
     return (

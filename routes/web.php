@@ -10,6 +10,7 @@ use App\Http\Controllers\ProjectController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use App\Http\Controllers\PromptController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -284,4 +285,14 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
 Route::middleware(['auth'])->group(function () {
 
 });
+
+Route::resource('prompts', PromptController::class);
+
+Route::get('/prompt-management', function () {
+    return Inertia::render('PromptManagement', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+    ]);
+})->name('prompt-management');
 
