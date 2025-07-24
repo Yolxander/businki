@@ -916,4 +916,53 @@ class AISettingsController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get the default AI model for the authenticated user
+     */
+    public function getDefaultModel(): JsonResponse
+    {
+        try {
+            $defaultModel = AIModel::where('user_id', auth()->id())
+                ->where('is_default', true)
+                ->where('status', 'active')
+                ->first();
+
+            if (!$defaultModel) {
+                // If no default model, get the first active model
+                $defaultModel = AIModel::where('user_id', auth()->id())
+                    ->where('status', 'active')
+                    ->first();
+            }
+
+            if (!$defaultModel) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No AI models available'
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'id' => $defaultModel->id,
+                    'name' => $defaultModel->name,
+                    'model' => $defaultModel->model,
+                    'provider' => $defaultModel->aiProvider->provider_type,
+                    'status' => $defaultModel->status,
+                    'is_default' => $defaultModel->is_default
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get default AI model', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get default AI model: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

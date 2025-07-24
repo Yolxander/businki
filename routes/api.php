@@ -157,6 +157,9 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('projects/{projectId}/generate-tasks', [AIGenerationController::class, 'generateTasks']);
     Route::post('tasks/{taskId}/generate-subtasks', [AIGenerationController::class, 'generateSubtasks']);
 
+    // AI Models routes
+    Route::get('ai-models/default', [AISettingsController::class, 'getDefaultModel']);
+
     // Context Engineering routes
     Route::prefix('context-engineering')->group(function () {
         Route::get('/documents', [App\Http\Controllers\Api\ContextEngineeringController::class, 'index']);

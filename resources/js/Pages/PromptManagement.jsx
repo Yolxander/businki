@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Star, StarOff, Sparkles, Plus, Edit, X, Check, MoreVertical, Save, Brain, Copy, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { Star, StarOff, Sparkles, Plus, Edit, X, Check, MoreVertical, Save, Brain, Copy, CheckCircle, MessageSquare } from 'lucide-react';
 
 // Dummy data for prompts
 const dummyPrompts = [
@@ -52,14 +53,89 @@ export default function PromptManagement({ auth }) {
   const [optimizedContent, setOptimizedContent] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [copiedPromptId, setCopiedPromptId] = useState(null);
+  const [optimizingPromptId, setOptimizingPromptId] = useState(null);
+  const [defaultModelId, setDefaultModelId] = useState(null);
 
-  // Dummy optimize function
-  const handleOptimize = () => {
+  // Fetch default model ID on component mount
+  useEffect(() => {
+    fetchDefaultModelId();
+  }, []);
+
+      // Optimize function using AI/ML service
+  const handleOptimize = async (content, promptData = null) => {
     setIsOptimizing(true);
-    setTimeout(() => {
-      setOptimizedContent(convertContent + '\n\n[Optimized for clarity and detail!]');
+
+    toast.info('AI is optimizing your prompt...', {
+      duration: 2000,
+    });
+
+    try {
+      // Check if we have a default model ID
+      if (!defaultModelId) {
+        toast.error('No AI model available for optimization');
+        return;
+      }
+
+      // Prepare the optimization request
+      const optimizationData = {
+        prompt_content: content,
+        optimization_type: 'effectiveness', // Default to effectiveness optimization
+        model_id: defaultModelId,
+        prompt_id: promptData?.id || null,
+        // Include prompt metadata if available
+        prompt_title: promptData?.title || '',
+        prompt_description: promptData?.description || '',
+        prompt_context: promptData?.context || '',
+        prompt_tags: promptData?.tags || []
+      };
+
+      const response = await fetch('/api/prompt-engineering/optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify(optimizationData)
+      });
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        setOptimizedContent(result.data.optimized);
+        toast.success('Prompt optimized successfully!', {
+          description: result.data.improvements?.effectiveness || 'Your prompt has been enhanced for better AI results.',
+        });
+      } else {
+        throw new Error(result.message || 'Optimization failed');
+      }
+    } catch (error) {
+      console.error('Optimization error:', error);
+      toast.error('Failed to optimize prompt', {
+        description: error.message || 'Please try again later.',
+      });
+    } finally {
       setIsOptimizing(false);
-    }, 1000);
+      setOptimizingPromptId(null);
+    }
+  };
+
+  // Fetch default model ID
+  const fetchDefaultModelId = async () => {
+    try {
+      const response = await fetch('/api/ai-models/default');
+      const result = await response.json();
+      if (result.status === 'success' && result.data) {
+        setDefaultModelId(result.data.id);
+      } else {
+        // Fallback to a hardcoded model ID if API fails
+        console.warn('Failed to fetch default model, using fallback ID');
+        setDefaultModelId(1);
+      }
+    } catch (error) {
+      console.error('Failed to fetch default model:', error);
+      // Fallback to a hardcoded model ID if API fails
+      setDefaultModelId(1);
+    }
   };
 
   // Copy prompt content function
@@ -68,8 +144,10 @@ export default function PromptManagement({ auth }) {
       await navigator.clipboard.writeText(prompt.content);
       setCopiedPromptId(prompt.id);
       setTimeout(() => setCopiedPromptId(null), 2000);
+      toast.success('Prompt copied to clipboard!');
     } catch (err) {
       console.error('Failed to copy prompt:', err);
+      toast.error('Failed to copy prompt to clipboard');
     }
   };
 
@@ -129,7 +207,12 @@ export default function PromptManagement({ auth }) {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">🧠 Prompt Management</h1>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <MessageSquare className="w-6 h-6 text-purple-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">Prompt Management</h1>
+            </div>
             <p className="text-muted-foreground mt-1">Save, optimize, and reuse your best AI prompts. Convert notes or tasks into prompts in one click!</p>
           </div>
           <Button onClick={() => setShowConvertModal(true)}>
@@ -152,7 +235,7 @@ export default function PromptManagement({ auth }) {
                           <StarOff className="w-4 h-4 text-muted-foreground" />
                         )}
                       </button>
-                      <button
+                                            <button
                         onClick={() => handleCopyPrompt(prompt)}
                         className="ml-1 p-1 rounded hover:bg-muted transition-colors"
                         title={copiedPromptId === prompt.id ? 'Copied!' : 'Copy prompt content'}
@@ -163,6 +246,7 @@ export default function PromptManagement({ auth }) {
                           <Copy className="w-4 h-4 text-muted-foreground hover:text-foreground" />
                         )}
                       </button>
+
                     </div>
                     <CardTitle className="text-lg font-semibold truncate" title={prompt.title}>{prompt.title}</CardTitle>
                     <CardDescription className="truncate text-xs">{prompt.description}</CardDescription>
@@ -243,7 +327,26 @@ export default function PromptManagement({ auth }) {
                       AI Optimization
                     </Label>
                     <div className="flex gap-2">
-                      <Button variant="outline" onClick={handleOptimize} disabled={isOptimizing || !convertContent}>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          // Get form data for optimization
+                          const titleInput = document.getElementById('prompt-title');
+                          const descriptionInput = document.getElementById('prompt-description');
+                          const contextInput = document.getElementById('prompt-context');
+                          const tagsInput = document.getElementById('prompt-tags');
+
+                          const promptData = {
+                            title: titleInput?.value || '',
+                            description: descriptionInput?.value || '',
+                            context: contextInput?.value || '',
+                            tags: tagsInput?.value ? tagsInput.value.split(',').map(t => t.trim()) : []
+                          };
+
+                          handleOptimize(convertContent, promptData);
+                        }}
+                        disabled={isOptimizing || !convertContent}
+                      >
                         <Sparkles className="w-4 h-4 mr-2" />
                         {isOptimizing ? 'Optimizing...' : 'Optimize Prompt'}
                       </Button>
@@ -373,18 +476,23 @@ export default function PromptManagement({ auth }) {
                       <Label className="block text-sm font-medium text-foreground">
                         AI Optimization
                       </Label>
-                      <div className="flex gap-2">
+                                                                  <div className="flex gap-2">
                         <Button
                           variant="outline"
-                          onClick={() => {
-                            setConvertContent(selectedPrompt.content);
-                            setShowConvertModal(true);
-                            setShowEditModal(false);
-                          }}
+                          onClick={() => handleOptimize(selectedPrompt.content, selectedPrompt)}
+                          disabled={isOptimizing}
                         >
                           <Sparkles className="w-4 h-4 mr-2" />
-                          Optimize Prompt
+                          {isOptimizing ? 'Optimizing...' : 'Optimize Prompt'}
                         </Button>
+                        {optimizedContent && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => setSelectedPrompt({ ...selectedPrompt, content: optimizedContent })}
+                          >
+                            <Check className="w-4 h-4 mr-2" /> Use Optimized
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
