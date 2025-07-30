@@ -116,6 +116,64 @@
             background: rgba(209, 255, 117, 0.6);
             transform: scale(1.1);
         }
+
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            .section-nav {
+                right: 10px;
+                gap: 8px;
+            }
+
+            .section-nav-dot {
+                width: 10px;
+                height: 10px;
+            }
+
+            body {
+                padding-left: 4px;
+                padding-right: 4px;
+            }
+
+            .mobile-hidden {
+                display: none;
+            }
+
+            .mobile-full-width {
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+
+            .mobile-text-center {
+                text-align: center;
+            }
+
+            .mobile-stack {
+                flex-direction: column !important;
+            }
+
+            .mobile-padding {
+                padding: 1rem !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .section-nav {
+                display: none;
+            }
+
+            .mobile-text-sm {
+                font-size: 0.875rem !important;
+            }
+
+            .mobile-text-lg {
+                font-size: 1.125rem !important;
+            }
+
+            .mobile-text-xl {
+                font-size: 1.25rem !important;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-900 min-h-screen px-6" style="background-color: oklch(0.205 0 0);">
@@ -132,14 +190,52 @@
     <!-- Header -->
     <header class="w-full py-3 px-2 relative z-50">
         <nav class="w-full mx-auto flex items-center justify-between">
-            <div class="text-2xl font-bold text-white orbitron fade-in-left animate">Bobbi</div>
-            <div class="flex space-x-8">
-                <a href="#values" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-1 animate">Our Mission</a>
-                <a href="#features" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-2 animate">Features</a>
-                <a href="#about" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-3 animate">About</a>
-                <a href="/login" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-4 animate">Login</a>
+            <div class="text-xl md:text-2xl font-bold text-white orbitron fade-in-left animate">Bobbi</div>
+            
+            <!-- Desktop Navigation -->
+            <div class="hidden md:flex space-x-8">
+                <a href="#values" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-1 animate text-base">Our Mission</a>
+                <a href="#features" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-2 animate text-base">Features</a>
+                <a href="#about" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-3 animate text-base">About</a>
+                <a href="/login" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-4 animate text-base">Login</a>
+            </div>
+
+            <!-- Mobile Hamburger Menu -->
+            <div class="md:hidden">
+                <button id="mobile-menu-btn" class="text-white hover:text-gray-300 transition p-2">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
             </div>
         </nav>
+
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-menu" class="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 transform translate-x-full transition-transform duration-300 ease-in-out md:hidden">
+            <div class="flex flex-col h-full">
+                <!-- Close Button -->
+                <div class="flex justify-end p-4">
+                    <button id="close-mobile-menu" class="text-white hover:text-gray-300 transition p-2">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Mobile Navigation Links -->
+                <div class="flex flex-col items-center justify-center space-y-8 flex-1">
+                    <a href="#values" class="text-white hover:text-[#d1ff75] transition orbitron text-2xl font-medium mobile-menu-link">Our Mission</a>
+                    <a href="#features" class="text-white hover:text-[#d1ff75] transition orbitron text-2xl font-medium mobile-menu-link">Features</a>
+                    <a href="#about" class="text-white hover:text-[#d1ff75] transition orbitron text-2xl font-medium mobile-menu-link">About</a>
+                    <a href="/login" class="text-white hover:text-[#d1ff75] transition orbitron text-2xl font-medium mobile-menu-link">Login</a>
+                </div>
+
+                <!-- Mobile Menu Footer -->
+                <div class="p-8 text-center">
+                    <p class="text-white/60 text-sm">© 2025 Bobbi. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
     </header>
 
     <!-- Import all sections -->
@@ -254,15 +350,49 @@
             }
         });
 
-        // Keyboard navigation support
+                // Keyboard navigation support
         document.addEventListener('keydown', (e) => {
             const activeDot = document.querySelector('.section-nav-dot.active');
             const currentIndex = Array.from(navDots).indexOf(activeDot);
-
+            
             if (e.key === 'ArrowUp' && currentIndex > 0) {
                 navDots[currentIndex - 1].click();
             } else if (e.key === 'ArrowDown' && currentIndex < navDots.length - 1) {
                 navDots[currentIndex + 1].click();
+            }
+        });
+
+        // Mobile menu functionality
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuLinks = document.querySelectorAll('.mobile-menu-link');
+
+        // Open mobile menu
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.remove('translate-x-full');
+            document.body.style.overflow = 'hidden';
+        });
+
+        // Close mobile menu
+        closeMobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.add('translate-x-full');
+            document.body.style.overflow = 'auto';
+        });
+
+        // Close mobile menu when clicking on a link
+        mobileMenuLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('translate-x-full');
+                document.body.style.overflow = 'auto';
+            });
+        });
+
+        // Close mobile menu when clicking outside
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenu.classList.add('translate-x-full');
+                document.body.style.overflow = 'auto';
             }
         });
     </script>
