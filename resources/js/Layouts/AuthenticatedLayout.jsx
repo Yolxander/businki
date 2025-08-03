@@ -114,7 +114,14 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                 name: currentName,
                 href: currentPath
             };
-            setTabs(prev => [...prev, newTab]);
+            setTabs(prev => {
+                // If we already have 3 tabs, remove the first one (oldest)
+                if (prev.length >= 3) {
+                    return [...prev.slice(1), newTab];
+                }
+                // Otherwise, just add the new tab
+                return [...prev, newTab];
+            });
         }
         setActiveTab(currentPath);
     }, [currentPath, tabs]);
