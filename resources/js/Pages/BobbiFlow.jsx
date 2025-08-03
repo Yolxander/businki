@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Plus,
     Filter,
@@ -46,7 +48,20 @@ import {
     Menu,
     Bell,
     Sun,
-    Moon
+    Moon,
+    ArrowLeft,
+    Flag,
+    Send,
+    Save,
+    BookOpen,
+    X,
+    Sparkles as SparklesIcon,
+    Brain,
+    Clock as ClockIcon,
+    CheckSquare,
+    Square,
+    Coffee,
+    Heart
 } from 'lucide-react';
 
 export default function BobbiFlow({ auth, tasks = [] }) {
@@ -56,6 +71,18 @@ export default function BobbiFlow({ auth, tasks = [] }) {
     const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
     const [focusMode, setFocusMode] = useState(false);
     const [timerActive, setTimerActive] = useState(false);
+
+    // Zen Mode states
+    const [zenMode, setZenMode] = useState(false);
+    const [zenTask, setZenTask] = useState(null);
+    const [zenTimer, setZenTimer] = useState(0);
+    const [zenTimerActive, setZenTimerActive] = useState(false);
+    const [zenNotes, setZenNotes] = useState('');
+    const [zenSubtaskProgress, setZenSubtaskProgress] = useState({});
+    const [zenAiTip, setZenAiTip] = useState('');
+    const [showExitModal, setShowExitModal] = useState(false);
+    const [zenStartTime, setZenStartTime] = useState(null);
+    const timerRef = useRef(null);
 
     // Debug logging
     console.log('BobbiFlow received tasks:', tasks);
@@ -216,6 +243,393 @@ export default function BobbiFlow({ auth, tasks = [] }) {
     const reviewTasks = transformedTasks.filter(t => t.status === 'review').length;
     const activeTasks = transformedTasks.filter(t => t.status === 'in-progress').length;
 
+    // Zen Mode functions
+    const enterZenMode = (task) => {
+        setZenTask(task);
+        setZenMode(true);
+        setZenTimerActive(true);
+        setZenStartTime(new Date());
+        setZenTimer(0);
+        setZenNotes('');
+        setZenSubtaskProgress({});
+
+        // Generate AI tip
+        const tips = [
+            "Take a deep breath and start with what feels most natural",
+            "Remember to celebrate small wins as you complete subtasks",
+            "If you get stuck, try switching to a different subtask",
+            "Your progress is valuable - every step counts",
+            "Stay hydrated and take gentle breaks when needed",
+            "Focus on the process, not just the outcome",
+            "You're doing great - trust your ability to figure things out",
+            "Break complex tasks into smaller, manageable pieces",
+            "Remember why this work matters to you",
+            "Be kind to yourself - perfection is not required"
+        ];
+        setZenAiTip(tips[Math.floor(Math.random() * tips.length)]);
+    };
+
+    const exitZenMode = () => {
+        setShowExitModal(true);
+    };
+
+    const confirmExitZenMode = () => {
+        setZenMode(false);
+        setZenTask(null);
+        setZenTimerActive(false);
+        setShowExitModal(false);
+        setZenTimer(0);
+        setZenNotes('');
+        setZenSubtaskProgress({});
+        setZenAiTip('');
+    };
+
+    const toggleSubtask = (subtaskId) => {
+        setZenSubtaskProgress(prev => ({
+            ...prev,
+            [subtaskId]: !prev[subtaskId]
+        }));
+    };
+
+    const formatTime = (seconds) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Timer effect
+    useEffect(() => {
+        if (zenTimerActive) {
+            timerRef.current = setInterval(() => {
+                setZenTimer(prev => prev + 1);
+            }, 1000);
+        } else {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        }
+
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        };
+    }, [zenTimerActive]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyPress = (e) => {
+            if (zenMode) {
+                if (e.key === 'Escape') {
+                    exitZenMode();
+                }
+            } else if (e.key === 'z' || e.key === 'Z') {
+                // Enter Zen Mode for first available task
+                const firstTask = transformedTasks.find(t => t.status === 'todo' || t.status === 'in-progress');
+                if (firstTask) {
+                    enterZenMode(firstTask);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [zenMode, transformedTasks]);
+
+    // Auto-save notes
+    useEffect(() => {
+        if (zenMode && zenNotes) {
+            const timeoutId = setTimeout(() => {
+                // Auto-save functionality would go here
+                console.log('Auto-saving notes...');
+            }, 5000);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [zenNotes, zenMode]);
+
+    if (zenMode && zenTask) {
+        return (
+            <AuthenticatedLayout user={auth.user} focusMode={true}>
+                <Head title={`Zen Mode - ${zenTask.title}`} />
+
+                <div className="h-screen flex flex-col bg-background">
+                    {/* Zen Mode Header */}
+                    <div className="flex-shrink-0 border-b border-border/50 bg-background/95 backdrop-blur">
+                        <div className="flex items-center justify-between px-6 py-4">
+                            <div className="flex items-center space-x-4">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={exitZenMode}
+                                    className="flex items-center space-x-2"
+                                >
+                                    <ArrowLeft className="w-4 h-4" />
+                                    <span>Back to Flow</span>
+                                </Button>
+                                <div className="h-4 w-px bg-border"></div>
+                                <div className="flex items-center space-x-2">
+                                    <Target className="w-4 h-4 text-primary" />
+                                    <span className="font-medium">{zenTask.title}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-2 bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                                    <Timer className="w-4 h-4 text-primary" />
+                                    <span className="font-mono text-sm font-medium">{formatTime(zenTimer)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Zen Mode Content */}
+                    <div className="flex-1 flex space-x-6 p-6">
+                        {/* Task Overview Panel */}
+                        <div className="w-1/3 space-y-6">
+                            <Card className="border border-border/50 bg-background shadow-sm">
+                                <CardContent className="p-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h2 className="text-xl font-semibold text-foreground mb-2">
+                                                {zenTask.title}
+                                            </h2>
+                                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                                <Building className="w-4 h-4" />
+                                                <span>{zenTask.project}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <div className="flex items-start space-x-2">
+                                                <Brain className="w-4 h-4 text-blue-600 mt-0.5" />
+                                                <div>
+                                                    <p className="text-sm font-medium text-blue-800">AI Tip</p>
+                                                    <p className="text-sm text-blue-700 mt-1">{zenAiTip}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-sm font-medium text-foreground mb-3">Subtasks</h3>
+                                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                                {zenTask.subtasks.map((subtask, index) => (
+                                                    <div key={subtask.id} className="flex items-center space-x-3">
+                                                        <Checkbox
+                                                            checked={zenSubtaskProgress[subtask.id] || false}
+                                                            onCheckedChange={() => toggleSubtask(subtask.id)}
+                                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                        />
+                                                        <span className={`text-sm ${zenSubtaskProgress[subtask.id] ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                                                            {subtask.text}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {zenTask.subtasks.length === 0 && (
+                                                    <p className="text-sm text-muted-foreground">No subtasks defined</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {zenTask.dueDate && (
+                                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                                <Calendar className="w-4 h-4" />
+                                                <span>Due: {new Date(zenTask.dueDate).toLocaleDateString()}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Work Notes Area */}
+                        <div className="flex-1 space-y-6">
+                            <Card className="border border-border/50 bg-background shadow-sm">
+                                <CardContent className="p-6">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-lg font-semibold text-foreground">Progress & Notes</h3>
+                                            <div className="flex items-center space-x-2">
+                                                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                                                    <SparklesIcon className="w-4 h-4" />
+                                                    <span>AI Suggest</span>
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                                                    <BookOpen className="w-4 h-4" />
+                                                    <span>Insert Prompt</span>
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <Textarea
+                                            placeholder="Share your progress, thoughts, or any insights..."
+                                            value={zenNotes}
+                                            onChange={(e) => setZenNotes(e.target.value)}
+                                            className="min-h-[200px] resize-none border border-border focus:border-primary"
+                                        />
+
+                                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                            <span>Auto-saved</span>
+                                            <span>{zenNotes.length} characters</span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Progress & Wellness Section */}
+                            <Card className="border border-border/50 bg-background shadow-sm">
+                                <CardContent className="p-6">
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-semibold text-foreground">Progress & Wellness</h3>
+
+                                        {/* Progress Bar */}
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">Progress</span>
+                                                <span className="font-medium">
+                                                    {zenTask.subtasks.length > 0
+                                                        ? `${Math.round((Object.values(zenSubtaskProgress).filter(Boolean).length / zenTask.subtasks.length) * 100)}%`
+                                                        : '0%'
+                                                    }
+                                                </span>
+                                            </div>
+                                            <div className="w-full bg-muted rounded-full h-2">
+                                                <div
+                                                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                                                    style={{
+                                                        width: zenTask.subtasks.length > 0
+                                                            ? `${(Object.values(zenSubtaskProgress).filter(Boolean).length / zenTask.subtasks.length) * 100}%`
+                                                            : '0%'
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Quick Actions */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                                                <Coffee className="w-4 h-4" />
+                                                <span>Take Break</span>
+                                            </Button>
+                                            <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                                                <Heart className="w-4 h-4" />
+                                                <span>Feeling Good</span>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+
+                    {/* Bottom Controls */}
+                    <div className="flex-shrink-0 border-t border-border/50 bg-background/95">
+                        <div className="flex items-center justify-between px-6 py-4">
+                            <div className="flex items-center space-x-4">
+                                <Button
+                                    variant="default"
+                                    size="lg"
+                                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                                >
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span>Mark Complete</span>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="lg"
+                                    className="flex items-center space-x-2"
+                                >
+                                    <Flag className="w-4 h-4" />
+                                    <span>Flag Issue</span>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="lg"
+                                    className="flex items-center space-x-2"
+                                >
+                                    <Send className="w-4 h-4" />
+                                    <span>Send Update</span>
+                                </Button>
+                            </div>
+
+                            <div className="flex items-center space-x-4">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setZenTimerActive(!zenTimerActive)}
+                                    className="flex items-center space-x-2"
+                                >
+                                    {zenTimerActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                                    <span>{zenTimerActive ? 'Pause' : 'Resume'}</span>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Exit Modal */}
+                {showExitModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="bg-background rounded-lg shadow-xl p-6 w-96 border border-border">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold">Exit Zen Mode?</h3>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowExitModal(false)}
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex items-center space-x-2">
+                                        <CheckCircle className="w-4 h-4 text-green-500" />
+                                        <span>Task: {zenTask.title}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <ClockIcon className="w-4 h-4 text-blue-500" />
+                                        <span>Time Spent: {formatTime(zenTimer)}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Brain className="w-4 h-4 text-purple-500" />
+                                        <span>AI Summary: "Work in progress, notes saved"</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                    <Save className="w-4 h-4" />
+                                    <span>Notes saved</span>
+                                    <span>•</span>
+                                    <BookOpen className="w-4 h-4" />
+                                    <span>Add to prompt library</span>
+                                </div>
+
+                                <div className="flex items-center space-x-3 pt-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowExitModal(false)}
+                                        className="flex-1"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="default"
+                                        onClick={confirmExitZenMode}
+                                        className="flex-1"
+                                    >
+                                        Exit Zen Mode
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </AuthenticatedLayout>
+        );
+    }
+
     return (
         <AuthenticatedLayout user={auth.user} focusMode={focusMode}>
             <Head title="Bobbi Flow" />
@@ -252,8 +666,17 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                     </Select>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-center space-x-4">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setFocusMode(true)}
+                                    className="flex items-center space-x-2"
+                                >
+                                    <Focus className="w-4 h-4" />
+                                    <span>Enter Focus Mode</span>
+                                </Button>
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -289,15 +712,6 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                     />
                                 </div>
                                 <Button
-                                    variant={focusMode ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setFocusMode(!focusMode)}
-                                    className="flex items-center space-x-2"
-                                >
-                                    <Focus className="w-4 h-4" />
-                                    <span>Focus Mode</span>
-                                </Button>
-                                <Button
                                     variant={timerActive ? "default" : "outline"}
                                     size="sm"
                                     onClick={() => setTimerActive(!timerActive)}
@@ -307,7 +721,7 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                     <span>Timer</span>
                                 </Button>
                             </div>
-                            
+
                             <div className="flex items-center space-x-2">
                                 <Button variant="ghost" size="sm">
                                     <Menu className="w-4 h-4" />
@@ -374,40 +788,68 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                         </div>
                                     )}
                                     {lane.tasks.map((task) => (
-                                        <Link key={task.id} href={`/tasks/${task.id}`} className="group cursor-pointer block">
-                                            <Card className={`border hover:border-primary/30 hover:shadow-lg transition-all duration-200 ${lane.color}`}>
+                                        <div key={task.id} className="group cursor-pointer block">
+                                            <Card className="border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-200 bg-background relative overflow-hidden">
+                                                {/* Zen Mode Button - appears on hover */}
+                                                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            enterZenMode(task);
+                                                        }}
+                                                        className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 border border-primary/20"
+                                                    >
+                                                        <SparklesIcon className="w-3 h-3 text-primary" />
+                                                    </Button>
+                                                </div>
+
                                                 <CardContent className="p-4">
-                                                    {/* Task Title & Priority */}
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <h4 className="font-medium text-base leading-tight text-foreground pr-3 line-clamp-2">
-                                                            {task.title}
-                                                        </h4>
-                                                        <span className="flex-shrink-0 ml-2">{getPriorityIcon(task.priority)}</span>
+                                                    {/* Project/Category - Faded text at top */}
+                                                    <div className="text-xs text-muted-foreground mb-2">
+                                                        {task.project}
                                                     </div>
 
-                                                    {/* Project & Time */}
-                                                    <div className="flex items-center justify-between text-sm mb-3">
-                                                        <div className="flex items-center space-x-2 text-muted-foreground">
-                                                            <Building className="w-3 h-3" />
-                                                            <span>{task.project}</span>
+                                                    {/* Task Title & Priority */}
+                                                    <div className="flex items-start justify-between mb-3 pr-10">
+                                                        <div className="flex items-start space-x-2 flex-1">
+                                                            <Building className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                                            <h4 className="font-medium text-sm leading-tight text-foreground line-clamp-2">
+                                                                {task.title}
+                                                            </h4>
                                                         </div>
-                                                        <span className="text-muted-foreground">{task.estimatedTime}</span>
+                                                        <div className="flex items-center space-x-1 flex-shrink-0">
+                                                            {getPriorityIcon(task.priority)}
+                                                            {task.priority === 'high' && (
+                                                                <AlertCircle className="w-3 h-3 text-red-500" />
+                                                            )}
+                                                            <Star className="w-3 h-3 text-green-500" />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Estimated Time */}
+                                                    <div className="flex justify-end mb-3">
+                                                        <span className="text-xs text-muted-foreground font-mono">
+                                                            {task.estimatedTime}
+                                                        </span>
                                                     </div>
 
                                                     {/* Tags */}
                                                     {task.tags.length > 0 && (
-                                                        <div className="flex flex-wrap gap-2 mb-3">
+                                                        <div className="flex flex-wrap gap-1 mb-3">
                                                             {task.tags.slice(0, 2).map((tag, index) => (
                                                                 <Badge
                                                                     key={index}
-                                                                    variant="outline"
-                                                                    className="text-xs px-2 py-1 bg-muted/30 border-muted-foreground/20"
+                                                                    variant="secondary"
+                                                                    className="text-xs px-2 py-0.5 bg-muted text-muted-foreground"
                                                                 >
                                                                     {tag}
                                                                 </Badge>
                                                             ))}
                                                             {task.tags.length > 2 && (
-                                                                <Badge variant="outline" className="text-xs px-2 py-1 bg-muted/30 border-muted-foreground/20">
+                                                                <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-muted text-muted-foreground">
                                                                     +{task.tags.length - 2}
                                                                 </Badge>
                                                             )}
@@ -417,13 +859,13 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                                     {/* Progress Bar */}
                                                     {task.subtasks.length > 0 && (
                                                         <div className="mb-3">
-                                                            <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                                                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                                                 <span>Progress</span>
                                                                 <span>{task.subtasks.filter(st => st.completed).length}/{task.subtasks.length}</span>
                                                             </div>
-                                                            <div className="w-full bg-muted rounded-full h-2">
+                                                            <div className="w-full bg-muted rounded-full h-1.5">
                                                                 <div
-                                                                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                                                                    className="bg-primary h-1.5 rounded-full transition-all duration-300"
                                                                     style={{
                                                                         width: `${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%`
                                                                     }}
@@ -435,26 +877,26 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                                     {/* Footer */}
                                                     <div className="flex items-center justify-between pt-3 border-t border-border/30">
                                                         <div className="flex items-center space-x-2">
-                                                            <div className={`w-3 h-3 rounded-full ${task.assignee === 'client' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
-                                                            <span className="text-sm text-muted-foreground">
+                                                            <div className={`w-2 h-2 rounded-full ${task.assignee === 'client' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
+                                                            <span className="text-xs text-muted-foreground">
                                                                 {task.assignee === 'client' ? 'Client' : 'You'}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center space-x-3">
                                                             {task.comments > 0 && (
                                                                 <div className="flex items-center space-x-1">
-                                                                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                                                                    <span className="text-sm text-muted-foreground">{task.comments}</span>
+                                                                    <MessageSquare className="w-3 h-3 text-muted-foreground" />
+                                                                    <span className="text-xs text-muted-foreground">{task.comments}</span>
                                                                 </div>
                                                             )}
-                                                            <span className="text-sm text-muted-foreground">
+                                                            <span className="text-xs text-muted-foreground">
                                                                 {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
                                                             </span>
                                                         </div>
                                                     </div>
                                                 </CardContent>
                                             </Card>
-                                        </Link>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
@@ -509,7 +951,7 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                     <span>Sync Project</span>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-center space-x-4">
                                 <Button variant="ghost" size="sm" className="flex items-center space-x-2">
                                     <TrendingUp className="w-4 h-4" />
