@@ -86,6 +86,25 @@
             scroll-behavior: smooth;
         }
 
+        /* Hide scrollbars */
+        html, body {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* Internet Explorer 10+ */
+        }
+
+        html::-webkit-scrollbar, body::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        * {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* Internet Explorer 10+ */
+        }
+
+        *::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
         /* Section navigation styles */
         .section-nav {
             position: fixed;
@@ -191,7 +210,7 @@
     <header class="w-full py-3 px-2 relative z-50">
         <nav class="w-full mx-auto flex items-center justify-between">
             <div class="text-xl md:text-2xl font-bold text-white orbitron fade-in-left animate">Bobbi</div>
-            
+
             <!-- Desktop Navigation -->
             <div class="hidden md:flex space-x-8">
                 <a href="#values" class="text-white hover:text-gray-300 transition orbitron fade-in-right stagger-1 animate text-base">Our Mission</a>
@@ -354,7 +373,7 @@
         document.addEventListener('keydown', (e) => {
             const activeDot = document.querySelector('.section-nav-dot.active');
             const currentIndex = Array.from(navDots).indexOf(activeDot);
-            
+
             if (e.key === 'ArrowUp' && currentIndex > 0) {
                 navDots[currentIndex - 1].click();
             } else if (e.key === 'ArrowDown' && currentIndex < navDots.length - 1) {
@@ -371,20 +390,17 @@
         // Open mobile menu
         mobileMenuBtn.addEventListener('click', () => {
             mobileMenu.classList.remove('translate-x-full');
-            document.body.style.overflow = 'hidden';
         });
 
         // Close mobile menu
         closeMobileMenuBtn.addEventListener('click', () => {
             mobileMenu.classList.add('translate-x-full');
-            document.body.style.overflow = 'auto';
         });
 
         // Close mobile menu when clicking on a link
         mobileMenuLinks.forEach(link => {
             link.addEventListener('click', () => {
                 mobileMenu.classList.add('translate-x-full');
-                document.body.style.overflow = 'auto';
             });
         });
 
@@ -392,7 +408,6 @@
         mobileMenu.addEventListener('click', (e) => {
             if (e.target === mobileMenu) {
                 mobileMenu.classList.add('translate-x-full');
-                document.body.style.overflow = 'auto';
             }
         });
     </script>
