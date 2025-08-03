@@ -75,7 +75,7 @@ export default function Login() {
                 </div>
 
                 {/* Content */}
-                <div className="max-w-md w-full space-y-8 relative z-10">
+                <div className="max-w-md w-full space-y-8 relative z-10 transition-all duration-700 ease-in-out animate-in fade-in-0 slide-in-from-bottom-8">
                     <div>
                         <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
                             Welcome to <span className="font-orbitron text-[#d1ff75]">Bobbi</span>
@@ -85,7 +85,7 @@ export default function Login() {
                         </p>
                     </div>
 
-                    <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-2xl">
+                    <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-2xl transition-all duration-500 ease-in-out animate-in fade-in-0 slide-in-from-bottom-4">
                         <CardHeader>
                             <CardTitle className="text-white">Account Access</CardTitle>
                             <CardDescription className="text-gray-300">
@@ -94,12 +94,22 @@ export default function Login() {
                         </CardHeader>
                         <CardContent>
                             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="login">Sign In</TabsTrigger>
-                                    <TabsTrigger value="register">Sign Up</TabsTrigger>
+                                <TabsList className="grid w-full grid-cols-2 bg-gray-800/50 border border-gray-700">
+                                    <TabsTrigger
+                                        value="login"
+                                        className="data-[state=active]:bg-[#d1ff75] data-[state=active]:text-black data-[state=active]:font-semibold transition-all duration-300 ease-in-out"
+                                    >
+                                        Sign In
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="register"
+                                        className="data-[state=active]:bg-[#d1ff75] data-[state=active]:text-black data-[state=active]:font-semibold transition-all duration-300 ease-in-out"
+                                    >
+                                        Sign Up
+                                    </TabsTrigger>
                                 </TabsList>
 
-                                <TabsContent value="login" className="space-y-6">
+                                <TabsContent value="login" className="space-y-6 transition-all duration-300 ease-in-out animate-in fade-in-0 slide-in-from-left-2">
                                     <form onSubmit={submitLogin} className="space-y-6">
                                         <div>
                                             <label htmlFor="login-email" className="block text-sm font-medium text-white">
@@ -147,7 +157,7 @@ export default function Login() {
                                     </form>
                                 </TabsContent>
 
-                                <TabsContent value="register" className="space-y-6">
+                                <TabsContent value="register" className="space-y-6 transition-all duration-300 ease-in-out animate-in fade-in-0 slide-in-from-right-2">
                                     <form onSubmit={submitRegister} className="space-y-6">
                                         <div>
                                             <label htmlFor="register-name" className="block text-sm font-medium text-white">
