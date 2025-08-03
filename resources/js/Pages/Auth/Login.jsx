@@ -3,6 +3,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import DarkVeil from '@/components/ui/DarkVeil';
 
 export default function Login() {
     const [activeTab, setActiveTab] = useState('login');
@@ -59,21 +60,35 @@ export default function Login() {
         <>
             <Head title="Login" />
 
-            <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-md w-full space-y-8">
+            <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+                {/* Dark Veil Background */}
+                <div className="absolute inset-0 z-0">
+                    <DarkVeil
+                        hueShift={180}
+                        noiseIntensity={0.02}
+                        scanlineIntensity={0.1}
+                        speed={0.3}
+                        scanlineFrequency={0.5}
+                        warpAmount={0.1}
+                        resolutionScale={1}
+                    />
+                </div>
+
+                {/* Content */}
+                <div className="max-w-md w-full space-y-8 relative z-10">
                     <div>
-                        <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
+                        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
                             Welcome to <span className="font-orbitron text-[#d1ff75]">Bobbi</span>
                         </h2>
-                        <p className="mt-2 text-center text-sm text-muted-foreground">
+                        <p className="mt-2 text-center text-sm text-gray-300">
                             Sign in to your account or create a new one
                         </p>
                     </div>
 
-                    <Card className="bg-card border-border">
+                    <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-2xl">
                         <CardHeader>
-                            <CardTitle className="text-card-foreground">Account Access</CardTitle>
-                            <CardDescription className="text-muted-foreground">
+                            <CardTitle className="text-white">Account Access</CardTitle>
+                            <CardDescription className="text-gray-300">
                                 Choose your preferred action below
                             </CardDescription>
                         </CardHeader>
@@ -87,7 +102,7 @@ export default function Login() {
                                 <TabsContent value="login" className="space-y-6">
                                     <form onSubmit={submitLogin} className="space-y-6">
                                         <div>
-                                            <label htmlFor="login-email" className="block text-sm font-medium text-foreground">
+                                            <label htmlFor="login-email" className="block text-sm font-medium text-white">
                                                 Email address
                                             </label>
                                             <input
@@ -95,7 +110,7 @@ export default function Login() {
                                                 type="email"
                                                 value={loginForm.data.email}
                                                 onChange={(e) => loginForm.setData('email', e.target.value)}
-                                                className="mt-1 block w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm"
+                                                className="mt-1 block w-full px-3 py-2 border border-gray-600 bg-black/20 text-white rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 required
                                             />
                                             {loginForm.errors.email && (
@@ -104,7 +119,7 @@ export default function Login() {
                                         </div>
 
                                         <div>
-                                            <label htmlFor="login-password" className="block text-sm font-medium text-foreground">
+                                            <label htmlFor="login-password" className="block text-sm font-medium text-white">
                                                 Password
                                             </label>
                                             <input
@@ -112,7 +127,7 @@ export default function Login() {
                                                 type="password"
                                                 value={loginForm.data.password}
                                                 onChange={(e) => loginForm.setData('password', e.target.value)}
-                                                className="mt-1 block w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm"
+                                                className="mt-1 block w-full px-3 py-2 border border-gray-600 bg-black/20 text-white rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 required
                                             />
                                             {loginForm.errors.password && (
@@ -124,7 +139,7 @@ export default function Login() {
                                             <Button
                                                 type="submit"
                                                 disabled={loginForm.processing}
-                                                className="w-full"
+                                                className="w-full bg-[#d1ff75] hover:bg-[#b8e65a] text-black font-semibold"
                                             >
                                                 {loginForm.processing ? 'Signing in...' : 'Sign in'}
                                             </Button>
@@ -135,7 +150,7 @@ export default function Login() {
                                 <TabsContent value="register" className="space-y-6">
                                     <form onSubmit={submitRegister} className="space-y-6">
                                         <div>
-                                            <label htmlFor="register-name" className="block text-sm font-medium text-foreground">
+                                            <label htmlFor="register-name" className="block text-sm font-medium text-white">
                                                 Full Name
                                             </label>
                                             <input
@@ -143,7 +158,7 @@ export default function Login() {
                                                 type="text"
                                                 value={registerForm.data.name}
                                                 onChange={(e) => registerForm.setData('name', e.target.value)}
-                                                className="mt-1 block w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm"
+                                                className="mt-1 block w-full px-3 py-2 border border-gray-600 bg-black/20 text-white rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 required
                                             />
                                             {registerForm.errors.name && (
@@ -152,7 +167,7 @@ export default function Login() {
                                         </div>
 
                                         <div>
-                                            <label htmlFor="register-email" className="block text-sm font-medium text-foreground">
+                                            <label htmlFor="register-email" className="block text-sm font-medium text-white">
                                                 Email address
                                             </label>
                                             <input
@@ -160,7 +175,7 @@ export default function Login() {
                                                 type="email"
                                                 value={registerForm.data.email}
                                                 onChange={(e) => registerForm.setData('email', e.target.value)}
-                                                className="mt-1 block w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm"
+                                                className="mt-1 block w-full px-3 py-2 border border-gray-600 bg-black/20 text-white rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 required
                                             />
                                             {registerForm.errors.email && (
@@ -169,7 +184,7 @@ export default function Login() {
                                         </div>
 
                                         <div>
-                                            <label htmlFor="register-password" className="block text-sm font-medium text-foreground">
+                                            <label htmlFor="register-password" className="block text-sm font-medium text-white">
                                                 Password
                                             </label>
                                             <input
@@ -177,7 +192,7 @@ export default function Login() {
                                                 type="password"
                                                 value={registerForm.data.password}
                                                 onChange={(e) => registerForm.setData('password', e.target.value)}
-                                                className="mt-1 block w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm"
+                                                className="mt-1 block w-full px-3 py-2 border border-gray-600 bg-black/20 text-white rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 required
                                             />
                                             {registerForm.errors.password && (
@@ -186,7 +201,7 @@ export default function Login() {
                                         </div>
 
                                         <div>
-                                            <label htmlFor="register-password-confirmation" className="block text-sm font-medium text-foreground">
+                                            <label htmlFor="register-password-confirmation" className="block text-sm font-medium text-white">
                                                 Confirm Password
                                             </label>
                                             <input
@@ -194,7 +209,7 @@ export default function Login() {
                                                 type="password"
                                                 value={registerForm.data.password_confirmation}
                                                 onChange={(e) => registerForm.setData('password_confirmation', e.target.value)}
-                                                className="mt-1 block w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm"
+                                                className="mt-1 block w-full px-3 py-2 border border-gray-600 bg-black/20 text-white rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 required
                                             />
                                             {registerForm.errors.password_confirmation && (
@@ -206,7 +221,7 @@ export default function Login() {
                                             <Button
                                                 type="submit"
                                                 disabled={registerForm.processing}
-                                                className="w-full"
+                                                className="w-full bg-[#d1ff75] hover:bg-[#b8e65a] text-black font-semibold"
                                             >
                                                 {registerForm.processing ? 'Creating account...' : 'Create account'}
                                             </Button>
