@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bobbi - AI-Powered Project Management for Freelancers</title>
+    <title>Bobbi - Next-Gen Project Management for Freelancers</title>
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ asset('logo.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">

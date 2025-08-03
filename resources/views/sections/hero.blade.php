@@ -8,7 +8,7 @@
         <!-- Large "Title" Text Overlay -->
         <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full px-4 md:px-0 md:left-[5%] md:transform-none md:top-auto md:bottom-80 md:w-[800px]">
             <h1 class="text-2xl sm:text-3xl md:text-6xl lg:text-8xl font-bold text-white tracking-wider slide-in-up text-center md:text-left leading-tight">
-                AI-Powered Project Management
+                Next-Gen Project Management
             </h1>
         </div>
 
