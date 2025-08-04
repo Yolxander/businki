@@ -400,12 +400,14 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                             </div>
                                         </div>
 
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <div className="bg-background/50 border border-border/50 rounded-lg p-4 backdrop-blur-sm">
                                             <div className="flex items-start space-x-2">
-                                                <Brain className="w-4 h-4 text-blue-600 mt-0.5" />
-                                                <div>
-                                                    <p className="text-sm font-medium text-blue-800">AI Tip</p>
-                                                    <p className="text-sm text-blue-700 mt-1">{zenAiTip}</p>
+                                                <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                                                    <Brain className="w-4 h-4 text-primary" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-foreground mb-1">AI Tip</p>
+                                                    <p className="text-sm text-muted-foreground leading-relaxed">{zenAiTip}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -529,7 +531,7 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                 <Button
                                     variant="default"
                                     size="lg"
-                                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                                    className="flex items-center space-x-2 bg-lime-600 hover:bg-lime-700"
                                 >
                                     <CheckCircle className="w-4 h-4" />
                                     <span>Mark Complete</span>
@@ -789,7 +791,7 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                     )}
                                     {lane.tasks.map((task) => (
                                         <div key={task.id} className="group cursor-pointer block">
-                                            <Card className="border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-200 bg-background relative overflow-hidden">
+                                            <Card className="border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-200 bg-sidebar relative overflow-hidden">
                                                 {/* Zen Mode Button - appears on hover */}
                                                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
                                                     <Button
@@ -800,9 +802,13 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                                             e.stopPropagation();
                                                             enterZenMode(task);
                                                         }}
-                                                        className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 border border-primary/20"
+                                                        className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 border border-primary/20 relative group/zen"
+                                                        title="Zen Mode"
                                                     >
-                                                        <SparklesIcon className="w-3 h-3 text-primary" />
+                                                        <Target className="w-3 h-3 text-primary" />
+                                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black/80 rounded opacity-0 group-hover/zen:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                                            Zen Mode
+                                                        </div>
                                                     </Button>
                                                 </div>
 
