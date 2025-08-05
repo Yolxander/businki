@@ -132,15 +132,26 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
     };
 
     const handleTabClose = (tabId) => {
+        // Find the tab to be closed
+        const tabToClose = tabs.find(tab => tab.id === tabId);
+        if (!tabToClose) return;
+
+        // Remove the tab from the list
         const newTabs = tabs.filter(tab => tab.id !== tabId);
         setTabs(newTabs);
-        
-        if (activeTab === tabId && newTabs.length > 0) {
-            const lastTab = newTabs[newTabs.length - 1];
-            setActiveTab(lastTab.id);
-            router.visit(lastTab.id);
-        } else if (newTabs.length === 0) {
-            router.visit('/dashboard');
+
+        // If we're closing the active tab, navigate to another tab
+        if (activeTab === tabId) {
+            if (newTabs.length > 0) {
+                // Navigate to the last tab in the list
+                const lastTab = newTabs[newTabs.length - 1];
+                setActiveTab(lastTab.id);
+                router.visit(lastTab.id);
+            } else {
+                // No tabs left, go to dashboard
+                setActiveTab('/dashboard');
+                router.visit('/dashboard');
+            }
         }
     };
 
@@ -162,10 +173,30 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
         if (currentIndex === -1) return;
 
         const newTabs = [...tabs];
-        const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+        let targetIndex;
 
-        if (targetIndex >= 0 && targetIndex < newTabs.length) {
-            [newTabs[currentIndex], newTabs[targetIndex]] = [newTabs[targetIndex], newTabs[currentIndex]];
+        switch (direction) {
+            case 'up':
+                targetIndex = currentIndex - 1;
+                break;
+            case 'down':
+                targetIndex = currentIndex + 1;
+                break;
+            case 'start':
+                targetIndex = 0;
+                break;
+            case 'end':
+                targetIndex = newTabs.length - 1;
+                break;
+            default:
+                return;
+        }
+
+        if (targetIndex >= 0 && targetIndex < newTabs.length && targetIndex !== currentIndex) {
+            // Remove the tab from its current position
+            const [movedTab] = newTabs.splice(currentIndex, 1);
+            // Insert it at the target position
+            newTabs.splice(targetIndex, 0, movedTab);
             setTabs(newTabs);
         }
     };
@@ -456,8 +487,8 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
 
                 {/* Main content */}
                 <div className={`transition-all duration-300 ${
-                    focusMode 
-                        ? 'pt-0 lg:pl-0' 
+                    focusMode
+                        ? 'pt-0 lg:pl-0'
                         : `pt-16 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`
                 }`}>
                     {/* Page content */}
