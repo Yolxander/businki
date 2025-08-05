@@ -637,7 +637,7 @@ export default function BobbiFlow({ auth, tasks = [] }) {
             <Head title="Bobbi Flow" />
 
             <div className="h-screen flex flex-col bg-background">
-                {/* 🧭 TOP NAVIGATION BAR */}
+                {/* 🧭 UNIFIED TOP NAVIGATION BAR */}
                 {!focusMode && (
                     <div className="flex-shrink-0 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                         <div className="flex items-center justify-between px-6 py-4">
@@ -670,6 +670,21 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                             </div>
 
                             <div className="flex items-center space-x-4">
+                                <Link href="/tasks/create">
+                                    <Button size="sm" className="flex items-center space-x-2 bg-lime-600 hover:bg-lime-700">
+                                        <Plus className="w-4 h-4" />
+                                        <span>Add Task</span>
+                                    </Button>
+                                </Link>
+                                <Button
+                                    variant={timerActive ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setTimerActive(!timerActive)}
+                                    className="flex items-center space-x-2"
+                                >
+                                    <Timer className="w-4 h-4" />
+                                    <span>Timer</span>
+                                </Button>
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -687,46 +702,6 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                 >
                                     <Bot className="w-4 h-4" />
                                     <span>AI Assistant</span>
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* 🛠 ACTION TOOLBAR */}
-                {!focusMode && (
-                    <div className="flex-shrink-0 border-b border-border/50 bg-background/95">
-                        <div className="flex items-center justify-between px-6 py-3">
-                            <div className="flex items-center space-x-4">
-                                <Link href="/tasks/create">
-                                    <Button size="sm" className="flex items-center space-x-2">
-                                        <Plus className="w-4 h-4" />
-                                        <span>Add Task</span>
-                                    </Button>
-                                </Link>
-                                <div className="relative">
-                                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                                    <Input
-                                        placeholder="⌘K Search..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-9 w-64"
-                                    />
-                                </div>
-                                <Button
-                                    variant={timerActive ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setTimerActive(!timerActive)}
-                                    className="flex items-center space-x-2"
-                                >
-                                    <Timer className="w-4 h-4" />
-                                    <span>Timer</span>
-                                </Button>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                                <Button variant="ghost" size="sm">
-                                    <Menu className="w-4 h-4" />
                                 </Button>
                             </div>
                         </div>
