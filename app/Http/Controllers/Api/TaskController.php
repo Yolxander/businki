@@ -83,7 +83,7 @@ class TaskController extends Controller
         ]);
 
         $validator = Validator::make($request->all(), [
-            'project_id' => 'sometimes|required|exists:projects,id',
+            'project_id' => 'sometimes|nullable|exists:projects,id',
             'phase_id' => 'nullable|integer',
             'title' => 'sometimes|required|string|max:255',
             'status' => 'sometimes|required|in:todo,in_progress,done',
@@ -104,7 +104,17 @@ class TaskController extends Controller
 
         // Validate phase_id exists in project's proposal timeline if provided
         if ($request->has('phase_id')) {
-            $project = Project::findOrFail($request->project_id ?? $task->project_id);
+            $projectId = $request->project_id ?? $task->project_id;
+            
+            if (!$projectId) {
+                Log::warning('Cannot validate phase_id - no project associated with task', [
+                    'task_id' => $task->id,
+                    'phase_id' => $request->phase_id
+                ]);
+                return response()->json(['errors' => ['phase_id' => ['Cannot assign phase to task without a project.']]], 422);
+            }
+            
+            $project = Project::findOrFail($projectId);
             Log::info('Project Found for Update:', [
                 'project_id' => $project->id,
                 'has_proposal' => !is_null($project->proposal),
@@ -155,6 +165,13 @@ class TaskController extends Controller
                 'errors' => $validator->errors()->toArray()
             ]);
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        if (!$task->project_id) {
+            Log::warning('Task has no project:', [
+                'task_id' => $task->id
+            ]);
+            return response()->json(['message' => 'Task must be associated with a project to connect to timeline'], 400);
         }
 
         $project = Project::findOrFail($task->project_id);

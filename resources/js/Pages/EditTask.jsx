@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Save, Target, Calendar, Clock, User, Building, Tag, Plus, X, MessageSquare, FileText, CheckCircle, AlertCircle, Circle, Flame, AlertTriangle, Minus, Inbox, Play, Eye, CheckCircle2, Flag, Trash2, ExternalLink } from 'lucide-react';
 
-export default function EditTask({ auth, task, projects = [], error }) {
+export default function EditTask({ auth, task, projects = [], users = [], error }) {
     const [newTag, setNewTag] = useState('');
     const [newSubtask, setNewSubtask] = useState('');
 
@@ -92,11 +92,7 @@ export default function EditTask({ auth, task, projects = [], error }) {
         subtasks: transformedTask.subtasks
     });
 
-    // Mock users for assignee dropdown (TODO: Fetch from API)
-    const users = [
-        { id: 1, name: 'You' },
-        { id: 2, name: 'Client' }
-    ];
+    // Users for assignment (fetched from database)
 
     const getPriorityIcon = (priority) => {
         switch (priority) {
@@ -241,12 +237,19 @@ export default function EditTask({ auth, task, projects = [], error }) {
                                             </div>
 
                                             <div>
-                                                <Label htmlFor="project">Project</Label>
-                                                <Select value={data.project_id ? data.project_id.toString() : ''} onValueChange={(value) => setData('project_id', parseInt(value))}>
+                                                <Label htmlFor="project">Project (Optional)</Label>
+                                                <Select value={data.project_id ? data.project_id.toString() : 'none'} onValueChange={(value) => {
+                                                    if (value === 'none') {
+                                                        setData('project_id', '');
+                                                    } else {
+                                                        setData('project_id', parseInt(value));
+                                                    }
+                                                }}>
                                                     <SelectTrigger className={errors.project_id ? 'border-red-500' : ''}>
-                                                        <SelectValue placeholder="Select project" />
+                                                        <SelectValue placeholder="Select project (optional)" />
                                                     </SelectTrigger>
                                                     <SelectContent>
+                                                        <SelectItem value="none">No Project</SelectItem>
                                                         {projects.map((project) => (
                                                             <SelectItem key={project.id} value={project.id.toString()}>
                                                                 {project.name}
@@ -254,6 +257,16 @@ export default function EditTask({ auth, task, projects = [], error }) {
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
+                                                {data.project_id && (
+                                                    <p className="text-sm text-green-600 mt-1">
+                                                        ✓ Project selected
+                                                    </p>
+                                                )}
+                                                {!data.project_id && (
+                                                    <p className="text-sm text-blue-600 mt-1">
+                                                        ✓ Task will be updated without a project
+                                                    </p>
+                                                )}
                                                 {errors.project_id && <p className="text-sm text-red-500 mt-1">{errors.project_id}</p>}
                                             </div>
                                         </CardContent>
@@ -366,19 +379,30 @@ export default function EditTask({ auth, task, projects = [], error }) {
 
                                             <div>
                                                 <Label htmlFor="assignee">Assignee</Label>
-                                                <Select value={data.assigned_to ? data.assigned_to.toString() : ''} onValueChange={(value) => setData('assigned_to', parseInt(value))}>
+                                                <Select value={data.assigned_to ? data.assigned_to.toString() : 'none'} onValueChange={(value) => {
+                                                    if (value === 'none') {
+                                                        setData('assigned_to', '');
+                                                    } else {
+                                                        setData('assigned_to', parseInt(value));
+                                                    }
+                                                }}>
                                                     <SelectTrigger>
-                                                        <SelectValue />
+                                                        <SelectValue placeholder="Select assignee" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {users.map((user) => (
+                                                        <SelectItem value="none">No Assignee</SelectItem>
+                                                        {users && users.length > 0 ? users.map((user) => (
                                                             <SelectItem key={user.id} value={user.id.toString()}>
                                                                 <div className="flex items-center">
-                                                                    {user.id === 1 ? (<User className="w-4 h-4 mr-2" />) : (<Building className="w-4 h-4 mr-2" />)}
+                                                                    <Building className="w-4 h-4 mr-2" />
                                                                     {user.name}
                                                                 </div>
                                                             </SelectItem>
-                                                        ))}
+                                                        )) : (
+                                                            <SelectItem value="no-users" disabled>
+                                                                No users available
+                                                            </SelectItem>
+                                                        )}
                                                     </SelectContent>
                                                 </Select>
                                             </div>

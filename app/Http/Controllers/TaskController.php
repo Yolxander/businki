@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Subtask;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -88,15 +89,20 @@ class TaskController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get(['id', 'name', 'description']);
 
+            // Fetch users for assignment
+            $users = User::orderBy('name')->get(['id', 'name', 'email']);
+
             Log::info('Task creation form loaded successfully', [
                 'user_id' => auth()->id(),
                 'projects_count' => $projects->count(),
+                'users_count' => $users->count(),
                 'projects' => $projects->toArray()
             ]);
 
             return Inertia::render('CreateTask', [
                 'auth' => ['user' => auth()->user()],
-                'projects' => $projects
+                'projects' => $projects,
+                'users' => $users
             ]);
 
         } catch (\Exception $e) {
@@ -109,7 +115,8 @@ class TaskController extends Controller
             return Inertia::render('CreateTask', [
                 'auth' => ['user' => auth()->user()],
                 'projects' => collect([]),
-                'error' => 'Failed to load projects'
+                'users' => collect([]),
+                'error' => 'Failed to load form data'
             ]);
         }
     }
@@ -130,16 +137,21 @@ class TaskController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get(['id', 'name', 'description']);
 
+            // Fetch users for assignment
+            $users = User::orderBy('name')->get(['id', 'name', 'email']);
+
             Log::info('Task edit form loaded successfully', [
                 'task_id' => $task->id,
                 'user_id' => auth()->id(),
-                'projects_count' => $projects->count()
+                'projects_count' => $projects->count(),
+                'users_count' => $users->count()
             ]);
 
             return Inertia::render('EditTask', [
                 'auth' => ['user' => auth()->user()],
                 'task' => $task,
-                'projects' => $projects
+                'projects' => $projects,
+                'users' => $users
             ]);
 
         } catch (\Exception $e) {
@@ -154,6 +166,7 @@ class TaskController extends Controller
                 'auth' => ['user' => auth()->user()],
                 'task' => null,
                 'projects' => collect([]),
+                'users' => collect([]),
                 'error' => 'Failed to load task data'
             ]);
         }
@@ -178,7 +191,7 @@ class TaskController extends Controller
         Log::info('Creating new task', ['request_data' => $request->all()]);
 
         $validator = Validator::make($request->all(), [
-            'project_id' => 'required|exists:projects,id',
+            'project_id' => 'nullable|exists:projects,id',
             'phase_id' => 'nullable|integer',
             'title' => 'required|string|max:255',
             'status' => 'required|in:todo,in_progress,done,inbox,in-progress,waiting,review',
@@ -203,7 +216,7 @@ class TaskController extends Controller
         }
 
         // Validate phase_id exists in project's proposal timeline if provided
-        if ($request->has('phase_id')) {
+        if ($request->has('phase_id') && $request->project_id) {
             Log::info('Validating phase_id against project proposal timeline', ['phase_id' => $request->phase_id]);
             $project = Project::findOrFail($request->project_id);
             if (!$project->proposal || !collect($project->proposal->timeline)->contains('id', $request->phase_id)) {
@@ -487,7 +500,7 @@ class TaskController extends Controller
         ]);
 
         $validator = Validator::make($request->all(), [
-            'project_id' => 'sometimes|required|exists:projects,id',
+            'project_id' => 'sometimes|nullable|exists:projects,id',
             'phase_id' => 'nullable|integer',
             'title' => 'sometimes|required|string|max:255',
             'status' => 'sometimes|required|in:todo,in_progress,done',
@@ -510,7 +523,17 @@ class TaskController extends Controller
         // Validate phase_id exists in project's proposal timeline if provided
         if ($request->has('phase_id')) {
             Log::info('Validating phase_id for update', ['phase_id' => $request->phase_id]);
-            $project = Project::findOrFail($request->project_id ?? $task->project_id);
+            $projectId = $request->project_id ?? $task->project_id;
+
+            if (!$projectId) {
+                Log::warning('Cannot validate phase_id - no project associated with task', [
+                    'task_id' => $task->id,
+                    'phase_id' => $request->phase_id
+                ]);
+                return response()->json(['errors' => ['phase_id' => ['Cannot assign phase to task without a project.']]], 422);
+            }
+
+            $project = Project::findOrFail($projectId);
             if (!$project->proposal || !collect($project->proposal->timeline)->contains('id', $request->phase_id)) {
                 Log::warning('Invalid phase_id for project update', [
                     'phase_id' => $request->phase_id,
@@ -694,6 +717,13 @@ class TaskController extends Controller
         }
 
         try {
+            if (!$task->project_id) {
+                Log::warning('Task has no project:', [
+                    'task_id' => $task->id
+                ]);
+                return response()->json(['message' => 'Task must be associated with a project to connect to timeline'], 400);
+            }
+
             $project = Project::findOrFail($task->project_id);
             Log::info('Project Found', [
                 'project_id' => $project->id,
