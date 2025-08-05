@@ -303,11 +303,11 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => onDashboardModeChange('ai_assistant')}>
                                                     <Brain className="w-4 h-4 mr-2" />
-                                                    AI Assistant Mode
+                                                    Chat Mode
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => onDashboardModeChange('default')}>
                                                     <Home className="w-4 h-4 mr-2" />
-                                                    Default Mode
+                                                    Classic Mode
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>

@@ -52,6 +52,7 @@ class DashboardController extends Controller
             'stats' => $stats,
             'clients' => $clients,
             'widgets' => $widgets,
+            'dashboardMode' => $user->dashboard_mode ?? 'default',
         ]);
     }
 

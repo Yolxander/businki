@@ -58,7 +58,7 @@ import {
     Home
 } from 'lucide-react';
 
-export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
+export default function Dashboard({ auth, stats, clients = [], widgets = [], dashboardMode: initialDashboardMode = 'default' }) {
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
     const [showAISetupModal, setShowAISetupModal] = useState(false);
     const [showAlert, setShowAlert] = useState(false);
@@ -73,7 +73,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
         userPrompt: '',
     });
     const [isGeneratingWidget, setIsGeneratingWidget] = useState(false);
-    const [dashboardMode, setDashboardMode] = useState('default'); // 'default' or 'ai_assistant'
+    const [dashboardMode, setDashboardMode] = useState(initialDashboardMode); // 'default' or 'ai_assistant'
     const [aiContext, setAiContext] = useState('general'); // 'general', 'projects', 'clients', 'bobbi-flow', 'calendar', 'analytics'
     const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
@@ -277,9 +277,31 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
         setIsEditMode(!isEditMode);
     };
 
-    const handleDashboardModeChange = (mode) => {
-        setDashboardMode(mode);
-        setIsEditMode(false);
+    const handleDashboardModeChange = async (mode) => {
+        try {
+            const response = await fetch('/api/user/dashboard-mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    dashboard_mode: mode
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                setDashboardMode(mode);
+                setIsEditMode(false);
+            } else {
+                console.error('Failed to update dashboard mode:', data.message);
+            }
+        } catch (error) {
+            console.error('Error updating dashboard mode:', error);
+        }
     };
 
     const handleContextChange = (context) => {
@@ -345,14 +367,14 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                 ];
             default:
                 return [
-                    'Consolidate financial data from all subsidiaries',
-                    'Reconcile the bank accounts for March',
-                    'Provide a 12-month cash flow forecast',
-                    'Show the budget variance for Q1 compared to actuals',
-                    'Generate the monthly income statement',
-                    'Book a journal entry',
-                    'Generate the quarterly profit and loss statement',
-                    'Create a real-time financial performance dashboard'
+                    'Create a new project timeline and milestones',
+                    'Generate a client status report for this month',
+                    'Review and update task priorities across all projects',
+                    'Create a proposal template for new client work',
+                    'Analyze project performance and identify bottlenecks',
+                    'Schedule team meetings for the upcoming week',
+                    'Generate a progress report for active projects',
+                    'Set up automated workflows for client onboarding'
                 ];
         }
     };
@@ -570,7 +592,10 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
 
                             {/* Navigation */}
                             <div className="flex-1 p-6 space-y-4">
-                                <Button className="w-full justify-start bg-primary text-primary-foreground hover:bg-primary/90">
+                                <Button
+                                    className="w-full justify-start bg-primary text-primary-foreground hover:bg-primary/90"
+                                    onClick={() => handleContextChange('general')}
+                                >
                                     <Plus className="w-4 h-4 mr-2" />
                                     New Chat
                                 </Button>
@@ -733,24 +758,29 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                         <div className={`${rightSidebarCollapsed ? 'w-16' : 'w-80'} bg-sidebar border-l border-sidebar-border flex flex-col transition-all duration-300`}>
                             <div className="p-6 border-b border-sidebar-border">
                                 <div className="flex items-center justify-between">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="sm" className="text-sidebar-foreground/70 hover:text-sidebar-foreground">
-                                                <Settings className="w-4 h-4 mr-2" />
-                                                Customize
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => handleDashboardModeChange('default')}>
-                                                <Home className="w-4 h-4 mr-2" />
-                                                Default Mode
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDashboardModeChange('ai_assistant')}>
-                                                <Brain className="w-4 h-4 mr-2" />
-                                                AI Assistant Mode
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    {!rightSidebarCollapsed && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" size="sm" className="text-sidebar-foreground/70 hover:text-sidebar-foreground">
+                                                    <Settings className="w-4 h-4 mr-2" />
+                                                    Customize
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                                                            {dashboardMode === 'ai_assistant' ? (
+                                                <DropdownMenuItem onClick={() => handleDashboardModeChange('default')}>
+                                                    <Home className="w-4 h-4 mr-2" />
+                                                    Classic Mode
+                                                </DropdownMenuItem>
+                                                                                        ) : (
+                                                <DropdownMenuItem onClick={() => handleDashboardModeChange('ai_assistant')}>
+                                                    <Brain className="w-4 h-4 mr-2" />
+                                                    Chat Mode
+                                                </DropdownMenuItem>
+                                            )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
                                     <Button
                                         variant="ghost"
                                         size="sm"

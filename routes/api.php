@@ -190,6 +190,23 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::delete('/delete', [App\Http\Controllers\Api\DashboardWidgetController::class, 'deleteWidget']);
     });
 
+    // Update user dashboard mode
+    Route::post('/user/dashboard-mode', function (Request $request) {
+        $request->validate([
+            'dashboard_mode' => 'required|in:default,ai_assistant',
+        ]);
+
+        $user = $request->user();
+        $user->dashboard_mode = $request->dashboard_mode;
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Dashboard mode updated successfully',
+            'dashboard_mode' => $user->dashboard_mode
+        ]);
+    });
+
 
 });
 
