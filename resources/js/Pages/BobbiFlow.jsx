@@ -383,139 +383,115 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                         </div>
                     </div>
 
-                    {/* Zen Mode Content */}
-                    <div className="flex-1 flex space-x-6 p-6">
-                        {/* Task Overview Panel */}
-                        <div className="w-1/3 space-y-6">
+                                                            {/* Zen Mode Content */}
+                    <div className="flex-1 flex p-6">
+                        {/* Left Section - Task Info & Progress */}
+                        <div className="w-1/3 pr-6 space-y-6">
+                            {/* AI Tip */}
                             <Card className="border border-border/50 bg-background shadow-sm">
-                                <CardContent className="p-6">
-                                    <div className="space-y-4">
-                                        <div>
-                                            <h2 className="text-xl font-semibold text-foreground mb-2">
-                                                {zenTask.title}
-                                            </h2>
-                                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                                <Building className="w-4 h-4" />
-                                                <span>{zenTask.project}</span>
-                                            </div>
-                                        </div>
+                                <CardContent className="p-4">
+                                    <div className="flex items-center space-x-2 mb-3">
+                                        <Brain className="w-4 h-4 text-primary" />
+                                        <span className="text-sm font-medium">AI Tip</span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground italic">"{zenAiTip}"</p>
+                                </CardContent>
+                            </Card>
 
-                                        <div className="bg-background/50 border border-border/50 rounded-lg p-4 backdrop-blur-sm">
-                                            <div className="flex items-start space-x-2">
-                                                <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                                                    <Brain className="w-4 h-4 text-primary" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-foreground mb-1">AI Tip</p>
-                                                    <p className="text-sm text-muted-foreground leading-relaxed">{zenAiTip}</p>
-                                                </div>
-                                            </div>
+                            {/* Progress & Reflection */}
+                            <Card className="border border-border/50 bg-background shadow-sm">
+                                <CardContent className="p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center space-x-2">
+                                            <FileText className="w-4 h-4 text-primary" />
+                                            <span className="text-sm font-medium">Progress & Reflection</span>
                                         </div>
-
-                                        <div>
-                                            <h3 className="text-sm font-medium text-foreground mb-3">Subtasks</h3>
-                                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                                                {zenTask.subtasks.map((subtask, index) => (
-                                                    <div key={subtask.id} className="flex items-center space-x-3">
-                                                        <Checkbox
-                                                            checked={zenSubtaskProgress[subtask.id] || false}
-                                                            onCheckedChange={() => toggleSubtask(subtask.id)}
-                                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                                        />
-                                                        <span className={`text-sm ${zenSubtaskProgress[subtask.id] ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                                                            {subtask.text}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                                {zenTask.subtasks.length === 0 && (
-                                                    <p className="text-sm text-muted-foreground">No subtasks defined</p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {zenTask.dueDate && (
-                                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                                <Calendar className="w-4 h-4" />
-                                                <span>Due: {new Date(zenTask.dueDate).toLocaleDateString()}</span>
-                                            </div>
-                                        )}
+                                        <span className="text-xs text-muted-foreground">
+                                            {zenNotes.split(' ').filter(word => word.length > 0).length} words
+                                        </span>
+                                    </div>
+                                    <Textarea
+                                        placeholder="Share your progress, thoughts, or insights..."
+                                        value={zenNotes}
+                                        onChange={(e) => setZenNotes(e.target.value)}
+                                        className="min-h-[120px] resize-none border border-border focus:border-primary"
+                                    />
+                                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                                        <span>Auto-saved</span>
+                                        <span>Flow: {Math.floor(zenTimer / 60)}m {zenTimer % 60}s</span>
                                     </div>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        {/* Work Notes Area */}
+                        {/* Right Section - Main Work Area */}
                         <div className="flex-1 space-y-6">
+                            {/* Subtasks */}
                             <Card className="border border-border/50 bg-background shadow-sm">
                                 <CardContent className="p-6">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-lg font-semibold text-foreground">Progress & Notes</h3>
-                                            <div className="flex items-center space-x-2">
-                                                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                                                    <SparklesIcon className="w-4 h-4" />
-                                                    <span>AI Suggest</span>
-                                                </Button>
-                                                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                                                    <BookOpen className="w-4 h-4" />
-                                                    <span>Insert Prompt</span>
-                                                </Button>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center space-x-2">
+                                            <ListTodo className="w-4 h-4 text-primary" />
+                                            <span className="font-medium">Subtasks</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                            <span>{Object.values(zenSubtaskProgress).filter(Boolean).length}/{zenTask.subtasks.length}</span>
+                                            {zenTask.dueDate && (
+                                                <span>• Due in {Math.ceil((new Date(zenTask.dueDate) - new Date()) / (1000 * 60 * 60 * 24))}d</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {zenTask.subtasks.map((subtask, index) => (
+                                            <div key={subtask.id} className="flex items-center space-x-3">
+                                                <Checkbox
+                                                    checked={zenSubtaskProgress[subtask.id] || false}
+                                                    onCheckedChange={() => toggleSubtask(subtask.id)}
+                                                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                />
+                                                <span className={`text-sm ${zenSubtaskProgress[subtask.id] ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                                                    {subtask.text}
+                                                </span>
                                             </div>
-                                        </div>
-
-                                        <Textarea
-                                            placeholder="Share your progress, thoughts, or any insights..."
-                                            value={zenNotes}
-                                            onChange={(e) => setZenNotes(e.target.value)}
-                                            className="min-h-[200px] resize-none border border-border focus:border-primary"
-                                        />
-
-                                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                                            <span>Auto-saved</span>
-                                            <span>{zenNotes.length} characters</span>
-                                        </div>
+                                        ))}
+                                        {zenTask.subtasks.length === 0 && (
+                                            <p className="text-sm text-muted-foreground text-center">No subtasks defined</p>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            {/* Progress & Wellness Section */}
+                            {/* Progress & Wellness */}
                             <Card className="border border-border/50 bg-background shadow-sm">
                                 <CardContent className="p-6">
                                     <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold text-foreground">Progress & Wellness</h3>
-
-                                        {/* Progress Bar */}
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-muted-foreground">Progress</span>
-                                                <span className="font-medium">
-                                                    {zenTask.subtasks.length > 0
-                                                        ? `${Math.round((Object.values(zenSubtaskProgress).filter(Boolean).length / zenTask.subtasks.length) * 100)}%`
-                                                        : '0%'
-                                                    }
-                                                </span>
-                                            </div>
-                                            <div className="w-full bg-muted rounded-full h-2">
-                                                <div
-                                                    className="bg-primary h-2 rounded-full transition-all duration-300"
-                                                    style={{
-                                                        width: zenTask.subtasks.length > 0
-                                                            ? `${(Object.values(zenSubtaskProgress).filter(Boolean).length / zenTask.subtasks.length) * 100}%`
-                                                            : '0%'
-                                                    }}
-                                                />
-                                            </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium">Progress</span>
+                                            <span className="text-sm text-muted-foreground">
+                                                {zenTask.subtasks.length > 0
+                                                    ? `${Math.round((Object.values(zenSubtaskProgress).filter(Boolean).length / zenTask.subtasks.length) * 100)}%`
+                                                    : '0%'
+                                                }
+                                            </span>
                                         </div>
-
-                                        {/* Quick Actions */}
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="w-full bg-muted rounded-full h-2">
+                                            <div
+                                                className="bg-primary h-2 rounded-full transition-all duration-300"
+                                                style={{
+                                                    width: zenTask.subtasks.length > 0
+                                                        ? `${(Object.values(zenSubtaskProgress).filter(Boolean).length / zenTask.subtasks.length) * 100}%`
+                                                        : '0%'
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="flex justify-center space-x-3">
                                             <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                                                <Coffee className="w-4 h-4" />
-                                                <span>Take Break</span>
+                                                <Coffee className="w-3 h-3" />
+                                                <span className="text-xs">Break</span>
                                             </Button>
                                             <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                                                <Heart className="w-4 h-4" />
-                                                <span>Feeling Good</span>
+                                                <Heart className="w-3 h-3" />
+                                                <span className="text-xs">Well</span>
                                             </Button>
                                         </div>
                                     </div>
