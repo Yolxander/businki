@@ -320,7 +320,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                 })
             });
 
-            const data = await response.json();
+                        const data = await response.json();
 
             if (data.status === 'success') {
                 setSelectedWidget(data.data);
@@ -331,6 +331,16 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                 });
                 // Refresh the page to show updated widgets
                 window.location.reload();
+            } else if (data.can_fulfill === false) {
+                // Show context-aware error message
+                let errorMessage = data.message + '\n\n';
+                if (data.suggestions && data.suggestions.length > 0) {
+                    errorMessage += 'Suggestions:\n' + data.suggestions.join('\n');
+                }
+                if (data.recommendations && data.recommendations.length > 0) {
+                    errorMessage += '\n\nRecommendations:\n' + data.recommendations.join('\n');
+                }
+                alert(errorMessage);
             } else {
                 alert('Failed to generate widget: ' + data.message);
             }
@@ -503,6 +513,16 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                                         return statsData.pendingTasks || '0';
                                     }
                                     return statsData.totalTasks || '0';
+
+                                                                case 'proposals':
+                                    if (metricFilter === 'draft') {
+                                        return statsData.dynamic_proposals_draft || '0';
+                                    } else if (metricFilter === 'sent') {
+                                        return statsData.dynamic_proposals_sent || '0';
+                                    } else if (metricFilter === 'accepted') {
+                                        return statsData.dynamic_proposals_accepted || '0';
+                                    }
+                                    return statsData.dynamic_proposals_all || '0';
 
                                 case 'revenue':
                                     return '0'; // Revenue widget removed

@@ -179,6 +179,18 @@ class DashboardController extends Controller
                     $stats[$metricKey] = Client::count();
                     break;
 
+                case 'proposals':
+                    if ($metricFilter === 'draft') {
+                        $stats[$metricKey] = Proposal::where('status', 'draft')->count();
+                    } elseif ($metricFilter === 'sent') {
+                        $stats[$metricKey] = Proposal::where('status', 'sent')->count();
+                    } elseif ($metricFilter === 'accepted') {
+                        $stats[$metricKey] = Proposal::where('status', 'accepted')->count();
+                    } else {
+                        $stats[$metricKey] = Proposal::count();
+                    }
+                    break;
+
                 case 'revenue':
                     // Revenue widget removed
                     $stats[$metricKey] = 0;

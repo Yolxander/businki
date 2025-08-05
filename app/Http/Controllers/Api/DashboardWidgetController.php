@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\DashboardWidget;
 use App\Services\OpenAIService;
+use App\Services\ContextAwareService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -14,10 +15,12 @@ use Illuminate\Support\Facades\Validator;
 class DashboardWidgetController extends Controller
 {
     private OpenAIService $openAIService;
+    private ContextAwareService $contextAwareService;
 
-    public function __construct(OpenAIService $openAIService)
+    public function __construct(OpenAIService $openAIService, ContextAwareService $contextAwareService)
     {
         $this->openAIService = $openAIService;
+        $this->contextAwareService = $contextAwareService;
     }
 
     /**
@@ -77,7 +80,7 @@ class DashboardWidgetController extends Controller
         }
     }
 
-    /**
+        /**
      * Generate widget content using AI
      */
     public function generateWidget(Request $request): JsonResponse
@@ -102,8 +105,13 @@ class DashboardWidgetController extends Controller
             $userPrompt = $request->user_prompt;
             $currentConfig = $request->current_configuration ?? [];
 
-            // Build AI prompt for widget generation
-            $aiPrompt = $this->buildWidgetPrompt($widgetType, $userPrompt, $currentConfig);
+            // Get platform and user context for AI
+            $this->contextAwareService->refreshUserContext();
+            $platformContext = $this->contextAwareService->getPlatformContext();
+            $userContext = $this->contextAwareService->getUserContext();
+
+            // Build comprehensive AI prompt with full context - let AI handle the analysis
+            $aiPrompt = $this->buildContextAwareWidgetPrompt($widgetType, $userPrompt, $currentConfig, $platformContext, $userContext);
 
             // Generate content using AI
             $response = $this->openAIService->generateChatCompletionWithParams(
@@ -114,42 +122,143 @@ class DashboardWidgetController extends Controller
             );
 
             if (!isset($response['content'])) {
-                throw new \Exception('Failed to generate widget content');
-            }
-
-            $generatedContent = json_decode($response['content'], true);
-
-            if (!$generatedContent) {
-                throw new \Exception('Invalid JSON response from AI');
-            }
-
-            // Save or update widget
-            $widget = DashboardWidget::updateOrCreate(
-                [
+                Log::error('OpenAI response missing content', [
+                    'response' => $response,
                     'user_id' => Auth::id(),
                     'widget_type' => $widgetType,
                     'widget_key' => $request->widget_key,
-                ],
-                [
-                    'title' => $generatedContent['title'] ?? $this->getDefaultTitle($widgetType),
-                    'description' => $generatedContent['description'] ?? $this->getDefaultDescription($widgetType),
-                    'configuration' => $generatedContent['configuration'] ?? $currentConfig,
-                    'ai_prompt' => [
-                        'user_prompt' => $userPrompt,
-                        'system_prompt' => $aiPrompt,
+                ]);
+                throw new \Exception('Failed to generate widget content');
+            }
+
+            // Log the raw AI response for debugging
+            Log::info('Raw AI Response', [
+                'user_id' => Auth::id(),
+                'widget_type' => $widgetType,
+                'widget_key' => $request->widget_key,
+                'raw_response' => $response['content']
+            ]);
+
+            try {
+                $generatedContent = json_decode($response['content'], true);
+
+                if (!$generatedContent) {
+                    throw new \Exception('Invalid JSON response from AI: ' . $response['content']);
+                }
+            } catch (\Exception $e) {
+                Log::error('JSON decode error', [
+                    'error' => $e->getMessage(),
+                    'raw_response' => $response['content'],
+                    'user_id' => Auth::id(),
+                    'widget_type' => $widgetType,
+                    'widget_key' => $request->widget_key,
+                ]);
+                throw new \Exception('Failed to parse AI response: ' . $e->getMessage());
+            }
+
+            // Log the AI response for debugging
+            Log::info('AI Response for widget generation', [
+                'user_id' => Auth::id(),
+                'widget_type' => $widgetType,
+                'widget_key' => $request->widget_key,
+                'user_prompt' => $userPrompt,
+                'ai_response' => $generatedContent,
+                'raw_response' => $response['content']
+            ]);
+
+            // Validate AI response structure
+            if (!is_array($generatedContent)) {
+                throw new \Exception('AI response is not an array: ' . json_encode($generatedContent));
+            }
+
+            // Ensure required fields are strings if they exist
+            $requiredStringFields = ['title', 'description'];
+            foreach ($requiredStringFields as $field) {
+                if (isset($generatedContent[$field]) && !is_string($generatedContent[$field])) {
+                    throw new \Exception("AI response field '{$field}' must be a string, got: " . gettype($generatedContent[$field]));
+                }
+            }
+
+            // Ensure configuration is an array if it exists
+            if (isset($generatedContent['configuration']) && !is_array($generatedContent['configuration'])) {
+                throw new \Exception("AI response field 'configuration' must be an array, got: " . gettype($generatedContent['configuration']));
+            }
+
+            // Check if AI determined the request cannot be fulfilled
+            if (isset($generatedContent['can_fulfill']) && !$generatedContent['can_fulfill']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $generatedContent['reason'] ?? 'Request cannot be fulfilled',
+                    'can_fulfill' => false,
+                    'suggestions' => $generatedContent['suggestions'] ?? [],
+                    'available_options' => $generatedContent['available_options'] ?? []
+                ], 400);
+            }
+
+            // Validate the generated configuration if it exists
+            if (isset($generatedContent['configuration'])) {
+                try {
+                    $validation = $this->contextAwareService->validateWidgetConfiguration($generatedContent['configuration']);
+
+                    if (!$validation['is_valid']) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Generated widget configuration is invalid',
+                            'errors' => $validation['errors'],
+                            'warnings' => $validation['warnings'],
+                            'suggestions' => $validation['suggestions']
+                        ], 400);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Configuration validation error', [
+                        'error' => $e->getMessage(),
+                        'configuration' => $generatedContent['configuration']
+                    ]);
+                    throw new \Exception('Configuration validation failed: ' . $e->getMessage());
+                }
+            }
+
+            // Save or update widget
+            try {
+                $widget = DashboardWidget::updateOrCreate(
+                    [
+                        'user_id' => Auth::id(),
+                        'widget_type' => $widgetType,
+                        'widget_key' => $request->widget_key,
                     ],
-                    'ai_response' => $generatedContent,
-                    'generation_metadata' => [
-                        'tokens_used' => $response['usage']['total_tokens'] ?? null,
-                        'cost' => $response['cost'] ?? null,
-                        'model' => config('services.openai.model'),
-                        'temperature' => 0.7,
-                        'max_tokens' => 4000,
-                    ],
-                    'is_ai_generated' => true,
-                    'is_active' => true,
-                ]
-            );
+                    [
+                        'title' => $generatedContent['title'] ?? $this->getDefaultTitle($widgetType),
+                        'description' => $generatedContent['description'] ?? $this->getDefaultDescription($widgetType),
+                        'configuration' => $generatedContent['configuration'] ?? $currentConfig,
+                        'ai_prompt' => [
+                            'user_prompt' => $userPrompt,
+                            'system_prompt' => $aiPrompt,
+                            'platform_context' => $platformContext,
+                            'user_context' => $userContext
+                        ],
+                        'ai_response' => $generatedContent,
+                        'generation_metadata' => [
+                            'tokens_used' => $response['usage']['total_tokens'] ?? null,
+                            'cost' => $response['cost'] ?? null,
+                            'model' => config('services.openai.model'),
+                            'temperature' => 0.7,
+                            'max_tokens' => 4000,
+                            'response_keys' => array_keys($response),
+                        ],
+                        'is_ai_generated' => true,
+                        'is_active' => true,
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::error('Database save error', [
+                    'error' => $e->getMessage(),
+                    'generated_content' => $generatedContent,
+                    'user_id' => Auth::id(),
+                    'widget_type' => $widgetType,
+                    'widget_key' => $request->widget_key,
+                ]);
+                throw new \Exception('Failed to save widget to database: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -158,16 +267,20 @@ class DashboardWidgetController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+
+            // Safely log the error without causing array to string conversion
             Log::error('Error generating widget', [
-                'error' => $e->getMessage(),
+                'error' => $errorMessage,
                 'user_id' => Auth::id(),
-                'widget_type' => $request->widget_type,
-                'widget_key' => $request->widget_key,
+                'widget_type' => $request->widget_type ?? 'unknown',
+                'widget_key' => $request->widget_key ?? 'unknown',
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to generate widget: ' . $e->getMessage()
+                'message' => 'Failed to generate widget: ' . $errorMessage
             ], 500);
         }
     }
@@ -309,8 +422,73 @@ class DashboardWidgetController extends Controller
         }
     }
 
+        /**
+     * Build context-aware AI prompt for widget generation
+     */
+    private function buildContextAwareWidgetPrompt(string $widgetType, string $userPrompt, array $currentConfig, array $platformContext, array $userContext): string
+    {
+        $basePrompt = "You are an expert dashboard widget designer for a business management platform. Your job is to understand user requests and create appropriate widget configurations based on the available platform data.\n\n";
+
+        $widgetDescriptions = [
+            'quick_stats' => 'Quick statistics cards showing key metrics like projects, clients, tasks, revenue',
+            'recent_tasks' => 'List of recent tasks with status, priority, due dates, and project information',
+            'recent_projects' => 'List of recent projects with progress, status, client, and timeline information',
+            'quick_actions' => 'Quick action buttons for common tasks like creating projects, clients, tasks',
+            'recent_proposals' => 'List of recent proposals with status, client, and creation date',
+        ];
+
+        $prompt = $basePrompt;
+        $prompt .= "PLATFORM CONTEXT:\n";
+        $prompt .= "- Platform Type: " . ($platformContext['platform_description'] ?? 'Business Management Platform') . "\n";
+        $prompt .= "- Available Tables: " . implode(', ', array_keys($platformContext['available_tables'])) . "\n";
+        $prompt .= "- Table Descriptions: " . json_encode($platformContext['table_descriptions'] ?? []) . "\n";
+        $prompt .= "- Supported Metrics: " . json_encode($platformContext['supported_metrics']) . "\n\n";
+
+        $prompt .= "USER CONTEXT:\n";
+        $prompt .= "- User Stats: " . json_encode($userContext['user_stats'] ?? []) . "\n";
+        $prompt .= "- User Permissions: " . json_encode($userContext['user_permissions'] ?? []) . "\n\n";
+
+        $prompt .= "WIDGET REQUIREMENTS:\n";
+        $prompt .= "- Widget Type: " . ($widgetDescriptions[$widgetType] ?? $widgetType) . "\n";
+        $prompt .= "- Current Configuration: " . json_encode($currentConfig) . "\n";
+        $prompt .= "- User Request: " . $userPrompt . "\n\n";
+
+        $prompt .= "ANALYSIS INSTRUCTIONS:\n";
+        $prompt .= "1. First, analyze if the user's request can be fulfilled with the available data\n";
+        $prompt .= "2. If the request mentions data that doesn't exist (like 'school', 'students', etc.), explain why it's not available\n";
+        $prompt .= "3. If the request can be fulfilled, suggest the best matching metrics and configurations\n";
+        $prompt .= "4. Consider synonyms and variations (e.g., 'ticket' = 'task', 'proposal' = 'quote')\n";
+        $prompt .= "5. Use only the available metrics and tables from the platform context\n\n";
+
+        $prompt .= "RESPONSE FORMAT:\n";
+        $prompt .= "If the request CAN be fulfilled, respond with:\n";
+        $prompt .= "{\n";
+        $prompt .= "  \"can_fulfill\": true,\n";
+        $prompt .= "  \"title\": \"Widget Title\",\n";
+        $prompt .= "  \"description\": \"Widget description\",\n";
+        $prompt .= "  \"configuration\": {\n";
+        $prompt .= "    \"metric_type\": \"one of: clients, projects, tasks, subtasks, proposals, revenue\",\n";
+        $prompt .= "    \"metric_filter\": \"appropriate filter for the metric type\",\n";
+        $prompt .= "    \"icon\": \"appropriate Lucide React icon name\",\n";
+        $prompt .= "    \"trend\": \"trend information if applicable\",\n";
+        $prompt .= "    \"show_trend\": true/false,\n";
+        $prompt .= "    \"refresh_interval\": 300\n";
+        $prompt .= "  }\n";
+        $prompt .= "}\n\n";
+
+        $prompt .= "If the request CANNOT be fulfilled, respond with:\n";
+        $prompt .= "{\n";
+        $prompt .= "  \"can_fulfill\": false,\n";
+        $prompt .= "  \"reason\": \"Explanation of why the request cannot be fulfilled\",\n";
+        $prompt .= "  \"suggestions\": [\"List of alternative suggestions\"],\n";
+        $prompt .= "  \"available_options\": [\"List of what is actually available\"]\n";
+        $prompt .= "}\n";
+
+        return $prompt;
+    }
+
     /**
-     * Build AI prompt for widget generation
+     * Build AI prompt for widget generation (legacy method)
      */
     private function buildWidgetPrompt(string $widgetType, string $userPrompt, array $currentConfig): string
     {

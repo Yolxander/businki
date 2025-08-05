@@ -61,21 +61,6 @@ class DashboardWidgetSeeder extends Seeder
             ],
             [
                 'widget_type' => 'quick_stats',
-                'widget_key' => 'quick_stat_pending_tasks',
-                'title' => 'Pending Tasks',
-                'description' => 'Tasks to complete',
-                'configuration' => [
-                    'metric_type' => 'tasks',
-                    'metric_filter' => 'pending',
-                    'icon' => 'Clock',
-                    'trend' => '-5 from yesterday',
-                    'show_trend' => true,
-                    'refresh_interval' => 300,
-                ],
-                'position' => 3,
-            ],
-            [
-                'widget_type' => 'quick_stats',
                 'widget_key' => 'quick_stat_subtasks',
                 'title' => 'Subtask Tracker',
                 'description' => 'This widget displays the total number of subtasks assigned to you, helping you manage your workload effectively.',
