@@ -23,9 +23,9 @@ class CalendarController extends Controller
 
         \Log::info('CalendarController called for user: ' . $user->id);
 
-        // Get projects with due dates
-        $projects = Project::where('user_id', $user->id)
-            ->whereNotNull('due_date')
+        // Get projects with due dates - show projects created by the user
+        $projects = Project::whereNotNull('due_date')
+            ->where('user_id', $user->id)
             ->with('client')
             ->get()
             ->map(function ($project) {
@@ -50,9 +50,20 @@ class CalendarController extends Controller
             })
             ->toArray();
 
-        // Get tasks with due dates
-        $tasks = Task::where('assigned_to', $user->id)
-            ->whereNotNull('due_date')
+        // Get tasks with due dates - show tasks that are:
+        // 1. Directly assigned to the user
+        // 2. Connected to projects owned by the user
+        // 3. Created by the user
+        $userProjectIds = Project::where('user_id', $user->id)
+            ->pluck('id')
+            ->toArray();
+
+        $tasks = Task::whereNotNull('due_date')
+            ->where(function($query) use ($user, $userProjectIds) {
+                $query->where('assigned_to', $user->id)
+                      ->orWhere('user_id', $user->id)
+                      ->orWhereIn('project_id', $userProjectIds);
+            })
             ->with(['project.client'])
             ->get()
             ->map(function ($task) {
@@ -81,9 +92,9 @@ class CalendarController extends Controller
             })
             ->toArray();
 
-        // Get proposals with valid_until dates
-        $proposals = Proposal::where('user_id', $user->id)
-            ->whereNotNull('valid_until')
+        // Get proposals with valid_until dates - show proposals created by the user
+        $proposals = Proposal::whereNotNull('valid_until')
+            ->where('user_id', $user->id)
             ->with('client')
             ->get()
             ->map(function ($proposal) {
@@ -129,11 +140,13 @@ class CalendarController extends Controller
 
         // Debug logging
         \Log::info('Calendar data:', [
+            'user_id' => $user->id,
             'projects_count' => count($projects),
             'tasks_count' => count($tasks),
             'proposals_count' => count($proposals),
             'total_events' => count($events),
-            'upcoming_events' => count($upcomingEvents)
+            'upcoming_events' => count($upcomingEvents),
+            'user_project_ids' => $userProjectIds
         ]);
 
         return Inertia::render('Calendar', [
