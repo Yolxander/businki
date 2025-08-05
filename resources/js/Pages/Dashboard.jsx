@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -427,8 +427,67 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         }
     };
 
-    const handlePresetClick = (prompt) => {
-        handleSendMessage(prompt);
+    const handlePresetClick = async (prompt) => {
+        // Create a new chat with the preset message
+        try {
+            const createResponse = await fetch('/api/chats', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    type: aiContext,
+                    first_message: prompt
+                })
+            });
+
+            if (createResponse.ok) {
+                const chatData = await createResponse.json();
+                setCurrentChatId(chatData.chat.id);
+
+                // Add the user message to the chat interface
+                const userMessage = {
+                    role: 'user',
+                    content: prompt,
+                    user: auth.user?.name
+                };
+                setChatMessages([userMessage]);
+                setIsChatLoading(true);
+
+                // Simulate AI response
+                setTimeout(async () => {
+                    // Send assistant response to server
+                    await fetch(`/api/chats/${chatData.chat.id}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            content: `I've processed your request: "${prompt}". Here's what I found...`,
+                            role: 'assistant'
+                        })
+                    });
+
+                    const responseMessage = {
+                        role: 'assistant',
+                        type: 'response',
+                        summary: `Response to: ${prompt}`,
+                        content: `I've processed your request: "${prompt}". Here's what I found...`
+                    };
+
+                    setChatMessages(prev => [...prev, responseMessage]);
+                    setIsChatLoading(false);
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Error creating chat with preset:', error);
+            // Fallback to regular message sending if chat creation fails
+            handleSendMessage(prompt);
+        }
     };
 
     // Chat management functions
@@ -437,6 +496,18 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         setChatMessages([]);
         setShowChatSidebar(false);
     };
+
+    // Listen for close sidebar event
+    useEffect(() => {
+        const handleCloseSidebar = () => {
+            setShowChatSidebar(false);
+        };
+
+        window.addEventListener('closeChatSidebar', handleCloseSidebar);
+        return () => {
+            window.removeEventListener('closeChatSidebar', handleCloseSidebar);
+        };
+    }, []);
 
     const handleChatSelect = async (chatId) => {
         try {

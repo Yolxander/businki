@@ -113,7 +113,14 @@ export default function RecentChatsSidebar({
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={onNewChat}
+                    onClick={() => {
+                        onNewChat();
+                        // Close the sidebar after creating new chat
+                        if (typeof window !== 'undefined') {
+                            // Trigger a custom event to close sidebar if needed
+                            window.dispatchEvent(new CustomEvent('closeChatSidebar'));
+                        }
+                    }}
                     className="mb-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     title="New Chat"
                 >
@@ -148,8 +155,16 @@ export default function RecentChatsSidebar({
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={onNewChat}
+                        onClick={() => {
+                            onNewChat();
+                            // Close the sidebar after creating new chat
+                            if (typeof window !== 'undefined') {
+                                // Trigger a custom event to close sidebar if needed
+                                window.dispatchEvent(new CustomEvent('closeChatSidebar'));
+                            }
+                        }}
                         className="h-6 w-6 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        title="New Chat"
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
@@ -209,7 +224,7 @@ export default function RecentChatsSidebar({
                                             <Edit3 className="h-3 w-3 mr-2" />
                                             Edit
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem 
+                                        <DropdownMenuItem
                                             onClick={(e) => handleDeleteChat(chat.id, e)}
                                             className="text-destructive"
                                         >
@@ -240,4 +255,4 @@ export default function RecentChatsSidebar({
             )}
         </div>
     );
-} 
+}
