@@ -29,6 +29,14 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrowserTabs } from '@/components/ui/tabs';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export const SidebarContext = React.createContext({
     sidebarCollapsed: false,
@@ -264,29 +272,7 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                             </div>
 
                             <div className="flex items-center gap-x-6 flex-shrink-0">
-                                <div className="flex items-center gap-x-4">
-                                    <div className="flex-shrink-0">
-                                        <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center shadow-sm ring-2 ring-primary/20">
-                                            <span className="text-sm font-semibold text-primary-foreground">
-                                                {user?.name?.charAt(0) || 'U'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="hidden sm:block">
-                                        <p className="text-sm font-semibold text-sidebar-foreground leading-tight">{user?.name || 'shadcn'}</p>
-                                        <p className="text-xs text-sidebar-foreground/70 leading-tight">{user?.email || 'm@example.com'}</p>
-                                    </div>
-                                </div>
-                                <div className="h-6 w-px bg-sidebar-border"></div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleLogout}
-                                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground px-3 py-2 h-auto"
-                                >
-                                    <LogOut className="h-4 w-4 mr-2" />
-                                    <span className="hidden sm:inline font-medium">Sign out</span>
-                                </Button>
+                                {/* User profile moved to sidebar bottom */}
                             </div>
                         </div>
                     </div>
@@ -480,6 +466,49 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                                         </div>
                                     </div>
                                 </nav>
+                            </div>
+
+                            {/* User profile section at bottom of sidebar */}
+                            <div className="border-t border-sidebar-border p-4">
+                                <div className="flex items-center gap-x-3">
+                                    <div className="flex-shrink-0">
+                                        <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-sm ring-2 ring-primary/20">
+                                            <span className="text-sm font-semibold text-primary-foreground">
+                                                {user?.name?.charAt(0) || 'U'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {!sidebarCollapsed && (
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-sidebar-foreground leading-tight truncate">{user?.name || 'shadcn'}</p>
+                                            <p className="text-xs text-sidebar-foreground/70 leading-tight truncate">{user?.email || 'm@example.com'}</p>
+                                        </div>
+                                    )}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                                            <DropdownMenuLabel className="font-normal">
+                                                <div className="flex flex-col space-y-1">
+                                                    <p className="text-sm font-medium leading-none">{user?.name || 'shadcn'}</p>
+                                                    <p className="text-xs leading-none text-muted-foreground">{user?.email || 'm@example.com'}</p>
+                                                </div>
+                                            </DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={handleLogout}>
+                                                <LogOut className="mr-2 h-4 w-4" />
+                                                <span>Sign out</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             </div>
                         </div>
                     </div>
