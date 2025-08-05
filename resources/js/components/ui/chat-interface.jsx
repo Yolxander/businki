@@ -341,7 +341,7 @@ export default function ChatInterface({
 
                 {/* Disclaimer */}
                 <div className="mt-4 text-center text-xs text-muted-foreground">
-                    Bobbi may produce inaccurate information about people, places or facts. Check Privacy Notice.
+                    Bobbi is currently in Beta. Some information produced may be inaccurate or incomplete.
                 </div>
             </div>
         </div>
