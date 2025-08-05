@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -355,148 +355,178 @@ export default function BobbiFlow({ auth, tasks = [] }) {
 
                 <div className="h-screen flex flex-col bg-background">
                     {/* Zen Mode Header */}
-                    <div className="flex-shrink-0 border-b border-border/50 bg-background/95 backdrop-blur">
-                        <div className="flex items-center justify-between px-6 py-4">
+                    <div className="flex-shrink-0 p-6 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                        <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
                                 <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
                                     onClick={exitZenMode}
-                                    className="flex items-center space-x-2"
                                 >
-                                    <ArrowLeft className="w-4 h-4" />
-                                    <span>Back to Flow</span>
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Back to Flow
                                 </Button>
-                                <div className="h-4 w-px bg-border"></div>
-                                <div className="flex items-center space-x-2">
-                                    <Target className="w-4 h-4 text-primary" />
-                                    <span className="font-medium">{zenTask.title}</span>
+                                <div>
+                                    <h1 className="text-xl font-semibold text-foreground">{zenTask.title}</h1>
+                                    <p className="text-sm text-muted-foreground">
+                                        {zenTask.client} • {zenTask.project}
+                                    </p>
                                 </div>
                             </div>
-
+                            {/* Zen Timer */}
                             <div className="flex items-center space-x-4">
-                                <div className="flex items-center space-x-2 bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-                                    <Timer className="w-4 h-4 text-primary" />
-                                    <span className="font-mono text-sm font-medium">{formatTime(zenTimer)}</span>
+                                <div className="text-center">
+                                    <div className="text-2xl font-mono font-bold text-foreground">
+                                        {formatTime(zenTimer)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">Zen Time</div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setZenTimerActive(!zenTimerActive)}
+                                        title={zenTimerActive ? 'Pause Timer' : 'Resume Timer'}
+                                    >
+                                        {zenTimerActive ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                                    </Button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                                                             {/* Zen Mode Content */}
-                    <div className="flex-1 flex p-6">
-                        {/* Left Section - Task Info & Progress */}
-                        <div className="w-1/3 pr-6 space-y-6">
-                            {/* AI Tip */}
-                            <Card className="border border-border/50 bg-background shadow-sm">
-                                <CardContent className="p-4">
-                                    <div className="flex items-center space-x-2 mb-3">
-                                        <Brain className="w-4 h-4 text-primary" />
-                                        <span className="text-sm font-medium">AI Tip</span>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground italic">"{zenAiTip}"</p>
-                                </CardContent>
-                            </Card>
-
-                            {/* Progress & Reflection */}
-                            <Card className="border border-border/50 bg-background shadow-sm">
-                                <CardContent className="p-4">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center space-x-2">
-                                            <FileText className="w-4 h-4 text-primary" />
-                                            <span className="text-sm font-medium">Progress & Reflection</span>
+                    <div className="flex-1 flex overflow-hidden">
+                        {/* Left Panel - Bobbi AI Chat */}
+                        <div className="w-2/5 flex flex-col min-h-0">
+                            <div className="h-full flex flex-col">
+                                {/* Chat Header */}
+                                <div className="flex-shrink-0 p-4 border-b border-border/30">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                            <Brain className="w-4 h-4 text-primary" />
                                         </div>
-                                        <span className="text-xs text-muted-foreground">
-                                            {zenNotes.split(' ').filter(word => word.length > 0).length} words
-                                        </span>
+                                        <div>
+                                            <h3 className="font-medium text-foreground">Bobbi AI</h3>
+                                            <p className="text-xs text-muted-foreground">Your Zen companion</p>
+                                        </div>
                                     </div>
-                                    <Textarea
-                                        placeholder="Share your progress, thoughts, or insights..."
-                                        value={zenNotes}
-                                        onChange={(e) => setZenNotes(e.target.value)}
-                                        className="min-h-[120px] resize-none border border-border focus:border-primary"
-                                    />
-                                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                                        <span>Auto-saved</span>
-                                        <span>Flow: {Math.floor(zenTimer / 60)}m {zenTimer % 60}s</span>
+                                </div>
+
+                                {/* Chat Messages */}
+                                <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+                                    {/* Initial AI Message */}
+                                    <div className="flex items-start space-x-3">
+                                        <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                            <Brain className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm text-foreground leading-relaxed">"{zenAiTip}"</p>
+                                        </div>
                                     </div>
-                                </CardContent>
-                            </Card>
+
+                                    {/* Second AI Message */}
+                                    <div className="flex items-start space-x-3">
+                                        <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                            <Brain className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm text-foreground leading-relaxed">
+                                                I'm here to support your workflow and help you stay focused. Feel free to share any thoughts, concerns, or ideas as we work through this task together.
+                                                <br /><br />
+                                                Remember to celebrate small wins as you complete subtasks. Every step forward is progress, no matter how small.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* User Message (if notes exist) */}
+                                    {zenNotes.trim() && (
+                                        <div className="flex items-start space-x-3 justify-end">
+                                            <div className="flex-1 max-w-xs">
+                                                <p className="text-sm text-foreground leading-relaxed bg-primary/10 p-3 rounded-lg">
+                                                    {zenNotes}
+                                                </p>
+                                            </div>
+                                            <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                                                <User className="w-4 h-4 text-muted-foreground" />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* AI Response to User Notes */}
+                                    {zenNotes.trim() && (
+                                        <div className="flex items-start space-x-3">
+                                            <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                                <Brain className="w-4 h-4 text-primary" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm text-foreground leading-relaxed">
+                                                    Thank you for sharing that with me. I've noted your thoughts and will keep them in mind as we continue.
+                                                    Your insights are valuable to this process. ✨
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Chat Input */}
+                                <div className="flex-shrink-0 p-4 border-t border-border/30">
+                                    <div className="flex items-center space-x-3">
+                                        <Textarea
+                                            placeholder="Share your thoughts with Bobbi..."
+                                            value={zenNotes}
+                                            onChange={(e) => setZenNotes(e.target.value)}
+                                            className="flex-1 min-h-[60px] resize-none border border-border focus:border-primary text-sm"
+                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="flex-shrink-0"
+                                        >
+                                            <Send className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Right Section - Main Work Area */}
-                        <div className="flex-1 space-y-6">
-                            {/* Subtasks */}
-                            <Card className="border border-border/50 bg-background shadow-sm">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center space-x-2">
+                        {/* Right Panel - Subtasks */}
+                        <div className="flex-1 border-l border-border/50 bg-muted/20">
+                            <div className="p-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center space-x-2">
                                             <ListTodo className="w-4 h-4 text-primary" />
-                                            <span className="font-medium">Subtasks</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                            <span>{Object.values(zenSubtaskProgress).filter(Boolean).length}/{zenTask.subtasks.length}</span>
+                                            <span>Subtasks</span>
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {Object.values(zenSubtaskProgress).filter(Boolean).length}/{zenTask.subtasks.length} completed
                                             {zenTask.dueDate && (
-                                                <span>• Due in {Math.ceil((new Date(zenTask.dueDate) - new Date()) / (1000 * 60 * 60 * 24))}d</span>
+                                                <span> • Due in {Math.ceil((new Date(zenTask.dueDate) - new Date()) / (1000 * 60 * 60 * 24))} days</span>
+                                            )}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3">
+                                            {zenTask.subtasks.map((subtask, index) => (
+                                                <div key={subtask.id} className="flex items-center space-x-3">
+                                                    <Checkbox
+                                                        checked={zenSubtaskProgress[subtask.id] || false}
+                                                        onCheckedChange={() => toggleSubtask(subtask.id)}
+                                                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                    />
+                                                    <span className={`text-sm ${zenSubtaskProgress[subtask.id] ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                                                        {subtask.text}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {zenTask.subtasks.length === 0 && (
+                                                <p className="text-sm text-muted-foreground text-center">No subtasks defined</p>
                                             )}
                                         </div>
-                                    </div>
-                                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                                        {zenTask.subtasks.map((subtask, index) => (
-                                            <div key={subtask.id} className="flex items-center space-x-3">
-                                                <Checkbox
-                                                    checked={zenSubtaskProgress[subtask.id] || false}
-                                                    onCheckedChange={() => toggleSubtask(subtask.id)}
-                                                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                                />
-                                                <span className={`text-sm ${zenSubtaskProgress[subtask.id] ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                                                    {subtask.text}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {zenTask.subtasks.length === 0 && (
-                                            <p className="text-sm text-muted-foreground text-center">No subtasks defined</p>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Progress & Wellness */}
-                            <Card className="border border-border/50 bg-background shadow-sm">
-                                <CardContent className="p-6">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium">Progress</span>
-                                            <span className="text-sm text-muted-foreground">
-                                                {zenTask.subtasks.length > 0
-                                                    ? `${Math.round((Object.values(zenSubtaskProgress).filter(Boolean).length / zenTask.subtasks.length) * 100)}%`
-                                                    : '0%'
-                                                }
-                                            </span>
-                                        </div>
-                                        <div className="w-full bg-muted rounded-full h-2">
-                                            <div
-                                                className="bg-primary h-2 rounded-full transition-all duration-300"
-                                                style={{
-                                                    width: zenTask.subtasks.length > 0
-                                                        ? `${(Object.values(zenSubtaskProgress).filter(Boolean).length / zenTask.subtasks.length) * 100}%`
-                                                        : '0%'
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="flex justify-center space-x-3">
-                                            <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                                                <Coffee className="w-3 h-3" />
-                                                <span className="text-xs">Break</span>
-                                            </Button>
-                                            <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                                                <Heart className="w-3 h-3" />
-                                                <span className="text-xs">Well</span>
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                    </CardContent>
+                                </Card>
+                            </div>
                         </div>
                     </div>
 
@@ -512,14 +542,7 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                     <CheckCircle className="w-4 h-4" />
                                     <span>Mark Complete</span>
                                 </Button>
-                                <Button
-                                    variant="outline"
-                                    size="lg"
-                                    className="flex items-center space-x-2"
-                                >
-                                    <Flag className="w-4 h-4" />
-                                    <span>Flag Issue</span>
-                                </Button>
+
                                 <Button
                                     variant="outline"
                                     size="lg"
@@ -741,8 +764,11 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                         </div>
                                     )}
                                     {lane.tasks.map((task) => (
-                                        <div key={task.id} className="group cursor-pointer block">
-                                            <Card className="border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-200 bg-sidebar relative overflow-hidden">
+                                        <div key={task.id} className="group">
+                                            <Card
+                                                className="border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-200 bg-sidebar relative overflow-hidden cursor-pointer"
+                                                onClick={() => router.visit(`/tasks/${task.id}`)}
+                                            >
                                                 {/* Zen Mode Button - appears on hover */}
                                                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
                                                     <Button
@@ -764,91 +790,59 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                                                 </div>
 
                                                 <CardContent className="p-4">
-                                                    {/* Project/Category - Faded text at top */}
-                                                    <div className="text-xs text-muted-foreground mb-2">
-                                                        {task.project}
-                                                    </div>
-
-                                                    {/* Task Title & Priority */}
-                                                    <div className="flex items-start justify-between mb-3 pr-10">
-                                                        <div className="flex items-start space-x-2 flex-1">
-                                                            <Building className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                                            <h4 className="font-medium text-sm leading-tight text-foreground line-clamp-2">
-                                                                {task.title}
-                                                            </h4>
-                                                        </div>
-                                                        <div className="flex items-center space-x-1 flex-shrink-0">
-                                                            {getPriorityIcon(task.priority)}
+                                                    {/* Project & Priority */}
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className="text-xs text-muted-foreground">{task.project}</span>
                                                             {task.priority === 'high' && (
                                                                 <AlertCircle className="w-3 h-3 text-red-500" />
                                                             )}
-                                                            <Star className="w-3 h-3 text-green-500" />
                                                         </div>
-                                                    </div>
-
-                                                    {/* Estimated Time */}
-                                                    <div className="flex justify-end mb-3">
-                                                        <span className="text-xs text-muted-foreground font-mono">
-                                                            {task.estimatedTime}
-                                                        </span>
-                                                    </div>
-
-                                                    {/* Tags */}
-                                                    {task.tags.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 mb-3">
-                                                            {task.tags.slice(0, 2).map((tag, index) => (
-                                                                <Badge
-                                                                    key={index}
-                                                                    variant="secondary"
-                                                                    className="text-xs px-2 py-0.5 bg-muted text-muted-foreground"
-                                                                >
-                                                                    {tag}
-                                                                </Badge>
-                                                            ))}
-                                                            {task.tags.length > 2 && (
-                                                                <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-muted text-muted-foreground">
-                                                                    +{task.tags.length - 2}
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Progress Bar */}
-                                                    {task.subtasks.length > 0 && (
-                                                        <div className="mb-3">
-                                                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                                                <span>Progress</span>
-                                                                <span>{task.subtasks.filter(st => st.completed).length}/{task.subtasks.length}</span>
-                                                            </div>
-                                                            <div className="w-full bg-muted rounded-full h-1.5">
-                                                                <div
-                                                                    className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                                                                    style={{
-                                                                        width: `${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%`
-                                                                    }}
-                                                                ></div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Footer */}
-                                                    <div className="flex items-center justify-between pt-3 border-t border-border/30">
-                                                        <div className="flex items-center space-x-2">
-                                                            <div className={`w-2 h-2 rounded-full ${task.assignee === 'client' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {task.assignee === 'client' ? 'Client' : 'You'}
+                                                        {task.estimatedTime && (
+                                                            <span className="text-xs text-muted-foreground font-mono">
+                                                                {task.estimatedTime}
                                                             </span>
-                                                        </div>
-                                                        <div className="flex items-center space-x-3">
-                                                            {task.comments > 0 && (
-                                                                <div className="flex items-center space-x-1">
-                                                                    <MessageSquare className="w-3 h-3 text-muted-foreground" />
-                                                                    <span className="text-xs text-muted-foreground">{task.comments}</span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Task Title */}
+                                                    <h4 className="font-medium text-sm leading-tight text-foreground line-clamp-2 mb-3">
+                                                        {task.title}
+                                                    </h4>
+
+                                                    {/* Progress & Footer */}
+                                                    <div className="space-y-3">
+                                                        {/* Progress Bar */}
+                                                        {task.subtasks.length > 0 && (
+                                                            <div>
+                                                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                                                    <span>Progress</span>
+                                                                    <span>{task.subtasks.filter(st => st.completed).length}/{task.subtasks.length}</span>
                                                                 </div>
+                                                                <div className="w-full bg-muted rounded-full h-1">
+                                                                    <div
+                                                                        className="bg-primary h-1 rounded-full transition-all duration-300"
+                                                                        style={{
+                                                                            width: `${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%`
+                                                                        }}
+                                                                    ></div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Footer */}
+                                                        <div className="flex items-center justify-between pt-2 border-t border-border/20">
+                                                            <div className="flex items-center space-x-2">
+                                                                <div className={`w-1.5 h-1.5 rounded-full ${task.assignee === 'client' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {task.assignee === 'client' ? 'Client' : 'You'}
+                                                                </span>
+                                                            </div>
+                                                            {task.dueDate && (
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {new Date(task.dueDate).toLocaleDateString()}
+                                                                </span>
                                                             )}
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-                                                            </span>
                                                         </div>
                                                     </div>
                                                 </CardContent>
