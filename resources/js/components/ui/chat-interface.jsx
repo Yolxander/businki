@@ -109,7 +109,7 @@ export default function ChatInterface({
                             <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
                         </div>
                     </div>
-                    <div className="flex-1 bg-card rounded-lg p-4 border border-border">
+                    <div className="flex-shrink-0 bg-card rounded-lg p-4 border border-border">
                         <div className="space-y-3">
                             <div className="flex items-center space-x-2">
                                 <Check className="w-4 h-4 text-green-500" />
@@ -148,7 +148,7 @@ export default function ChatInterface({
                             <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
                         </div>
                     </div>
-                    <div className="flex-1 bg-card rounded-lg p-4 border border-border">
+                    <div className="flex-shrink-0 bg-card rounded-lg p-4 border border-border">
                         <div className="mb-3">
                             <p className="text-sm text-muted-foreground">{message.summary}</p>
                             <div className="flex space-x-2 mt-2">
@@ -225,7 +225,7 @@ export default function ChatInterface({
                         <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
                     </div>
                 </div>
-                <div className="flex-1 bg-card rounded-lg p-4 border border-border">
+                <div className="flex-shrink-0 bg-card rounded-lg p-4 border border-border">
                     <p className="text-sm">{message.content}</p>
                 </div>
             </div>
@@ -294,7 +294,7 @@ export default function ChatInterface({
                                         <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
                                     </div>
                                 </div>
-                                <div className="flex-1 bg-card rounded-lg p-4 border border-border">
+                                <div className="flex-shrink-0 bg-card rounded-lg p-4 border border-border">
                                     <div className="flex space-x-2">
                                         <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
                                         <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
