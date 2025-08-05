@@ -462,12 +462,7 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                                         Add Task
                                     </Button>
                                 </Link>
-                                <Link href="/calendar">
-                                    <Button className="w-full justify-start" variant="outline">
-                                        <Calendar className="w-4 h-4 mr-2" />
-                                        View Calendar
-                                    </Button>
-                                </Link>
+
                                 <Link href="/zen-mode">
                                     <Button className="w-full justify-start" variant="outline">
                                         <Zap className="w-4 h-4 mr-2" />
