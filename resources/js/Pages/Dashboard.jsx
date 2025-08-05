@@ -77,10 +77,14 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
     const [dashboardMode, setDashboardMode] = useState(initialDashboardMode); // 'default' or 'ai_assistant'
     const [aiContext, setAiContext] = useState('general'); // 'general', 'projects', 'clients', 'bobbi-flow', 'calendar', 'analytics'
     const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
-    
+
     // Chat state
     const [chatMessages, setChatMessages] = useState([]);
     const [isChatLoading, setIsChatLoading] = useState(false);
+
+    // Collapsible sections state
+    const [workCollapsed, setWorkCollapsed] = useState(false);
+    const [systemCollapsed, setSystemCollapsed] = useState(false);
 
     // AI Generation form state
     const [aiFormData, setAiFormData] = useState({
@@ -321,7 +325,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
             content: message,
             user: auth.user?.name
         };
-        
+
         setChatMessages(prev => [...prev, userMessage]);
         setIsChatLoading(true);
 
@@ -334,7 +338,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                 intent: 'Extract all invoices scheduled to be raised from today to the end of the year.',
                 agent: 'Revsaas'
             };
-            
+
             setChatMessages(prev => [...prev, processingMessage]);
 
             // Simulate AI response after processing
@@ -351,7 +355,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                         { invoiceNo: 'INV-0045', client: 'Creative Labs', dueDate: '2024-11-30', amount: '$3,200.00', status: 'Open' }
                     ]
                 };
-                
+
                 setChatMessages(prev => [...prev, responseMessage]);
                 setIsChatLoading(false);
             }, 2000);
@@ -656,60 +660,88 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
                                 {/* Work Section */}
                                 <div className="space-y-2">
-                                    <h3 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider mb-2">Work</h3>
-                                    <Button
-                                        variant="ghost"
-                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'projects' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
-                                        onClick={() => handleContextChange('projects')}
-                                    >
-                                        <Briefcase className="w-4 h-4 mr-2" />
-                                        Projects
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'clients' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
-                                        onClick={() => handleContextChange('clients')}
-                                    >
-                                        <Users className="w-4 h-4 mr-2" />
-                                        Clients
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'bobbi-flow' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
-                                        onClick={() => handleContextChange('bobbi-flow')}
-                                    >
-                                        <Target className="w-4 h-4 mr-2" />
-                                        Bobbi Flow
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'calendar' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
-                                        onClick={() => handleContextChange('calendar')}
-                                    >
-                                        <Calendar className="w-4 h-4 mr-2" />
-                                        Calendar
-                                    </Button>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">Work</h3>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 w-6 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                                            onClick={() => setWorkCollapsed(!workCollapsed)}
+                                        >
+                                            {workCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                        </Button>
+                                    </div>
+                                    {!workCollapsed && (
+                                        <div className="space-y-1 ml-2">
+                                            <Button
+                                                variant="ghost"
+                                                className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'projects' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                                onClick={() => handleContextChange('projects')}
+                                            >
+                                                <Briefcase className="w-4 h-4 mr-2" />
+                                                Projects
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'clients' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                                onClick={() => handleContextChange('clients')}
+                                            >
+                                                <Users className="w-4 h-4 mr-2" />
+                                                Clients
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'bobbi-flow' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                                onClick={() => handleContextChange('bobbi-flow')}
+                                            >
+                                                <Target className="w-4 h-4 mr-2" />
+                                                Bobbi Flow
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'calendar' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                                onClick={() => handleContextChange('calendar')}
+                                            >
+                                                <Calendar className="w-4 h-4 mr-2" />
+                                                Calendar
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* System Section */}
                                 <div className="space-y-2">
-                                    <h3 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider mb-2">System</h3>
-                                    <Button
-                                        variant="ghost"
-                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'analytics' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
-                                        onClick={() => handleContextChange('analytics')}
-                                    >
-                                        <BarChart3 className="w-4 h-4 mr-2" />
-                                        Analytics
-                                    </Button>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">System</h3>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 w-6 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                                            onClick={() => setSystemCollapsed(!systemCollapsed)}
+                                        >
+                                            {systemCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                        </Button>
+                                    </div>
+                                    {!systemCollapsed && (
+                                        <div className="space-y-1 ml-2">
+                                            <Button
+                                                variant="ghost"
+                                                className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'analytics' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                                onClick={() => handleContextChange('analytics')}
+                                            >
+                                                <BarChart3 className="w-4 h-4 mr-2" />
+                                                Analytics
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Recent */}
-                                <div className="mt-8">
+                                <div className="mt-8 flex-1">
                                     <h3 className="text-sm font-semibold text-sidebar-foreground/70 mb-3">Recent</h3>
-                                    <div className="space-y-2">
-                                        {chatMessages.filter(msg => msg.role === 'user').slice(-3).map((message, index) => (
-                                            <div 
+                                    <div className="space-y-2 overflow-y-auto max-h-32">
+                                        {chatMessages.filter(msg => msg.role === 'user').slice(-5).map((message, index) => (
+                                            <div
                                                 key={index}
                                                 className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent"
                                                 onClick={() => handlePresetClick(message.content)}
