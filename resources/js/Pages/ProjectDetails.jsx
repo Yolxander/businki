@@ -639,6 +639,12 @@ export default function ProjectDetails({ auth, project }) {
                                             </div>
                                         </Link>
                                         <div className="flex items-center space-x-2">
+                                            <Link href={`/zen-mode?task=${task.id}`}>
+                                                <Button variant="outline" size="sm" className="bg-primary/10 hover:bg-primary/20 border-primary/20">
+                                                    <Zap className="w-4 h-4 mr-1" />
+                                                    Zen
+                                                </Button>
+                                            </Link>
                                             {task.priority && (
                                                 <Badge className={getPriorityColor(task.priority)} size="sm">
                                                     {task.priority}

@@ -413,27 +413,42 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                                 <div className="space-y-4 max-h-80 overflow-y-auto">
                                     {statsData.recentTasks && statsData.recentTasks.length > 0 ? (
                                         statsData.recentTasks.map((task) => (
-                                            <Link key={task.id} href={`/tasks/${task.id}`}>
-                                                <div className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                                                    {getTaskStatusIcon(task.status)}
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-medium text-foreground truncate">
-                                                            {task.title}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">{task.project_name}</p>
-                                                        <div className="flex items-center space-x-2 mt-1">
-                                                            <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                                {task.priority}
-                                                            </Badge>
-                                                            {task.due_date && (
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    Due {new Date(task.due_date).toLocaleDateString()}
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                            <div key={task.id} className="group">
+                                                <div className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer relative">
+                                                    {/* Zen Mode Button - appears on hover */}
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                                                        <Link href={`/zen-mode?task=${task.id}`}>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-6 w-6 p-0 bg-background/80 backdrop-blur hover:bg-primary/10"
+                                                                title="Enter Zen Mode"
+                                                            >
+                                                                <Zap className="w-3 h-3 text-primary" />
+                                                            </Button>
+                                                        </Link>
                                                     </div>
+                                                    <Link href={`/tasks/${task.id}`} className="flex items-start space-x-3 flex-1">
+                                                        {getTaskStatusIcon(task.status)}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-foreground truncate">
+                                                                {task.title}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">{task.project_name}</p>
+                                                            <div className="flex items-center space-x-2 mt-1">
+                                                                <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                                    {task.priority}
+                                                                </Badge>
+                                                                {task.due_date && (
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        Due {new Date(task.due_date).toLocaleDateString()}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </Link>
                                                 </div>
-                                            </Link>
+                                            </div>
                                         ))
                                     ) : (
                                         <div className="text-center py-8 text-muted-foreground">

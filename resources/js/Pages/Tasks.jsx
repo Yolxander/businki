@@ -18,7 +18,8 @@ import {
     Edit,
     Trash2,
     Eye,
-    MoreHorizontal
+    MoreHorizontal,
+    Zap
 } from 'lucide-react';
 
 export default function Tasks({ auth }) {
@@ -290,6 +291,12 @@ export default function Tasks({ auth }) {
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-2">
+                                        <Link href={`/zen-mode?task=${task.id}`}>
+                                            <Button variant="outline" size="sm" className="bg-primary/10 hover:bg-primary/20 border-primary/20">
+                                                <Zap className="w-4 h-4 mr-1" />
+                                                Zen
+                                            </Button>
+                                        </Link>
                                         <Link href={`/tasks/${task.id}`}>
                                             <Button variant="outline" size="sm">
                                                 <Eye className="w-4 h-4 mr-1" />

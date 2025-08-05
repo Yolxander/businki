@@ -266,6 +266,39 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
     Route::get('/context-engineering/{document}/edit', [App\Http\Controllers\ContextEngineeringController::class, 'edit'])->name('context-engineering.edit');
     Route::get('/context-engineering/{document}/download', [App\Http\Controllers\ContextEngineeringController::class, 'download'])->name('context-engineering.download');
 
+    // Zen Mode Route
+    Route::get('/zen-mode', function (Request $request) {
+        $taskId = $request->query('task');
+        $task = null;
+        
+        if ($taskId) {
+            $task = \App\Models\Task::with(['project.client', 'subtasks'])->find($taskId);
+            if ($task) {
+                $task = [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'client' => $task->project?->client?->name || 'No Client',
+                    'project' => $task->project?->name || 'No Project',
+                    'dueDate' => $task->due_date ? $task->due_date->format('Y-m-d') : null,
+                    'subtasks' => $task->subtasks->map(function($subtask) {
+                        return [
+                            'id' => $subtask->id,
+                            'text' => $subtask->description,
+                            'completed' => $subtask->status === 'done'
+                        ];
+                    })->toArray()
+                ];
+            }
+        }
+        
+        return Inertia::render('ZenMode', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'zenTask' => $task,
+        ]);
+    })->name('zen-mode');
+
     // Context Engineering API routes
     Route::get('/api/context-engineering/documents', [App\Http\Controllers\Api\ContextEngineeringController::class, 'index']);
     Route::get('/api/context-engineering/documents/{document}', [App\Http\Controllers\Api\ContextEngineeringController::class, 'show']);
