@@ -47,13 +47,21 @@ import {
     Edit
 } from 'lucide-react';
 
-export default function Dashboard({ auth, stats, clients = [] }) {
+export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
     const [showAISetupModal, setShowAISetupModal] = useState(false);
     const [showAlert, setShowAlert] = useState(false);
     const [alertState, setAlertState] = useState('loading'); // 'loading', 'success'
     const [generatedProject, setGeneratedProject] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [showWidgetEditModal, setShowWidgetEditModal] = useState(false);
+    const [selectedWidget, setSelectedWidget] = useState(null);
+    const [widgetEditData, setWidgetEditData] = useState({
+        title: '',
+        description: '',
+        userPrompt: '',
+    });
+    const [isGeneratingWidget, setIsGeneratingWidget] = useState(false);
 
     // AI Generation form state
     const [aiFormData, setAiFormData] = useState({
@@ -255,6 +263,142 @@ export default function Dashboard({ auth, stats, clients = [] }) {
         setIsEditMode(!isEditMode);
     };
 
+    const handleWidgetClick = async (widgetType, widgetKey) => {
+        if (!isEditMode) return;
+
+        try {
+            const response = await fetch('/api/dashboard-widgets/info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    widget_type: widgetType,
+                    widget_key: widgetKey,
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                setSelectedWidget(data.data);
+                setWidgetEditData({
+                    title: data.data.title || '',
+                    description: data.data.description || '',
+                    userPrompt: '',
+                });
+                setShowWidgetEditModal(true);
+            }
+        } catch (error) {
+            console.error('Error getting widget info:', error);
+        }
+    };
+
+    const handleGenerateWidget = async () => {
+        if (!selectedWidget || !widgetEditData.userPrompt.trim()) {
+            alert('Please enter a prompt for AI generation');
+            return;
+        }
+
+        setIsGeneratingWidget(true);
+
+        try {
+            const response = await fetch('/api/dashboard-widgets/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    widget_type: selectedWidget.widget_type,
+                    widget_key: selectedWidget.widget_key,
+                    user_prompt: widgetEditData.userPrompt,
+                    current_configuration: selectedWidget.configuration || {},
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                setSelectedWidget(data.data);
+                setWidgetEditData({
+                    title: data.data.title || '',
+                    description: data.data.description || '',
+                    userPrompt: '',
+                });
+                // Refresh the page to show updated widgets
+                window.location.reload();
+            } else {
+                alert('Failed to generate widget: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error generating widget:', error);
+            alert('Failed to generate widget');
+        } finally {
+            setIsGeneratingWidget(false);
+        }
+    };
+
+        const handleUpdateWidget = async () => {
+        if (!selectedWidget || !widgetEditData.title.trim()) {
+            alert('Please enter a title for the widget');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/dashboard-widgets/update', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    widget_type: selectedWidget.widget_type,
+                    widget_key: selectedWidget.widget_key,
+                    title: widgetEditData.title,
+                    description: widgetEditData.description,
+                    configuration: selectedWidget.configuration || {},
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                setShowWidgetEditModal(false);
+                // Refresh the page to show updated widgets
+                window.location.reload();
+            } else {
+                alert('Failed to update widget: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error updating widget:', error);
+            alert('Failed to update widget');
+        }
+    };
+
+    // Function to render widgets based on their configuration
+    const renderWidgets = () => {
+        const quickStatsWidgets = widgets.filter(w => w.widget_type === 'quick_stats');
+        const recentTasksWidget = widgets.find(w => w.widget_type === 'recent_tasks');
+        const recentProjectsWidget = widgets.find(w => w.widget_type === 'recent_projects');
+        const quickActionsWidget = widgets.find(w => w.widget_type === 'quick_actions');
+        const recentProposalsWidget = widgets.find(w => w.widget_type === 'recent_proposals');
+
+        return {
+            quickStatsWidgets,
+            recentTasksWidget,
+            recentProjectsWidget,
+            quickActionsWidget,
+            recentProposalsWidget,
+        };
+    };
+
+    const widgetData = renderWidgets();
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -285,54 +429,73 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                     </div>
                 </div>
 
-                {/* Quick Stats */}
+                                {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {quickStats.map((stat) => (
-                        <Card key={stat.title} className="bg-card border-border relative">
-                            {isEditMode && (
-                                <div className="absolute top-2 right-2 z-10">
-                                    <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
-                                </div>
-                            )}
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    {stat.title}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                                <p className="text-xs text-muted-foreground">{stat.description}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{stat.trend}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    {widgetData.quickStatsWidgets.map((widget, index) => {
+                        // Get the corresponding stat data
+                        const statKey = widget.widget_key.replace('quick_stat_', '');
+                        const statData = quickStats.find(s => s.title.toLowerCase().includes(statKey)) || quickStats[index] || {
+                            title: widget.title,
+                            value: '0',
+                            description: widget.description,
+                            trend: widget.configuration?.trend || '+0 this week'
+                        };
+
+                        return (
+                            <Card
+                                key={widget.widget_key}
+                                className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+                                onClick={() => isEditMode && handleWidgetClick('quick_stats', widget.widget_key)}
+                            >
+                                {isEditMode && (
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
+                                    </div>
+                                )}
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                                        {widget.title}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-foreground">{statData.value}</div>
+                                    <p className="text-xs text-muted-foreground">{widget.description}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{statData.trend}</p>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
 
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Recent Tasks & Projects */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Recent Tasks */}
-                        <Card className="bg-card border-border relative">
-                            {isEditMode && (
-                                <div className="absolute top-2 right-2 z-10">
-                                    <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
-                                </div>
-                            )}
-                            <CardHeader>
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <CardTitle className="text-foreground">Recent Tasks</CardTitle>
-                                        <CardDescription className="text-muted-foreground">Latest task updates</CardDescription>
+                                                {/* Recent Tasks */}
+                        {widgetData.recentTasksWidget && (
+                            <Card
+                                className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+                                onClick={() => isEditMode && handleWidgetClick('recent_tasks', widgetData.recentTasksWidget.widget_key)}
+                            >
+                                {isEditMode && (
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
                                     </div>
-                                    <Link href="/tasks">
-                                        <Button variant="outline" size="sm">
-                                            View All
-                                            <ArrowRight className="w-4 h-4 ml-2" />
-                                        </Button>
-                                    </Link>
-                                </div>
-                            </CardHeader>
+                                )}
+                                <CardHeader>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <CardTitle className="text-foreground">{widgetData.recentTasksWidget.title}</CardTitle>
+                                            <CardDescription className="text-muted-foreground">{widgetData.recentTasksWidget.description}</CardDescription>
+                                        </div>
+                                        <Link href="/tasks">
+                                            <Button variant="outline" size="sm">
+                                                View All
+                                                <ArrowRight className="w-4 h-4 ml-2" />
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </CardHeader>
                             <CardContent>
                                 <div className="space-y-4 max-h-60 overflow-y-auto">
                                     {statsData.recentTasks && statsData.recentTasks.length > 0 ? (
@@ -384,28 +547,33 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                                 </div>
                             </CardContent>
                         </Card>
+                        )}
 
                         {/* Recent Projects */}
-                        <Card className="bg-card border-border relative">
-                            {isEditMode && (
-                                <div className="absolute top-2 right-2 z-10">
-                                    <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
-                                </div>
-                            )}
-                            <CardHeader>
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <CardTitle className="text-foreground">Recent Projects</CardTitle>
-                                        <CardDescription className="text-muted-foreground">Your active and recent projects</CardDescription>
+                        {widgetData.recentProjectsWidget && (
+                            <Card
+                                className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+                                onClick={() => isEditMode && handleWidgetClick('recent_projects', widgetData.recentProjectsWidget.widget_key)}
+                            >
+                                {isEditMode && (
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
                                     </div>
-                                    <Link href="/projects">
-                                        <Button variant="outline" size="sm">
-                                            View All
-                                            <ArrowRight className="w-4 h-4 ml-2" />
-                                        </Button>
-                                    </Link>
-                                </div>
-                            </CardHeader>
+                                )}
+                                <CardHeader>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <CardTitle className="text-foreground">{widgetData.recentProjectsWidget.title}</CardTitle>
+                                            <CardDescription className="text-muted-foreground">{widgetData.recentProjectsWidget.description}</CardDescription>
+                                        </div>
+                                        <Link href="/projects">
+                                            <Button variant="outline" size="sm">
+                                                View All
+                                                <ArrowRight className="w-4 h-4 ml-2" />
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </CardHeader>
                             <CardContent>
                                 <div className="space-y-4 max-h-80 overflow-y-auto">
                                     {statsData.recentProjects && statsData.recentProjects.length > 0 ? (
@@ -465,20 +633,25 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                                 </div>
                             </CardContent>
                         </Card>
+                        )}
                     </div>
 
                     {/* Quick Actions */}
                     <div className="space-y-6">
-                        <Card className="bg-card border-border relative">
-                            {isEditMode && (
-                                <div className="absolute top-2 right-2 z-10">
-                                    <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
-                                </div>
-                            )}
-                            <CardHeader>
-                                <CardTitle className="text-foreground">Quick Actions</CardTitle>
-                                <CardDescription className="text-muted-foreground">Get things done faster</CardDescription>
-                            </CardHeader>
+                        {widgetData.quickActionsWidget && (
+                            <Card
+                                className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+                                onClick={() => isEditMode && handleWidgetClick('quick_actions', widgetData.quickActionsWidget.widget_key)}
+                            >
+                                {isEditMode && (
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
+                                    </div>
+                                )}
+                                <CardHeader>
+                                    <CardTitle className="text-foreground">{widgetData.quickActionsWidget.title}</CardTitle>
+                                    <CardDescription className="text-muted-foreground">{widgetData.quickActionsWidget.description}</CardDescription>
+                                </CardHeader>
                             <CardContent className="space-y-3">
                                 <Link href="/clients/create">
                                     <Button className="w-full justify-start" variant="outline">
@@ -515,12 +688,16 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                                 </Link>
                             </CardContent>
                         </Card>
+                        )}
                     </div>
                 </div>
 
                 {/* Recent Proposals */}
-                {statsData.recentProposals && statsData.recentProposals.length > 0 && (
-                    <Card className="bg-card border-border relative">
+                {widgetData.recentProposalsWidget && statsData.recentProposals && statsData.recentProposals.length > 0 && (
+                    <Card
+                        className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+                        onClick={() => isEditMode && handleWidgetClick('recent_proposals', widgetData.recentProposalsWidget.widget_key)}
+                    >
                         {isEditMode && (
                             <div className="absolute top-2 right-2 z-10">
                                 <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
@@ -529,8 +706,8 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle className="text-foreground">Recent Proposals</CardTitle>
-                                    <CardDescription className="text-muted-foreground">Latest client proposals</CardDescription>
+                                    <CardTitle className="text-foreground">{widgetData.recentProposalsWidget.title}</CardTitle>
+                                    <CardDescription className="text-muted-foreground">{widgetData.recentProposalsWidget.description}</CardDescription>
                                 </div>
                                 <Link href="/proposals">
                                     <Button variant="outline" size="sm">
@@ -866,6 +1043,103 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                     </Alert>
                 </div>
             )}
+
+            {/* Widget Edit Modal */}
+            <Dialog open={showWidgetEditModal} onOpenChange={setShowWidgetEditModal}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center space-x-3">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <Edit className="w-6 h-6 text-primary" />
+                            </div>
+                            <span>Edit Widget</span>
+                        </DialogTitle>
+                        <DialogDescription>
+                            Customize your dashboard widget with AI assistance
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="widget-title">Widget Title</Label>
+                            <Input
+                                id="widget-title"
+                                value={widgetEditData.title}
+                                onChange={(e) => setWidgetEditData({...widgetEditData, title: e.target.value})}
+                                placeholder="Enter widget title"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="widget-description">Description</Label>
+                            <Textarea
+                                id="widget-description"
+                                value={widgetEditData.description}
+                                onChange={(e) => setWidgetEditData({...widgetEditData, description: e.target.value})}
+                                placeholder="Enter widget description"
+                                rows={2}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="ai-prompt">AI Prompt</Label>
+                            <Textarea
+                                id="ai-prompt"
+                                value={widgetEditData.userPrompt}
+                                onChange={(e) => setWidgetEditData({...widgetEditData, userPrompt: e.target.value})}
+                                placeholder="Tell AI what you want this widget to do or show..."
+                                rows={4}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Describe what you want the widget to display or how you want it to behave
+                            </p>
+                        </div>
+
+                        {selectedWidget && (
+                            <div className="space-y-2">
+                                <Label>Current Configuration</Label>
+                                <div className="p-3 bg-muted rounded-lg">
+                                    <pre className="text-xs text-muted-foreground overflow-auto">
+                                        {JSON.stringify(selectedWidget.configuration, null, 2)}
+                                    </pre>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter className="space-x-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowWidgetEditModal(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleUpdateWidget}
+                            variant="outline"
+                        >
+                            Save Changes
+                        </Button>
+                        <Button
+                            onClick={handleGenerateWidget}
+                            disabled={isGeneratingWidget || !widgetEditData.userPrompt.trim()}
+                            style={{ backgroundColor: '#d1ff75', color: '#000' }}
+                        >
+                            {isGeneratingWidget ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Generating...
+                                </>
+                            ) : (
+                                <>
+                                    <Brain className="w-4 h-4 mr-2" />
+                                    Generate with AI
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AuthenticatedLayout>
     );
 }

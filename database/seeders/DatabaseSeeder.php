@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
             ListingSeeder::class,
             AIProviderSeeder::class,
             AIModelSeeder::class,
+            DashboardWidgetSeeder::class,
         ]);
     }
 }

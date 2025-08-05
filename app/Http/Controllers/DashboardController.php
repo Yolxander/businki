@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\Proposal;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\DashboardWidget;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -16,7 +17,13 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // Get basic statistics
+        // Get user's dashboard widgets
+        $widgets = DashboardWidget::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->orderBy('position')
+            ->get();
+
+        // Get basic statistics for widget data
         $stats = [
             'totalClients' => Client::count(),
             'totalProposals' => Proposal::count(),
@@ -40,6 +47,7 @@ class DashboardController extends Controller
             ],
             'stats' => $stats,
             'clients' => $clients,
+            'widgets' => $widgets,
         ]);
     }
 

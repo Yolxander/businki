@@ -181,6 +181,14 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::post('/generate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'generate']);
     });
 
+    // Dashboard Widget routes
+    Route::prefix('dashboard-widgets')->group(function () {
+        Route::get('/user', [App\Http\Controllers\Api\DashboardWidgetController::class, 'getUserWidgets']);
+        Route::post('/info', [App\Http\Controllers\Api\DashboardWidgetController::class, 'getWidgetInfo']);
+        Route::post('/generate', [App\Http\Controllers\Api\DashboardWidgetController::class, 'generateWidget']);
+        Route::put('/update', [App\Http\Controllers\Api\DashboardWidgetController::class, 'updateWidget']);
+    });
+
 
 });
 
