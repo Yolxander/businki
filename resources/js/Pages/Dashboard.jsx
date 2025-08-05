@@ -54,7 +54,8 @@ import {
     BarChart3,
     CheckSquare,
     Wifi,
-    Volume2
+    Volume2,
+    Home
 } from 'lucide-react';
 
 export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
@@ -571,7 +572,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                             <div className="flex-1 p-6 space-y-4">
                                 <Button className="w-full justify-start bg-primary text-primary-foreground hover:bg-primary/90">
                                     <Plus className="w-4 h-4 mr-2" />
-                                    + New Chat
+                                    New Chat
                                 </Button>
 
                                 {/* Work Section */}
@@ -731,7 +732,25 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                         {/* Right Sidebar */}
                         <div className={`${rightSidebarCollapsed ? 'w-16' : 'w-80'} bg-sidebar border-l border-sidebar-border flex flex-col transition-all duration-300`}>
                             <div className="p-6 border-b border-sidebar-border">
-                                <div className="flex items-center justify-end">
+                                <div className="flex items-center justify-between">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" size="sm" className="text-sidebar-foreground/70 hover:text-sidebar-foreground">
+                                                <Settings className="w-4 h-4 mr-2" />
+                                                Customize
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleDashboardModeChange('default')}>
+                                                <Home className="w-4 h-4 mr-2" />
+                                                Default Mode
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleDashboardModeChange('ai_assistant')}>
+                                                <Brain className="w-4 h-4 mr-2" />
+                                                AI Assistant Mode
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                     <Button
                                         variant="ghost"
                                         size="sm"
