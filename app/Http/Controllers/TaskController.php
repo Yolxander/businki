@@ -503,7 +503,7 @@ class TaskController extends Controller
             'project_id' => 'sometimes|nullable|exists:projects,id',
             'phase_id' => 'nullable|integer',
             'title' => 'sometimes|required|string|max:255',
-            'status' => 'sometimes|required|in:todo,in_progress,done',
+            'status' => 'sometimes|required|in:todo,in_progress,done,inbox,in-progress,waiting,review',
             'due_date' => 'nullable|date',
             'assigned_to' => 'nullable|integer',
             'description' => 'nullable|string',
@@ -544,7 +544,23 @@ class TaskController extends Controller
         }
 
         try {
-            $task->update($request->all());
+            // Prepare the update data
+            $updateData = $request->all();
+
+            // Map frontend status values to database values
+            $statusMap = [
+                'inbox' => 'todo',
+                'in-progress' => 'in_progress',
+                'waiting' => 'todo',
+                'review' => 'in_progress',
+                'done' => 'done'
+            ];
+
+            if (isset($updateData['status']) && isset($statusMap[$updateData['status']])) {
+                $updateData['status'] = $statusMap[$updateData['status']];
+            }
+
+            $task->update($updateData);
             Log::info('Task updated successfully', ['task_id' => $task->id]);
 
             // Handle Inertia.js requests
