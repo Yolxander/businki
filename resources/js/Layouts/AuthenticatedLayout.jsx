@@ -511,12 +511,15 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
 
                             {/* Trial Information */}
                             <div className="border-t border-sidebar-border p-4">
-                                <div className="p-4 bg-sidebar-accent rounded-lg border border-primary/20">
-                                    <p className="text-sm text-sidebar-foreground mb-2">Your trial ends in 14 days</p>
-                                    <p className="text-xs text-sidebar-foreground/70 mb-3">
+                                <div className="p-4 bg-gradient-to-br from-[#d1ff75]/10 to-[#d1ff75]/5 rounded-lg border border-[#d1ff75]/20 shadow-sm">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                        <div className="w-2 h-2 bg-[#d1ff75] rounded-full animate-pulse"></div>
+                                        <p className="text-sm font-medium text-sidebar-foreground">Your trial ends in 14 days</p>
+                                    </div>
+                                    <p className="text-xs text-sidebar-foreground/70 mb-3 leading-relaxed">
                                         Enjoy working with reports, extract data, advanced search experience and much more.
                                     </p>
-                                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm">
+                                    <Button className="w-full bg-[#d1ff75] hover:bg-[#d1ff75]/90 text-black font-medium text-sm shadow-sm">
                                         <ArrowRight className="w-4 h-4 mr-1" />
                                         Upgrade
                                     </Button>

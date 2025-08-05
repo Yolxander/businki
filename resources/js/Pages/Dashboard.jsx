@@ -19,6 +19,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import ChatInterface from '@/components/ui/chat-interface';
 import {
     Plus,
     Users,
@@ -76,6 +77,10 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
     const [dashboardMode, setDashboardMode] = useState(initialDashboardMode); // 'default' or 'ai_assistant'
     const [aiContext, setAiContext] = useState('general'); // 'general', 'projects', 'clients', 'bobbi-flow', 'calendar', 'analytics'
     const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+    
+    // Chat state
+    const [chatMessages, setChatMessages] = useState([]);
+    const [isChatLoading, setIsChatLoading] = useState(false);
 
     // AI Generation form state
     const [aiFormData, setAiFormData] = useState({
@@ -306,6 +311,55 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
     const handleContextChange = (context) => {
         setAiContext(context);
+    };
+
+    // Chat handlers
+    const handleSendMessage = async (message) => {
+        // Add user message to chat
+        const userMessage = {
+            role: 'user',
+            content: message,
+            user: auth.user?.name
+        };
+        
+        setChatMessages(prev => [...prev, userMessage]);
+        setIsChatLoading(true);
+
+        // Simulate AI processing
+        setTimeout(() => {
+            // Add processing message
+            const processingMessage = {
+                role: 'assistant',
+                type: 'processing',
+                intent: 'Extract all invoices scheduled to be raised from today to the end of the year.',
+                agent: 'Revsaas'
+            };
+            
+            setChatMessages(prev => [...prev, processingMessage]);
+
+            // Simulate AI response after processing
+            setTimeout(() => {
+                const responseMessage = {
+                    role: 'assistant',
+                    type: 'response',
+                    summary: 'Here are all unbilled invoices from today to end of the year on founded data',
+                    data: [
+                        { invoiceNo: 'INV-0045', client: 'XYZ Corp.', dueDate: '2024-11-30', amount: '$12,500.00', status: 'Open' },
+                        { invoiceNo: 'INV-0045', client: 'ABC Tech', dueDate: '2024-10-20', amount: '$12,750.00', status: 'Open' },
+                        { invoiceNo: 'INV-0045', client: 'Digital Solutions', dueDate: '2024-11-05', amount: '$6,300.00', status: 'Pending' },
+                        { invoiceNo: 'INV-0045', client: 'FreshStart', dueDate: '2024-10-18', amount: '$4,500.00', status: 'Pending' },
+                        { invoiceNo: 'INV-0045', client: 'Creative Labs', dueDate: '2024-11-30', amount: '$3,200.00', status: 'Open' }
+                    ]
+                };
+                
+                setChatMessages(prev => [...prev, responseMessage]);
+                setIsChatLoading(false);
+            }, 2000);
+        }, 1000);
+    };
+
+    const handlePresetClick = (prompt) => {
+        handleSendMessage(prompt);
     };
 
     const getContextPrompts = (context) => {
@@ -654,24 +708,40 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                 <div className="mt-8">
                                     <h3 className="text-sm font-semibold text-sidebar-foreground/70 mb-3">Recent</h3>
                                     <div className="space-y-2">
-                                        <div className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent">
-                                            Send me the detail file for t...
-                                        </div>
-                                        <div className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent">
-                                            I need to generate report
-                                        </div>
+                                        {chatMessages.filter(msg => msg.role === 'user').slice(-3).map((message, index) => (
+                                            <div 
+                                                key={index}
+                                                className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent"
+                                                onClick={() => handlePresetClick(message.content)}
+                                            >
+                                                {message.content.length > 30 ? `${message.content.substring(0, 30)}...` : message.content}
+                                            </div>
+                                        ))}
+                                        {chatMessages.filter(msg => msg.role === 'user').length === 0 && (
+                                            <>
+                                                <div className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent">
+                                                    Send me the detail file for t...
+                                                </div>
+                                                <div className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent">
+                                                    I need to generate report
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Trial Info */}
                             <div className="p-6 border-t border-sidebar-border">
-                                <div className="p-4 bg-sidebar-accent rounded-lg border border-primary/20">
-                                    <p className="text-sm text-sidebar-foreground mb-2">Your trial ends in 14 days</p>
-                                    <p className="text-xs text-sidebar-foreground/70 mb-3">
+                                <div className="p-4 bg-gradient-to-br from-[#d1ff75]/10 to-[#d1ff75]/5 rounded-lg border border-[#d1ff75]/20 shadow-sm">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                        <div className="w-2 h-2 bg-[#d1ff75] rounded-full animate-pulse"></div>
+                                        <p className="text-sm font-medium text-sidebar-foreground">Your trial ends in 14 days</p>
+                                    </div>
+                                    <p className="text-xs text-sidebar-foreground/70 mb-3 leading-relaxed">
                                         Enjoy working with reports, extract data, advanced search experience and much more.
                                     </p>
-                                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm">
+                                    <Button className="w-full bg-[#d1ff75] hover:bg-[#d1ff75]/90 text-black font-medium text-sm shadow-sm">
                                         <ArrowRight className="w-4 h-4 mr-1" />
                                         Upgrade
                                     </Button>
@@ -695,63 +765,13 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
                         {/* Main Content */}
                         <div className="flex-1 bg-background flex flex-col">
-                            <div className="flex-1 p-8 flex flex-col">
-                                {/* Greeting */}
-                                <div className="mb-8">
-                                    <h1 className="text-3xl font-bold text-foreground mb-2">Hi, {auth.user?.name?.split(' ')[0] || 'there'}</h1>
-                                    <p className="text-xl text-muted-foreground">What can I help you with?</p>
-                                </div>
-
-                                {/* Instruction */}
-                                <p className="text-muted-foreground mb-8">
-                                    Choose a prompt below or write your own to start chatting with Bobbi.
-                                </p>
-
-                                {/* Input Field */}
-                                <div className="mb-8">
-                                    <div className="relative">
-                                        <Input
-                                            placeholder="Ask a question or make a request..."
-                                            className="w-full h-12 pl-4 pr-12 text-lg border-2 border-border focus:border-primary"
-                                        />
-                                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                <Paperclip className="w-4 h-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                <Command className="w-4 h-4" />
-                                            </Button>
-                                            <Button className="h-8 w-8 p-0 bg-muted hover:bg-muted/80 rounded-full">
-                                                <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Suggested Prompts */}
-                                <div className="grid grid-cols-2 gap-4 flex-1">
-                                    {getContextPrompts(aiContext).map((prompt, index) => {
-                                        const icons = [FileText, Building, TrendingUp, BarChart3, FileText, FileText, FileText, BarChart3];
-                                        const colors = ['text-blue-500', 'text-green-500', 'text-purple-500', 'text-orange-500', 'text-blue-500', 'text-green-500', 'text-purple-500', 'text-orange-500'];
-                                        const IconComponent = icons[index] || FileText;
-                                        const colorClass = colors[index] || 'text-blue-500';
-
-                                        return (
-                                            <Button key={index} variant="outline" className="h-auto p-4 justify-start text-left">
-                                                <IconComponent className={`w-5 h-5 mr-3 ${colorClass}`} />
-                                                <div>
-                                                    <div className="font-medium">{prompt}</div>
-                                                </div>
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Footer */}
-                                <div className="mt-8 text-center text-sm text-muted-foreground">
-                                    2024 Bobbi · Privacy Policy · Support
-                                </div>
-                            </div>
+                            <ChatInterface
+                                messages={chatMessages}
+                                onSendMessage={handleSendMessage}
+                                isLoading={isChatLoading}
+                                onPresetClick={handlePresetClick}
+                                context={aiContext}
+                            />
                         </div>
 
                         {/* Right Sidebar */}
