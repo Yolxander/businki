@@ -342,7 +342,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
         }
     };
 
-        const handleUpdateWidget = async () => {
+            const handleUpdateWidget = async () => {
         if (!selectedWidget || !widgetEditData.title.trim()) {
             alert('Please enter a title for the widget');
             return;
@@ -377,6 +377,44 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
         } catch (error) {
             console.error('Error updating widget:', error);
             alert('Failed to update widget');
+        }
+    };
+
+    const handleDeleteWidget = async () => {
+        if (!selectedWidget) {
+            return;
+        }
+
+        if (!confirm('Are you sure you want to delete this widget? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/dashboard-widgets/delete', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    widget_type: selectedWidget.widget_type,
+                    widget_key: selectedWidget.widget_key,
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                setShowWidgetEditModal(false);
+                // Refresh the page to show updated widgets
+                window.location.reload();
+            } else {
+                alert('Failed to delete widget: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error deleting widget:', error);
+            alert('Failed to delete widget');
         }
     };
 
@@ -429,17 +467,56 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                     </div>
                 </div>
 
-                                {/* Quick Stats */}
+                                                {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {widgetData.quickStatsWidgets.map((widget, index) => {
-                        // Get the corresponding stat data
-                        const statKey = widget.widget_key.replace('quick_stat_', '');
-                        const statData = quickStats.find(s => s.title.toLowerCase().includes(statKey)) || quickStats[index] || {
-                            title: widget.title,
-                            value: '0',
-                            description: widget.description,
-                            trend: widget.configuration?.trend || '+0 this week'
+                        // Calculate dynamic value based on widget configuration
+                        const getDynamicValue = (widget) => {
+                            const config = widget.configuration || {};
+                            const metricType = config.metric_type || '';
+                            const metricFilter = config.metric_filter || '';
+
+                            // Generate the dynamic key that matches the backend
+                            const dynamicKey = `dynamic_${metricType}_${metricFilter}`;
+
+                            // Try to get the dynamic value first
+                            if (statsData[dynamicKey] !== undefined) {
+                                if (metricType === 'revenue') {
+                                    return `$${(statsData[dynamicKey] || 0).toLocaleString()}`;
+                                }
+                                return statsData[dynamicKey]?.toString() || '0';
+                            }
+
+                            // Fallback to static values if dynamic key doesn't exist
+                            switch (metricType) {
+                                case 'projects':
+                                    if (metricFilter === 'active') {
+                                        return statsData.totalProjects || '0';
+                                    }
+                                    return statsData.totalProjects || '0';
+
+                                case 'clients':
+                                    return statsData.totalClients || '0';
+
+                                case 'tasks':
+                                    if (metricFilter === 'pending') {
+                                        return statsData.pendingTasks || '0';
+                                    }
+                                    return statsData.totalTasks || '0';
+
+                                case 'revenue':
+                                    return '0'; // Revenue widget removed
+
+                                case 'subtasks':
+                                    return '0'; // Will be calculated dynamically
+
+                                default:
+                                    return '0';
+                            }
                         };
+
+                        const dynamicValue = getDynamicValue(widget);
+                        const trend = widget.configuration?.trend || '+0 this week';
 
                         return (
                             <Card
@@ -458,9 +535,9 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-foreground">{statData.value}</div>
+                                    <div className="text-2xl font-bold text-foreground">{dynamicValue}</div>
                                     <p className="text-xs text-muted-foreground">{widget.description}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">{statData.trend}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{trend}</p>
                                 </CardContent>
                             </Card>
                         );
@@ -1061,6 +1138,20 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
 
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
+                            <Label htmlFor="ai-prompt">AI Prompt</Label>
+                            <Textarea
+                                id="ai-prompt"
+                                value={widgetEditData.userPrompt}
+                                onChange={(e) => setWidgetEditData({...widgetEditData, userPrompt: e.target.value})}
+                                placeholder="Tell AI what you want this widget to do or show..."
+                                rows={4}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Describe what you want the widget to display or how you want it to behave. After entering your prompt, click "Generate with AI" to populate the fields below.
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
                             <Label htmlFor="widget-title">Widget Title</Label>
                             <Input
                                 id="widget-title"
@@ -1081,20 +1172,6 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="ai-prompt">AI Prompt</Label>
-                            <Textarea
-                                id="ai-prompt"
-                                value={widgetEditData.userPrompt}
-                                onChange={(e) => setWidgetEditData({...widgetEditData, userPrompt: e.target.value})}
-                                placeholder="Tell AI what you want this widget to do or show..."
-                                rows={4}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Describe what you want the widget to display or how you want it to behave
-                            </p>
-                        </div>
-
                         {selectedWidget && (
                             <div className="space-y-2">
                                 <Label>Current Configuration</Label>
@@ -1113,6 +1190,12 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                             onClick={() => setShowWidgetEditModal(false)}
                         >
                             Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDeleteWidget}
+                            variant="destructive"
+                        >
+                            Delete Widget
                         </Button>
                         <Button
                             onClick={handleUpdateWidget}

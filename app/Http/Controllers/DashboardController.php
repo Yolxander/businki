@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\Proposal;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Subtask;
 use App\Models\DashboardWidget;
 use Illuminate\Support\Facades\Auth;
 
@@ -35,6 +36,9 @@ class DashboardController extends Controller
             'recentTasks' => $this->getRecentTasks(),
             'recentProjects' => $this->getRecentProjects(),
         ];
+
+        // Add dynamic calculations based on widget configurations
+        $stats = $this->addDynamicStats($stats);
 
         // Get clients for AI project generation
         $clients = Client::whereHas('users', function($query) use ($user) {
@@ -118,5 +122,79 @@ class DashboardController extends Controller
                     'created_at' => $project->created_at->diffForHumans(),
                 ];
             });
+    }
+
+    /**
+     * Add dynamic statistics based on widget configurations
+     */
+    private function addDynamicStats(array $stats): array
+    {
+        $user = Auth::user();
+
+        // Get user's widgets to understand what metrics they need
+        $widgets = DashboardWidget::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->where('widget_type', 'quick_stats')
+            ->get();
+
+        foreach ($widgets as $widget) {
+            $config = $widget->configuration ?? [];
+            $metricType = $config['metric_type'] ?? '';
+            $metricFilter = $config['metric_filter'] ?? '';
+
+            // Generate a unique key for this metric
+            $metricKey = "dynamic_{$metricType}_{$metricFilter}";
+
+            switch ($metricType) {
+                case 'subtasks':
+                    if ($metricFilter === 'assigned_to_user') {
+                        // Get subtasks where the parent task is assigned to the user
+                        $stats[$metricKey] = Subtask::whereHas('task', function($query) use ($user) {
+                            $query->where('assigned_to', $user->id);
+                        })->count();
+                    } else {
+                        $stats[$metricKey] = Subtask::count();
+                    }
+                    break;
+
+                case 'tasks':
+                    if ($metricFilter === 'pending') {
+                        $stats[$metricKey] = Task::whereIn('status', ['todo', 'in_progress'])->count();
+                    } elseif ($metricFilter === 'completed') {
+                        $stats[$metricKey] = Task::where('status', 'completed')->count();
+                    } else {
+                        $stats[$metricKey] = Task::count();
+                    }
+                    break;
+
+                case 'projects':
+                    if ($metricFilter === 'active') {
+                        $stats[$metricKey] = Project::whereIn('status', ['in_progress', 'active'])->count();
+                    } else {
+                        $stats[$metricKey] = Project::count();
+                    }
+                    break;
+
+                case 'clients':
+                    $stats[$metricKey] = Client::count();
+                    break;
+
+                case 'revenue':
+                    // Revenue widget removed
+                    $stats[$metricKey] = 0;
+                    break;
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Calculate monthly revenue
+     */
+    private function calculateMonthlyRevenue()
+    {
+        // This is a placeholder - implement your actual monthly revenue calculation
+        return 25000; // Example value
     }
 }

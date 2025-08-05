@@ -118,7 +118,7 @@ class DashboardWidgetController extends Controller
             }
 
             $generatedContent = json_decode($response['content'], true);
-            
+
             if (!$generatedContent) {
                 throw new \Exception('Invalid JSON response from AI');
             }
@@ -258,12 +258,64 @@ class DashboardWidgetController extends Controller
     }
 
     /**
+     * Delete a widget
+     */
+    public function deleteWidget(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'widget_type' => 'required|string',
+            'widget_key' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $widget = DashboardWidget::where('user_id', Auth::id())
+                ->where('widget_type', $request->widget_type)
+                ->where('widget_key', $request->widget_key)
+                ->first();
+
+            if (!$widget) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Widget not found'
+                ], 404);
+            }
+
+            // Soft delete by setting is_active to false
+            $widget->update(['is_active' => false]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Widget deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error deleting widget', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete widget'
+            ], 500);
+        }
+    }
+
+    /**
      * Build AI prompt for widget generation
      */
     private function buildWidgetPrompt(string $widgetType, string $userPrompt, array $currentConfig): string
     {
         $basePrompt = "You are an expert dashboard widget designer. Generate a JSON response for a dashboard widget based on the user's requirements.\n\n";
-        
+
         $widgetDescriptions = [
             'quick_stats' => 'Quick statistics cards showing key metrics like projects, clients, tasks, revenue',
             'recent_tasks' => 'List of recent tasks with status, priority, due dates, and project information',

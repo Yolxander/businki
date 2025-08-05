@@ -23,4 +23,9 @@ class Subtask extends Model
     {
         return $this->belongsTo(Task::class);
     }
+
+    public function assignedUser()
+    {
+        return $this->hasOneThrough(User::class, Task::class, 'id', 'id', 'task_id', 'assigned_to');
+    }
 }

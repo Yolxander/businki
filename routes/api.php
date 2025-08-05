@@ -187,6 +187,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::post('/info', [App\Http\Controllers\Api\DashboardWidgetController::class, 'getWidgetInfo']);
         Route::post('/generate', [App\Http\Controllers\Api\DashboardWidgetController::class, 'generateWidget']);
         Route::put('/update', [App\Http\Controllers\Api\DashboardWidgetController::class, 'updateWidget']);
+        Route::delete('/delete', [App\Http\Controllers\Api\DashboardWidgetController::class, 'deleteWidget']);
     });
 
 
