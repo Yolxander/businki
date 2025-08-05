@@ -20,6 +20,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import ChatInterface from '@/components/ui/chat-interface';
+import RecentChatsSidebar from '@/components/ui/recent-chats-sidebar';
 import {
     Plus,
     Users,
@@ -56,7 +57,8 @@ import {
     CheckSquare,
     Wifi,
     Volume2,
-    Home
+    Home,
+    MessageSquare
 } from 'lucide-react';
 
 export default function Dashboard({ auth, stats, clients = [], widgets = [], dashboardMode: initialDashboardMode = 'default' }) {
@@ -81,6 +83,8 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
     // Chat state
     const [chatMessages, setChatMessages] = useState([]);
     const [isChatLoading, setIsChatLoading] = useState(false);
+    const [currentChatId, setCurrentChatId] = useState(null);
+    const [showChatSidebar, setShowChatSidebar] = useState(false);
 
     // Collapsible sections state
     const [workCollapsed, setWorkCollapsed] = useState(false);
@@ -315,124 +319,231 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
     const handleContextChange = (context) => {
         setAiContext(context);
+        // Reset chat when context changes
+        setCurrentChatId(null);
+        setChatMessages([]);
     };
 
     // Chat handlers
     const handleSendMessage = async (message) => {
-        // Add user message to chat
-        const userMessage = {
-            role: 'user',
-            content: message,
-            user: auth.user?.name
-        };
+        try {
+            // If no current chat, create a new one
+            if (!currentChatId) {
+                const createResponse = await fetch('/api/chats', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: aiContext,
+                        first_message: message
+                    })
+                });
 
-        setChatMessages(prev => [...prev, userMessage]);
-        setIsChatLoading(true);
+                if (createResponse.ok) {
+                    const chatData = await createResponse.json();
+                    setCurrentChatId(chatData.chat.id);
+                } else {
+                    console.error('Failed to create chat');
+                    return;
+                }
+            }
 
-        // Simulate AI processing
-        setTimeout(() => {
-            // Add processing message
-            const processingMessage = {
-                role: 'assistant',
-                type: 'processing',
-                intent: 'Extract all invoices scheduled to be raised from today to the end of the year.',
-                agent: 'Revsaas'
+            // Add user message to chat
+            const userMessage = {
+                role: 'user',
+                content: message,
+                user: auth.user?.name
             };
 
-            setChatMessages(prev => [...prev, processingMessage]);
+            setChatMessages(prev => [...prev, userMessage]);
+            setIsChatLoading(true);
 
-            // Simulate AI response after processing
+            // Send message to server
+            const messageResponse = await fetch(`/api/chats/${currentChatId}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: message,
+                    role: 'user'
+                })
+            });
+
+            if (!messageResponse.ok) {
+                console.error('Failed to send message');
+                setIsChatLoading(false);
+                return;
+            }
+
+            // Simulate AI processing and response
             setTimeout(() => {
-                const responseMessage = {
+                // Add processing message
+                const processingMessage = {
                     role: 'assistant',
-                    type: 'response',
-                    summary: 'Here are all unbilled invoices from today to end of the year on founded data',
-                    data: [
-                        { invoiceNo: 'INV-0045', client: 'XYZ Corp.', dueDate: '2024-11-30', amount: '$12,500.00', status: 'Open' },
-                        { invoiceNo: 'INV-0045', client: 'ABC Tech', dueDate: '2024-10-20', amount: '$12,750.00', status: 'Open' },
-                        { invoiceNo: 'INV-0045', client: 'Digital Solutions', dueDate: '2024-11-05', amount: '$6,300.00', status: 'Pending' },
-                        { invoiceNo: 'INV-0045', client: 'FreshStart', dueDate: '2024-10-18', amount: '$4,500.00', status: 'Pending' },
-                        { invoiceNo: 'INV-0045', client: 'Creative Labs', dueDate: '2024-11-30', amount: '$3,200.00', status: 'Open' }
-                    ]
+                    type: 'processing',
+                    intent: 'Processing your request...',
+                    agent: 'Bobbi'
                 };
 
-                setChatMessages(prev => [...prev, responseMessage]);
-                setIsChatLoading(false);
-            }, 2000);
-        }, 1000);
+                setChatMessages(prev => [...prev, processingMessage]);
+
+                // Simulate AI response after processing
+                setTimeout(async () => {
+                    // Send assistant response to server
+                    await fetch(`/api/chats/${currentChatId}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            content: `I've processed your request: "${message}". Here's what I found...`,
+                            role: 'assistant'
+                        })
+                    });
+
+                    const responseMessage = {
+                        role: 'assistant',
+                        type: 'response',
+                        summary: `Response to: ${message}`,
+                        content: `I've processed your request: "${message}". Here's what I found...`
+                    };
+
+                    setChatMessages(prev => [...prev, responseMessage]);
+                    setIsChatLoading(false);
+                }, 2000);
+            }, 1000);
+
+        } catch (error) {
+            console.error('Error sending message:', error);
+            setIsChatLoading(false);
+        }
     };
 
     const handlePresetClick = (prompt) => {
         handleSendMessage(prompt);
     };
 
+    // Chat management functions
+    const handleNewChat = () => {
+        setCurrentChatId(null);
+        setChatMessages([]);
+        setShowChatSidebar(false);
+    };
+
+    const handleChatSelect = async (chatId) => {
+        try {
+            const response = await fetch(`/api/chats/${chatId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setCurrentChatId(chatId);
+                setChatMessages(data.messages);
+                setShowChatSidebar(false);
+            }
+        } catch (error) {
+            console.error('Error loading chat:', error);
+        }
+    };
+
+    const handleDeleteChat = async (chatId) => {
+        try {
+            const response = await fetch(`/api/chats/${chatId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            });
+            if (response.ok) {
+                if (currentChatId === chatId) {
+                    setCurrentChatId(null);
+                    setChatMessages([]);
+                }
+            }
+        } catch (error) {
+            console.error('Error deleting chat:', error);
+        }
+    };
+
+    const handleEditChat = (chatId) => {
+        // TODO: Implement chat editing functionality
+        console.log('Edit chat:', chatId);
+    };
+
     const getContextPrompts = (context) => {
         switch (context) {
             case 'projects':
                 return [
-                    'Create a new project timeline',
-                    'Update project status and milestones',
-                    'Generate project progress report',
-                    'Assign tasks to team members',
+                    'Show me all active projects with their progress',
+                    'Create a new project timeline and milestones',
+                    'Generate a project progress report for this month',
+                    'Find projects with overdue tasks',
                     'Review project budget and expenses',
-                    'Create project documentation',
+                    'Assign tasks to team members',
                     'Schedule project meetings',
                     'Track project deliverables'
                 ];
             case 'clients':
                 return [
-                    'Add new client information',
-                    'Update client contact details',
-                    'Generate client status report',
+                    'List all clients with their contact information',
+                    'Show me clients with outstanding invoices',
+                    'Generate a client satisfaction report',
+                    'Find clients with recent activity',
                     'Schedule client meetings',
                     'Track client communications',
                     'Create client proposals',
-                    'Review client feedback',
-                    'Manage client relationships'
+                    'Review client feedback'
                 ];
             case 'bobbi-flow':
                 return [
-                    'Start a new workflow',
-                    'Review workflow progress',
-                    'Optimize workflow efficiency',
+                    'Show me the current workflow status',
+                    'List all automated processes',
+                    'Generate a workflow efficiency report',
+                    'Find bottlenecks in current processes',
                     'Create workflow templates',
                     'Track workflow metrics',
                     'Automate workflow steps',
-                    'Generate workflow reports',
-                    'Manage workflow permissions'
+                    'Generate workflow reports'
                 ];
             case 'calendar':
                 return [
-                    'Schedule new meetings',
-                    'Review upcoming appointments',
+                    'Show me all meetings this week',
+                    'List upcoming deadlines',
+                    'Generate a calendar summary',
+                    'Find conflicting appointments',
                     'Block time for focused work',
                     'Coordinate team schedules',
                     'Set up recurring events',
-                    'Manage calendar integrations',
-                    'Track time allocation',
-                    'Generate calendar reports'
+                    'Track time allocation'
                 ];
             case 'analytics':
                 return [
-                    'Generate performance reports',
-                    'Analyze key metrics',
-                    'Create data visualizations',
+                    'Generate a revenue report for this quarter',
+                    'Show me performance metrics',
+                    'Create a trend analysis report',
+                    'Find areas for improvement',
                     'Track business KPIs',
                     'Monitor trends and patterns',
                     'Generate insights dashboard',
-                    'Export analytics data',
-                    'Set up automated reporting'
+                    'Export analytics data'
                 ];
             default:
                 return [
-                    'Create a new project timeline and milestones',
-                    'Generate a client status report for this month',
+                    'Show me invoices ranked by amount',
+                    'Generate a project report',
+                    'Show me all pending tasks for this week',
+                    'Create a summary of client communications',
                     'Review and update task priorities across all projects',
                     'Create a proposal template for new client work',
                     'Analyze project performance and identify bottlenecks',
-                    'Schedule team meetings for the upcoming week',
-                    'Generate a progress report for active projects',
-                    'Set up automated workflows for client onboarding'
+                    'Schedule team meetings for the upcoming week'
                 ];
         }
     };
@@ -795,14 +906,41 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                             </div>
                         </div>
 
+                        {/* Chat Sidebar */}
+                        {showChatSidebar && (
+                            <RecentChatsSidebar
+                                currentChatId={currentChatId}
+                                onChatSelect={handleChatSelect}
+                                onNewChat={handleNewChat}
+                                onDeleteChat={handleDeleteChat}
+                                onEditChat={handleEditChat}
+                                chatType={aiContext}
+                                collapsed={false}
+                            />
+                        )}
+
                         {/* Main Content */}
                         <div className="flex-1 bg-background flex flex-col">
+                            <div className="flex items-center justify-between p-4 border-b border-border">
+                                <div className="flex items-center space-x-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowChatSidebar(!showChatSidebar)}
+                                        className="text-muted-foreground hover:text-foreground"
+                                    >
+                                        <MessageSquare className="w-4 h-4 mr-2" />
+                                        {aiContext === 'general' ? 'Recent Chats' : `${aiContext.charAt(0).toUpperCase() + aiContext.slice(1)} Chats`}
+                                    </Button>
+                                </div>
+                            </div>
                             <ChatInterface
                                 messages={chatMessages}
                                 onSendMessage={handleSendMessage}
                                 isLoading={isChatLoading}
                                 onPresetClick={handlePresetClick}
                                 context={aiContext}
+                                presetPrompts={getContextPrompts(aiContext)}
                             />
                         </div>
 

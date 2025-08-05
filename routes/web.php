@@ -313,6 +313,14 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
     Route::post('/api/context-engineering/documents/{document}/regenerate', [App\Http\Controllers\Api\ContextEngineeringController::class, 'regenerateDocument']);
     Route::get('/api/context-engineering/types', [App\Http\Controllers\Api\ContextEngineeringController::class, 'types']);
     Route::get('/api/context-engineering/stats', [App\Http\Controllers\Api\ContextEngineeringController::class, 'stats']);
+
+    // Chat API routes
+    Route::get('/api/chats/recent', [App\Http\Controllers\ChatController::class, 'getRecentChats']);
+    Route::get('/api/chats/all', [App\Http\Controllers\ChatController::class, 'getAllChats']);
+    Route::get('/api/chats/{chatId}', [App\Http\Controllers\ChatController::class, 'getChat']);
+    Route::post('/api/chats', [App\Http\Controllers\ChatController::class, 'createChat']);
+    Route::post('/api/chats/{chatId}/messages', [App\Http\Controllers\ChatController::class, 'sendMessage']);
+    Route::delete('/api/chats/{chatId}', [App\Http\Controllers\ChatController::class, 'deleteChat']);
 });
 
 // Proposal Routes

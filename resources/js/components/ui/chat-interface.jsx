@@ -14,12 +14,7 @@ import {
     FileText,
     Building,
     TrendingUp,
-    BarChart3,
-    Xero,
-    Stripe,
-    Sage,
-    Intuit,
-    Airtable
+    BarChart3
 } from 'lucide-react';
 
 export default function ChatInterface({
@@ -59,7 +54,13 @@ export default function ChatInterface({
     };
 
     const getContextPrompts = (context) => {
-        const prompts = {
+        // Use the presetPrompts passed from parent if available, otherwise fall back to defaults
+        if (presetPrompts && presetPrompts.length > 0) {
+            return presetPrompts;
+        }
+
+        // Fallback prompts if none provided
+        const fallbackPrompts = {
             general: [
                 "Show me invoices ranked by amount",
                 "Generate a project report",
@@ -97,7 +98,7 @@ export default function ChatInterface({
                 "Find areas for improvement"
             ]
         };
-        return prompts[context] || prompts.general;
+        return fallbackPrompts[context] || fallbackPrompts.general;
     };
 
     const renderSystemMessage = (message) => {
