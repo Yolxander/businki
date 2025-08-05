@@ -14,6 +14,12 @@ import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
     Plus,
     Users,
     FileText,
@@ -36,7 +42,9 @@ import {
     User,
     Building,
     ArrowLeft,
-    ArrowRight as ArrowRightIcon
+    ArrowRight as ArrowRightIcon,
+    Settings,
+    Edit
 } from 'lucide-react';
 
 export default function Dashboard({ auth, stats, clients = [] }) {
@@ -45,6 +53,7 @@ export default function Dashboard({ auth, stats, clients = [] }) {
     const [showAlert, setShowAlert] = useState(false);
     const [alertState, setAlertState] = useState('loading'); // 'loading', 'success'
     const [generatedProject, setGeneratedProject] = useState(null);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     // AI Generation form state
     const [aiFormData, setAiFormData] = useState({
@@ -242,8 +251,17 @@ export default function Dashboard({ auth, stats, clients = [] }) {
         }
     };
 
+    const handleCustomizeClick = () => {
+        setIsEditMode(!isEditMode);
+    };
+
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout
+            user={auth.user}
+            currentPage="dashboard"
+            onCustomizeClick={handleCustomizeClick}
+            isEditMode={isEditMode}
+        >
             <Head title="Dashboard" />
 
             <div className="space-y-6">
@@ -270,7 +288,12 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                 {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {quickStats.map((stat) => (
-                        <Card key={stat.title} className="bg-card border-border">
+                        <Card key={stat.title} className="bg-card border-border relative">
+                            {isEditMode && (
+                                <div className="absolute top-2 right-2 z-10">
+                                    <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
+                                </div>
+                            )}
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">
                                     {stat.title}
@@ -290,7 +313,12 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                     {/* Recent Tasks & Projects */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Recent Tasks */}
-                        <Card className="bg-card border-border">
+                        <Card className="bg-card border-border relative">
+                            {isEditMode && (
+                                <div className="absolute top-2 right-2 z-10">
+                                    <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
+                                </div>
+                            )}
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <div>
@@ -358,7 +386,12 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                         </Card>
 
                         {/* Recent Projects */}
-                        <Card className="bg-card border-border">
+                        <Card className="bg-card border-border relative">
+                            {isEditMode && (
+                                <div className="absolute top-2 right-2 z-10">
+                                    <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
+                                </div>
+                            )}
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <div>
@@ -436,7 +469,12 @@ export default function Dashboard({ auth, stats, clients = [] }) {
 
                     {/* Quick Actions */}
                     <div className="space-y-6">
-                        <Card className="bg-card border-border">
+                        <Card className="bg-card border-border relative">
+                            {isEditMode && (
+                                <div className="absolute top-2 right-2 z-10">
+                                    <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
+                                </div>
+                            )}
                             <CardHeader>
                                 <CardTitle className="text-foreground">Quick Actions</CardTitle>
                                 <CardDescription className="text-muted-foreground">Get things done faster</CardDescription>
@@ -482,7 +520,12 @@ export default function Dashboard({ auth, stats, clients = [] }) {
 
                 {/* Recent Proposals */}
                 {statsData.recentProposals && statsData.recentProposals.length > 0 && (
-                    <Card className="bg-card border-border">
+                    <Card className="bg-card border-border relative">
+                        {isEditMode && (
+                            <div className="absolute top-2 right-2 z-10">
+                                <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
+                            </div>
+                        )}
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>

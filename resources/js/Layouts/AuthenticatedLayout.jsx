@@ -25,7 +25,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Target,
-    CreditCard
+    CreditCard,
+    Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrowserTabs } from '@/components/ui/tabs';
@@ -43,7 +44,7 @@ export const SidebarContext = React.createContext({
     setSidebarCollapsed: () => {},
 });
 
-export default function AuthenticatedLayout({ user, header, children, focusMode = false }) {
+export default function AuthenticatedLayout({ user, header, children, focusMode = false, currentPage, onCustomizeClick, isEditMode }) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => {
         // Initialize sidebar collapsed state from localStorage
@@ -272,6 +273,30 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                             </div>
 
                             <div className="flex items-center gap-x-6 flex-shrink-0">
+                                {/* Customize button - only show on dashboard */}
+                                {currentPage === 'dashboard' && (
+                                    isEditMode ? (
+                                        <Button variant="outline" size="sm" onClick={onCustomizeClick}>
+                                            <X className="w-4 h-4 mr-2" />
+                                            Exit Mode
+                                        </Button>
+                                    ) : (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" size="sm">
+                                                    <Settings className="w-4 h-4 mr-2" />
+                                                    Customize
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={onCustomizeClick}>
+                                                    <Edit className="w-4 h-4 mr-2" />
+                                                    Edit widgets
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )
+                                )}
                                 {/* User profile moved to sidebar bottom */}
                             </div>
                         </div>
