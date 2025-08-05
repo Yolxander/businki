@@ -819,17 +819,17 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                                                            {dashboardMode === 'ai_assistant' ? (
-                                                <DropdownMenuItem onClick={() => handleDashboardModeChange('default')}>
-                                                    <Home className="w-4 h-4 mr-2" />
-                                                    Classic Mode
-                                                </DropdownMenuItem>
-                                                                                        ) : (
-                                                <DropdownMenuItem onClick={() => handleDashboardModeChange('ai_assistant')}>
-                                                    <Brain className="w-4 h-4 mr-2" />
-                                                    Chat Mode
-                                                </DropdownMenuItem>
-                                            )}
+                                                {dashboardMode === 'ai_assistant' ? (
+                                                    <DropdownMenuItem onClick={() => handleDashboardModeChange('default')}>
+                                                        <Home className="w-4 h-4 mr-2" />
+                                                        Classic Mode
+                                                    </DropdownMenuItem>
+                                                ) : (
+                                                    <DropdownMenuItem onClick={() => handleDashboardModeChange('ai_assistant')}>
+                                                        <Brain className="w-4 h-4 mr-2" />
+                                                        Chat Mode
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     )}

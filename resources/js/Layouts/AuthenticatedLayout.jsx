@@ -301,14 +301,17 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                                                     <Edit className="w-4 h-4 mr-2" />
                                                     Edit widgets
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => onDashboardModeChange('ai_assistant')}>
-                                                    <Brain className="w-4 h-4 mr-2" />
-                                                    Chat Mode
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => onDashboardModeChange('default')}>
-                                                    <Home className="w-4 h-4 mr-2" />
-                                                    Classic Mode
-                                                </DropdownMenuItem>
+                                                {dashboardMode === 'ai_assistant' ? (
+                                                    <DropdownMenuItem onClick={() => onDashboardModeChange('default')}>
+                                                        <Home className="w-4 h-4 mr-2" />
+                                                        Classic Mode
+                                                    </DropdownMenuItem>
+                                                ) : (
+                                                    <DropdownMenuItem onClick={() => onDashboardModeChange('ai_assistant')}>
+                                                        <Brain className="w-4 h-4 mr-2" />
+                                                        Chat Mode
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     )
