@@ -287,8 +287,77 @@ export default function Dashboard({ auth, stats, clients = [] }) {
 
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Recent Projects */}
-                    <div className="lg:col-span-2">
+                    {/* Recent Tasks & Projects */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Recent Tasks */}
+                        <Card className="bg-card border-border">
+                            <CardHeader>
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <CardTitle className="text-foreground">Recent Tasks</CardTitle>
+                                        <CardDescription className="text-muted-foreground">Latest task updates</CardDescription>
+                                    </div>
+                                    <Link href="/tasks">
+                                        <Button variant="outline" size="sm">
+                                            View All
+                                            <ArrowRight className="w-4 h-4 ml-2" />
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4 max-h-60 overflow-y-auto">
+                                    {statsData.recentTasks && statsData.recentTasks.length > 0 ? (
+                                        statsData.recentTasks.map((task) => (
+                                            <div key={task.id} className="group">
+                                                <div className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer relative">
+                                                    {/* Zen Mode Button - appears on hover */}
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                                                        <Link href={`/zen-mode?task=${task.id}`}>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-6 w-6 p-0 bg-background/80 backdrop-blur hover:bg-primary/10"
+                                                                title="Enter Zen Mode"
+                                                            >
+                                                                <Zap className="w-3 h-3 text-primary" />
+                                                            </Button>
+                                                        </Link>
+                                                    </div>
+                                                    <Link href={`/tasks/${task.id}`} className="flex items-start space-x-3 flex-1">
+                                                        {getTaskStatusIcon(task.status)}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-foreground truncate">
+                                                                {task.title}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">{task.project_name}</p>
+                                                            <div className="flex items-center space-x-2 mt-1">
+                                                                <Badge className={getPriorityColor(task.priority)} size="sm">
+                                                                    {task.priority}
+                                                                </Badge>
+                                                                {task.due_date && (
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        Due {new Date(task.due_date).toLocaleDateString()}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                            <p className="text-sm">No tasks yet</p>
+                                            <p className="text-xs">Create your first task to get started</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Recent Projects */}
                         <Card className="bg-card border-border">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
@@ -305,7 +374,7 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
+                                <div className="space-y-4 max-h-80 overflow-y-auto">
                                     {statsData.recentProjects && statsData.recentProjects.length > 0 ? (
                                         statsData.recentProjects.map((project) => (
                                             <Link key={project.id} href={`/projects/${project.id}`}>
@@ -365,9 +434,8 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                         </Card>
                     </div>
 
-                    {/* Quick Actions & Recent Tasks */}
+                    {/* Quick Actions */}
                     <div className="space-y-6">
-                        {/* Quick Actions */}
                         <Card className="bg-card border-border">
                             <CardHeader>
                                 <CardTitle className="text-foreground">Quick Actions</CardTitle>
@@ -394,70 +462,24 @@ export default function Dashboard({ auth, stats, clients = [] }) {
                                         Add Task
                                     </Button>
                                 </Link>
-                                <Link href="/proposals/create">
+                                <Link href="/calendar">
                                     <Button className="w-full justify-start" variant="outline">
-                                        <Zap className="w-4 h-4 mr-2" />
-                                        Generate Proposal
+                                        <Calendar className="w-4 h-4 mr-2" />
+                                        View Calendar
                                     </Button>
                                 </Link>
-                            </CardContent>
-                        </Card>
-
-                        {/* Recent Tasks */}
-                        <Card className="bg-card border-border">
-                            <CardHeader>
-                                <CardTitle className="text-foreground">Recent Tasks</CardTitle>
-                                <CardDescription className="text-muted-foreground">Latest task updates</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4 max-h-80 overflow-y-auto">
-                                    {statsData.recentTasks && statsData.recentTasks.length > 0 ? (
-                                        statsData.recentTasks.map((task) => (
-                                            <div key={task.id} className="group">
-                                                <div className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer relative">
-                                                    {/* Zen Mode Button - appears on hover */}
-                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-                                                        <Link href={`/zen-mode?task=${task.id}`}>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-6 w-6 p-0 bg-background/80 backdrop-blur hover:bg-primary/10"
-                                                                title="Enter Zen Mode"
-                                                            >
-                                                                <Zap className="w-3 h-3 text-primary" />
-                                                            </Button>
-                                                        </Link>
-                                                    </div>
-                                                    <Link href={`/tasks/${task.id}`} className="flex items-start space-x-3 flex-1">
-                                                        {getTaskStatusIcon(task.status)}
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium text-foreground truncate">
-                                                                {task.title}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">{task.project_name}</p>
-                                                            <div className="flex items-center space-x-2 mt-1">
-                                                                <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                                    {task.priority}
-                                                                </Badge>
-                                                                {task.due_date && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        Due {new Date(task.due_date).toLocaleDateString()}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                            <p className="text-sm">No tasks yet</p>
-                                            <p className="text-xs">Create your first task to get started</p>
-                                        </div>
-                                    )}
-                                </div>
+                                <Link href="/zen-mode">
+                                    <Button className="w-full justify-start" variant="outline">
+                                        <Zap className="w-4 h-4 mr-2" />
+                                        Zen Mode
+                                    </Button>
+                                </Link>
+                                <Link href="/playground">
+                                    <Button className="w-full justify-start" variant="outline">
+                                        <Brain className="w-4 h-4 mr-2" />
+                                        AI Playground
+                                    </Button>
+                                </Link>
                             </CardContent>
                         </Card>
                     </div>
