@@ -44,7 +44,17 @@ import {
     ArrowLeft,
     ArrowRight as ArrowRightIcon,
     Settings,
-    Edit
+    Edit,
+    Search,
+    ChevronDown,
+    ChevronRight,
+    ChevronLeft,
+    Paperclip,
+    Command,
+    BarChart3,
+    CheckSquare,
+    Wifi,
+    Volume2
 } from 'lucide-react';
 
 export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
@@ -62,6 +72,9 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
         userPrompt: '',
     });
     const [isGeneratingWidget, setIsGeneratingWidget] = useState(false);
+    const [dashboardMode, setDashboardMode] = useState('default'); // 'default' or 'ai_assistant'
+    const [aiContext, setAiContext] = useState('general'); // 'general', 'projects', 'clients', 'bobbi-flow', 'calendar', 'analytics'
+    const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
     // AI Generation form state
     const [aiFormData, setAiFormData] = useState({
@@ -263,6 +276,86 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
         setIsEditMode(!isEditMode);
     };
 
+    const handleDashboardModeChange = (mode) => {
+        setDashboardMode(mode);
+        setIsEditMode(false);
+    };
+
+    const handleContextChange = (context) => {
+        setAiContext(context);
+    };
+
+    const getContextPrompts = (context) => {
+        switch (context) {
+            case 'projects':
+                return [
+                    'Create a new project timeline',
+                    'Update project status and milestones',
+                    'Generate project progress report',
+                    'Assign tasks to team members',
+                    'Review project budget and expenses',
+                    'Create project documentation',
+                    'Schedule project meetings',
+                    'Track project deliverables'
+                ];
+            case 'clients':
+                return [
+                    'Add new client information',
+                    'Update client contact details',
+                    'Generate client status report',
+                    'Schedule client meetings',
+                    'Track client communications',
+                    'Create client proposals',
+                    'Review client feedback',
+                    'Manage client relationships'
+                ];
+            case 'bobbi-flow':
+                return [
+                    'Start a new workflow',
+                    'Review workflow progress',
+                    'Optimize workflow efficiency',
+                    'Create workflow templates',
+                    'Track workflow metrics',
+                    'Automate workflow steps',
+                    'Generate workflow reports',
+                    'Manage workflow permissions'
+                ];
+            case 'calendar':
+                return [
+                    'Schedule new meetings',
+                    'Review upcoming appointments',
+                    'Block time for focused work',
+                    'Coordinate team schedules',
+                    'Set up recurring events',
+                    'Manage calendar integrations',
+                    'Track time allocation',
+                    'Generate calendar reports'
+                ];
+            case 'analytics':
+                return [
+                    'Generate performance reports',
+                    'Analyze key metrics',
+                    'Create data visualizations',
+                    'Track business KPIs',
+                    'Monitor trends and patterns',
+                    'Generate insights dashboard',
+                    'Export analytics data',
+                    'Set up automated reporting'
+                ];
+            default:
+                return [
+                    'Consolidate financial data from all subsidiaries',
+                    'Reconcile the bank accounts for March',
+                    'Provide a 12-month cash flow forecast',
+                    'Show the budget variance for Q1 compared to actuals',
+                    'Generate the monthly income statement',
+                    'Book a journal entry',
+                    'Generate the quarterly profit and loss statement',
+                    'Create a real-time financial performance dashboard'
+                ];
+        }
+    };
+
     const handleWidgetClick = async (widgetType, widgetKey) => {
         if (!isEditMode) return;
 
@@ -453,29 +546,307 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
             currentPage="dashboard"
             onCustomizeClick={handleCustomizeClick}
             isEditMode={isEditMode}
+            dashboardMode={dashboardMode}
+            onDashboardModeChange={handleDashboardModeChange}
         >
             <Head title="Dashboard" />
 
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                        <p className="text-muted-foreground">Welcome back! Here's what's happening with your projects.</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Link href="/calendar">
-                            <Button variant="outline">
-                                <Calendar className="w-4 h-4 mr-2" />
-                                View Calendar
-                            </Button>
-                        </Link>
-                        <Button onClick={() => setShowNewProjectModal(true)}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            New Project
-                        </Button>
+            {dashboardMode === 'ai_assistant' ? (
+                <div className="fixed inset-0 bg-background">
+                    {/* AI Assistant Layout - Full Screen */}
+                    <div className="flex h-full">
+                        {/* Left Sidebar */}
+                        <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+                            {/* Logo */}
+                            <div className="p-6 border-b border-sidebar-border">
+                                <div className="flex items-center space-x-2">
+                                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                                        <Brain className="w-5 h-5 text-primary-foreground" />
+                                    </div>
+                                    <span className="text-xl font-bold text-sidebar-foreground">Bobbi</span>
+                                </div>
+                            </div>
+
+                            {/* Navigation */}
+                            <div className="flex-1 p-6 space-y-4">
+                                <Button className="w-full justify-start bg-primary text-primary-foreground hover:bg-primary/90">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    + New Chat
+                                </Button>
+
+                                {/* Work Section */}
+                                <div className="space-y-2">
+                                    <h3 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider mb-2">Work</h3>
+                                    <Button
+                                        variant="ghost"
+                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'projects' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                        onClick={() => handleContextChange('projects')}
+                                    >
+                                        <Briefcase className="w-4 h-4 mr-2" />
+                                        Projects
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'clients' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                        onClick={() => handleContextChange('clients')}
+                                    >
+                                        <Users className="w-4 h-4 mr-2" />
+                                        Clients
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'bobbi-flow' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                        onClick={() => handleContextChange('bobbi-flow')}
+                                    >
+                                        <Target className="w-4 h-4 mr-2" />
+                                        Bobbi Flow
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'calendar' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                        onClick={() => handleContextChange('calendar')}
+                                    >
+                                        <Calendar className="w-4 h-4 mr-2" />
+                                        Calendar
+                                    </Button>
+                                </div>
+
+                                {/* System Section */}
+                                <div className="space-y-2">
+                                    <h3 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider mb-2">System</h3>
+                                    <Button
+                                        variant="ghost"
+                                        className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'analytics' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                        onClick={() => handleContextChange('analytics')}
+                                    >
+                                        <BarChart3 className="w-4 h-4 mr-2" />
+                                        Analytics
+                                    </Button>
+                                </div>
+
+                                {/* Recent */}
+                                <div className="mt-8">
+                                    <h3 className="text-sm font-semibold text-sidebar-foreground/70 mb-3">Recent</h3>
+                                    <div className="space-y-2">
+                                        <div className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent">
+                                            Send me the detail file for t...
+                                        </div>
+                                        <div className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent">
+                                            I need to generate report
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Trial Info */}
+                            <div className="p-6 border-t border-sidebar-border">
+                                <div className="p-4 bg-sidebar-accent rounded-lg border border-primary/20">
+                                    <p className="text-sm text-sidebar-foreground mb-2">Your trial ends in 14 days</p>
+                                    <p className="text-xs text-sidebar-foreground/70 mb-3">
+                                        Enjoy working with reports, extract data, advanced search experience and much more.
+                                    </p>
+                                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm">
+                                        <ArrowRight className="w-4 h-4 mr-1" />
+                                        Upgrade
+                                    </Button>
+                                </div>
+
+                                {/* User Profile */}
+                                <div className="mt-4 flex items-center space-x-3 p-3 bg-sidebar-accent rounded-lg">
+                                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                                        <span className="text-sm font-medium text-primary-foreground">
+                                            {auth.user?.name?.charAt(0) || 'U'}
+                                        </span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-sidebar-foreground">{auth.user?.name || 'User'}</p>
+                                        <p className="text-xs text-sidebar-foreground/70">{auth.user?.email || 'user@example.com'}</p>
+                                    </div>
+                                    <ChevronDown className="w-4 h-4 text-sidebar-foreground/70" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Main Content */}
+                        <div className="flex-1 bg-background flex flex-col">
+                            <div className="flex-1 p-8 flex flex-col">
+                                {/* Greeting */}
+                                <div className="mb-8">
+                                    <h1 className="text-3xl font-bold text-foreground mb-2">Hi, {auth.user?.name?.split(' ')[0] || 'there'}</h1>
+                                    <p className="text-xl text-muted-foreground">What can I help you with?</p>
+                                </div>
+
+                                {/* Instruction */}
+                                <p className="text-muted-foreground mb-8">
+                                    Choose a prompt below or write your own to start chatting with Bobbi.
+                                </p>
+
+                                {/* Input Field */}
+                                <div className="mb-8">
+                                    <div className="relative">
+                                        <Input
+                                            placeholder="Ask a question or make a request..."
+                                            className="w-full h-12 pl-4 pr-12 text-lg border-2 border-border focus:border-primary"
+                                        />
+                                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                <Paperclip className="w-4 h-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                <Command className="w-4 h-4" />
+                                            </Button>
+                                            <Button className="h-8 w-8 p-0 bg-muted hover:bg-muted/80 rounded-full">
+                                                <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Suggested Prompts */}
+                                <div className="grid grid-cols-2 gap-4 flex-1">
+                                    {getContextPrompts(aiContext).map((prompt, index) => {
+                                        const icons = [FileText, Building, TrendingUp, BarChart3, FileText, FileText, FileText, BarChart3];
+                                        const colors = ['text-blue-500', 'text-green-500', 'text-purple-500', 'text-orange-500', 'text-blue-500', 'text-green-500', 'text-purple-500', 'text-orange-500'];
+                                        const IconComponent = icons[index] || FileText;
+                                        const colorClass = colors[index] || 'text-blue-500';
+
+                                        return (
+                                            <Button key={index} variant="outline" className="h-auto p-4 justify-start text-left">
+                                                <IconComponent className={`w-5 h-5 mr-3 ${colorClass}`} />
+                                                <div>
+                                                    <div className="font-medium">{prompt}</div>
+                                                </div>
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Footer */}
+                                <div className="mt-8 text-center text-sm text-muted-foreground">
+                                    2024 Bobbi · Privacy Policy · Support
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Sidebar */}
+                        <div className={`${rightSidebarCollapsed ? 'w-16' : 'w-80'} bg-sidebar border-l border-sidebar-border flex flex-col transition-all duration-300`}>
+                            <div className="p-6 border-b border-sidebar-border">
+                                <div className="flex items-center justify-end">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                                        onClick={() => setRightSidebarCollapsed(!rightSidebarCollapsed)}
+                                    >
+                                        {rightSidebarCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                    </Button>
+                                </div>
+                            </div>
+
+                                                        {/* Dashboard Widgets */}
+                            {!rightSidebarCollapsed && (
+                                <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+                                    {widgetData.quickStatsWidgets.slice(0, 4).map((widget, index) => {
+                                        // Calculate dynamic value based on widget configuration
+                                        const getDynamicValue = (widget) => {
+                                            const config = widget.configuration || {};
+                                            const metricType = config.metric_type || '';
+                                            const metricFilter = config.metric_filter || '';
+
+                                            // Generate the dynamic key that matches the backend
+                                            const dynamicKey = `dynamic_${metricType}_${metricFilter}`;
+
+                                            // Try to get the dynamic value first
+                                            if (statsData[dynamicKey] !== undefined) {
+                                                if (metricType === 'revenue') {
+                                                    return `$${(statsData[dynamicKey] || 0).toLocaleString()}`;
+                                                }
+                                                return statsData[dynamicKey]?.toString() || '0';
+                                            }
+
+                                            // Fallback to static values if dynamic key doesn't exist
+                                            switch (metricType) {
+                                                case 'projects':
+                                                    if (metricFilter === 'active') {
+                                                        return statsData.totalProjects || '0';
+                                                    }
+                                                    return statsData.totalProjects || '0';
+
+                                                case 'clients':
+                                                    return statsData.totalClients || '0';
+
+                                                case 'tasks':
+                                                    if (metricFilter === 'pending') {
+                                                        return statsData.pendingTasks || '0';
+                                                    }
+                                                    return statsData.totalTasks || '0';
+
+                                                case 'proposals':
+                                                    if (metricFilter === 'draft') {
+                                                        return statsData.dynamic_proposals_draft || '0';
+                                                    } else if (metricFilter === 'sent') {
+                                                        return statsData.dynamic_proposals_sent || '0';
+                                                    } else if (metricFilter === 'accepted') {
+                                                        return statsData.dynamic_proposals_accepted || '0';
+                                                    }
+                                                    return statsData.dynamic_proposals_all || '0';
+
+                                                case 'revenue':
+                                                    return '0'; // Revenue widget removed
+
+                                                case 'subtasks':
+                                                    return '0'; // Will be calculated dynamically
+
+                                                default:
+                                                    return '0';
+                                            }
+                                        };
+
+                                        const dynamicValue = getDynamicValue(widget);
+                                        const trend = widget.configuration?.trend || '+0 this week';
+
+                                        return (
+                                            <Card key={widget.widget_key} className="bg-card border-border">
+                                                <CardHeader className="pb-2">
+                                                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                                                        {widget.title}
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="text-2xl font-bold text-foreground">{dynamicValue}</div>
+                                                    <p className="text-xs text-muted-foreground">{trend}</p>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+
+                        </div>
                     </div>
                 </div>
+            ) : (
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+                            <p className="text-muted-foreground">Welcome back! Here's what's happening with your projects.</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Link href="/calendar">
+                                <Button variant="outline">
+                                    <Calendar className="w-4 h-4 mr-2" />
+                                    View Calendar
+                                </Button>
+                            </Link>
+                            <Button onClick={() => setShowNewProjectModal(true)}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                New Project
+                            </Button>
+                        </div>
+                    </div>
 
                                                 {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -837,6 +1208,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
                     </Card>
                 )}
             </div>
+            )}
 
                         {/* New Project Modal */}
             <Dialog open={showNewProjectModal} onOpenChange={setShowNewProjectModal}>
@@ -1246,3 +1618,4 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [] }) {
         </AuthenticatedLayout>
     );
 }
+

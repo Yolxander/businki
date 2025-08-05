@@ -13,6 +13,7 @@ class DashboardWidget extends Model
     protected $fillable = [
         'user_id',
         'widget_type',
+        'dashboard_type',
         'widget_key',
         'title',
         'description',
@@ -53,6 +54,17 @@ class DashboardWidget extends Model
             'recent_projects' => 'Recent Projects',
             'quick_actions' => 'Quick Actions',
             'recent_proposals' => 'Recent Proposals',
+        ];
+    }
+
+    /**
+     * Get dashboard types
+     */
+    public static function getDashboardTypes(): array
+    {
+        return [
+            'default' => 'Default Dashboard',
+            'ai_assistant' => 'AI Assistant Dashboard',
         ];
     }
 

@@ -26,7 +26,9 @@ import {
     ChevronRight,
     Target,
     CreditCard,
-    Edit
+    Edit,
+    RefreshCw,
+    ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrowserTabs } from '@/components/ui/tabs';
@@ -44,7 +46,7 @@ export const SidebarContext = React.createContext({
     setSidebarCollapsed: () => {},
 });
 
-export default function AuthenticatedLayout({ user, header, children, focusMode = false, currentPage, onCustomizeClick, isEditMode }) {
+export default function AuthenticatedLayout({ user, header, children, focusMode = false, currentPage, onCustomizeClick, isEditMode, dashboardMode = 'default', onDashboardModeChange }) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => {
         // Initialize sidebar collapsed state from localStorage
@@ -239,9 +241,15 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
 
     return (
         <SidebarContext.Provider value={{ sidebarCollapsed, setSidebarCollapsed }}>
-            <div className="min-h-screen bg-background">
-                {/* Top navbar - hidden in focus mode */}
-                {!focusMode && (
+            {/* AI Assistant Mode - Full Screen Override */}
+            {currentPage === 'dashboard' && dashboardMode === 'ai_assistant' ? (
+                <div className="fixed inset-0 z-50">
+                    {children}
+                </div>
+            ) : (
+                <div className="min-h-screen bg-background">
+                    {/* Top navbar - hidden in focus mode */}
+                    {!focusMode && (
                     <div className={`fixed top-0 right-0 z-50 bg-sidebar border-b border-sidebar-border shadow-sm transition-all duration-300 ${
                         sidebarCollapsed ? 'left-16' : 'left-64'
                     }`}>
@@ -292,6 +300,14 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                                                 <DropdownMenuItem onClick={onCustomizeClick}>
                                                     <Edit className="w-4 h-4 mr-2" />
                                                     Edit widgets
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => onDashboardModeChange('ai_assistant')}>
+                                                    <Brain className="w-4 h-4 mr-2" />
+                                                    AI Assistant Mode
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => onDashboardModeChange('default')}>
+                                                    <Home className="w-4 h-4 mr-2" />
+                                                    Default Mode
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -493,6 +509,20 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                                 </nav>
                             </div>
 
+                            {/* Trial Information */}
+                            <div className="border-t border-sidebar-border p-4">
+                                <div className="p-4 bg-sidebar-accent rounded-lg border border-primary/20">
+                                    <p className="text-sm text-sidebar-foreground mb-2">Your trial ends in 14 days</p>
+                                    <p className="text-xs text-sidebar-foreground/70 mb-3">
+                                        Enjoy working with reports, extract data, advanced search experience and much more.
+                                    </p>
+                                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm">
+                                        <ArrowRight className="w-4 h-4 mr-1" />
+                                        Upgrade
+                                    </Button>
+                                </div>
+                            </div>
+
                             {/* User profile section at bottom of sidebar */}
                             <div className="border-t border-sidebar-border p-4">
                                 <div className="flex items-center gap-x-3">
@@ -557,7 +587,8 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
                         </div>
                     </main>
                 </div>
-            </div>
+                </div>
+            )}
         </SidebarContext.Provider>
     );
 }
