@@ -315,12 +315,31 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
     Route::get('/api/context-engineering/stats', [App\Http\Controllers\Api\ContextEngineeringController::class, 'stats']);
 
     // Chat API routes
-    Route::get('/api/chats/recent', [App\Http\Controllers\ChatController::class, 'getRecentChats']);
-    Route::get('/api/chats/all', [App\Http\Controllers\ChatController::class, 'getAllChats']);
-    Route::get('/api/chats/{chatId}', [App\Http\Controllers\ChatController::class, 'getChat']);
-    Route::post('/api/chats', [App\Http\Controllers\ChatController::class, 'createChat']);
-    Route::post('/api/chats/{chatId}/messages', [App\Http\Controllers\ChatController::class, 'sendMessage']);
-    Route::delete('/api/chats/{chatId}', [App\Http\Controllers\ChatController::class, 'deleteChat']);
+    Route::get('/api/chats/recent', [App\Http\Controllers\Api\ChatController::class, 'getRecentChats']);
+    Route::get('/api/chats/all', [App\Http\Controllers\Api\ChatController::class, 'getAllChats']);
+    Route::get('/api/chats/{chatId}', [App\Http\Controllers\Api\ChatController::class, 'getChat']);
+    Route::post('/api/chats', [App\Http\Controllers\Api\ChatController::class, 'createChat']);
+    Route::post('/api/chats/{chatId}/messages', [App\Http\Controllers\Api\ChatController::class, 'sendMessage']);
+    Route::get('/api/chats/suggestions', [App\Http\Controllers\Api\ChatController::class, 'getChatSuggestions']);
+    Route::delete('/api/chats/{chatId}', [App\Http\Controllers\Api\ChatController::class, 'deleteChat']);
+    Route::get('/api/chats/stats', [App\Http\Controllers\Api\ChatController::class, 'getChatStats']);
+
+    // Update user dashboard mode
+    Route::post('/api/user/dashboard-mode', function (Request $request) {
+        $request->validate([
+            'dashboard_mode' => 'required|in:default,ai_assistant',
+        ]);
+
+        $user = Auth::user();
+        $user->dashboard_mode = $request->dashboard_mode;
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Dashboard mode updated successfully',
+            'dashboard_mode' => $user->dashboard_mode
+        ]);
+    });
 });
 
 // Proposal Routes

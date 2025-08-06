@@ -4,12 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Chat;
 use App\Models\ChatMessage;
+use App\Services\AIChatService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ChatController extends Controller
 {
+    private AIChatService $aiChatService;
+
+    public function __construct(AIChatService $aiChatService)
+    {
+        $this->aiChatService = $aiChatService;
+    }
+
     /**
      * Get recent chats for the current user.
      */
@@ -104,24 +113,48 @@ class ChatController extends Controller
      */
     public function createChat(Request $request): JsonResponse
     {
+        // Debug logging
+        Log::info('Chat creation attempt', [
+            'user_id' => Auth::id(),
+            'type' => $request->type,
+            'first_message' => $request->first_message,
+            'authenticated' => Auth::check()
+        ]);
+
         $request->validate([
             'type' => 'required|in:general,projects,clients,bobbi-flow,calendar,system,analytics',
             'first_message' => 'nullable|string',
         ]);
 
-        $chat = Chat::create([
-            'user_id' => Auth::id(),
-            'type' => $request->type,
-            'first_message' => $request->first_message,
-            'last_activity_at' => now(),
-        ]);
+        try {
+            $chat = Chat::create([
+                'user_id' => Auth::id(),
+                'type' => $request->type,
+                'first_message' => $request->first_message,
+                'last_activity_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Chat creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
 
         // If there's a first message, create the message record
         if ($request->first_message) {
-            $chat->messages()->create([
-                'role' => 'user',
-                'content' => $request->first_message,
-            ]);
+            try {
+                $chat->messages()->create([
+                    'role' => 'user',
+                    'content' => $request->first_message,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Message creation failed', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chat->id
+                ]);
+                throw $e;
+            }
         }
 
         return response()->json([
@@ -135,7 +168,7 @@ class ChatController extends Controller
     }
 
     /**
-     * Send a message to a chat.
+     * Send a message to a chat and get AI response.
      */
     public function sendMessage(Request $request, int $chatId): JsonResponse
     {
@@ -146,8 +179,8 @@ class ChatController extends Controller
 
         $chat = Chat::where('user_id', Auth::id())->findOrFail($chatId);
 
-        // Create the message
-        $message = $chat->messages()->create([
+        // Create the user message
+        $userMessage = $chat->messages()->create([
             'role' => $request->role,
             'content' => $request->content,
         ]);
@@ -160,14 +193,79 @@ class ChatController extends Controller
             $chat->update(['title' => $chat->generateTitle()]);
         }
 
-        return response()->json([
+        // If this is a user message, generate AI response
+        $aiResponse = null;
+        if ($request->role === 'user') {
+            try {
+                $aiResult = $this->aiChatService->processMessage($chat, $request->content);
+                
+                if ($aiResult['success']) {
+                    // Create AI response message
+                    $aiResponse = $chat->messages()->create([
+                        'role' => 'assistant',
+                        'content' => $aiResult['response'],
+                        'metadata' => $aiResult['metadata'] ?? []
+                    ]);
+                } else {
+                    // Create error response message
+                    $aiResponse = $chat->messages()->create([
+                        'role' => 'assistant',
+                        'content' => $aiResult['response'],
+                        'metadata' => ['error' => $aiResult['error'] ?? 'Unknown error']
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('AI response generation failed', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chatId,
+                    'user_message' => $request->content
+                ]);
+                
+                // Create fallback response
+                $aiResponse = $chat->messages()->create([
+                    'role' => 'assistant',
+                    'content' => 'I apologize, but I encountered an error processing your request. Please try again.',
+                    'metadata' => ['error' => $e->getMessage()]
+                ]);
+            }
+        }
+
+        $response = [
             'message' => [
-                'id' => $message->id,
-                'role' => $message->role,
-                'content' => $message->content,
-                'created_at' => $message->created_at->toISOString(),
+                'id' => $userMessage->id,
+                'role' => $userMessage->role,
+                'content' => $userMessage->content,
+                'created_at' => $userMessage->created_at->toISOString(),
             ]
-        ], 201);
+        ];
+
+        // Add AI response if generated
+        if ($aiResponse) {
+            $response['ai_response'] = [
+                'id' => $aiResponse->id,
+                'role' => $aiResponse->role,
+                'content' => $aiResponse->content,
+                'created_at' => $aiResponse->created_at->toISOString(),
+                'metadata' => $aiResponse->metadata
+            ];
+        }
+
+        return response()->json($response, 201);
+    }
+
+    /**
+     * Get chat type suggestions for the frontend.
+     */
+    public function getChatSuggestions(Request $request): JsonResponse
+    {
+        $type = $request->get('type', 'general');
+        
+        $suggestions = $this->aiChatService->getChatTypeSuggestions($type);
+        
+        return response()->json([
+            'suggestions' => $suggestions,
+            'chat_type' => $type
+        ]);
     }
 
     /**
