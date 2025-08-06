@@ -35,8 +35,8 @@ export default function RecentChatsSidebar({
         try {
             const response = await fetch(`/api/chats/recent?type=${chatType}&limit=5`);
             const data = await response.json();
-            setRecentChats(data.chats);
-            setHasMore(data.has_more);
+            setRecentChats(data.data.chats);
+            setHasMore(data.data.has_more);
         } catch (error) {
             console.error('Error loading recent chats:', error);
         } finally {
@@ -48,8 +48,8 @@ export default function RecentChatsSidebar({
         try {
             const response = await fetch(`/api/chats/all?type=${chatType}&page=1&per_page=10`);
             const data = await response.json();
-            setRecentChats(data.data);
-            setHasMore(data.next_page_url !== null);
+            setRecentChats(data.data.data);
+            setHasMore(data.data.next_page_url !== null);
         } catch (error) {
             console.error('Error loading more chats:', error);
         }

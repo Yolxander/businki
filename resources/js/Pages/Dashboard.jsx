@@ -327,8 +327,10 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
     // Chat handlers
     const handleSendMessage = async (message) => {
         try {
+            let chatId = currentChatId;
+
             // If no current chat, create a new one
-            if (!currentChatId) {
+            if (!chatId) {
                 const createResponse = await fetch('/api/chats', {
                     method: 'POST',
                     headers: {
@@ -344,9 +346,12 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
                 if (createResponse.ok) {
                     const chatData = await createResponse.json();
-                    setCurrentChatId(chatData.chat.id);
+                    console.log('Chat created successfully:', chatData);
+                    chatId = chatData.data.chat.id;
+                    setCurrentChatId(chatId);
                 } else {
-                    console.error('Failed to create chat');
+                    const errorData = await createResponse.json();
+                    console.error('Failed to create chat:', errorData);
                     return;
                 }
             }
@@ -362,7 +367,8 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
             setIsChatLoading(true);
 
             // Send message to server
-            const messageResponse = await fetch(`/api/chats/${currentChatId}/messages`, {
+            console.log('Sending message to chat:', chatId);
+            const messageResponse = await fetch(`/api/chats/${chatId}/messages`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -376,50 +382,27 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
             });
 
             if (!messageResponse.ok) {
-                console.error('Failed to send message');
+                const errorData = await messageResponse.json();
+                console.error('Failed to send message:', errorData);
                 setIsChatLoading(false);
                 return;
             }
 
-            // Simulate AI processing and response
-            setTimeout(() => {
-                // Add processing message
-                const processingMessage = {
+            // Get the response data which includes the AI response
+            const responseData = await messageResponse.json();
+            console.log('Message response:', responseData);
+
+            // Add the AI response to the chat if it exists
+            if (responseData.data && responseData.data.ai_response) {
+                const aiMessage = {
                     role: 'assistant',
-                    type: 'processing',
-                    intent: 'Processing your request...',
-                    agent: 'Bobbi'
+                    content: responseData.data.ai_response.content,
+                    timestamp: responseData.data.ai_response.created_at
                 };
+                setChatMessages(prev => [...prev, aiMessage]);
+            }
 
-                setChatMessages(prev => [...prev, processingMessage]);
-
-                // Simulate AI response after processing
-                setTimeout(async () => {
-                    // Send assistant response to server
-                    await fetch(`/api/chats/${currentChatId}/messages`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            content: `I've processed your request: "${message}". Here's what I found...`,
-                            role: 'assistant'
-                        })
-                    });
-
-                    const responseMessage = {
-                        role: 'assistant',
-                        type: 'response',
-                        summary: `Response to: ${message}`,
-                        content: `I've processed your request: "${message}". Here's what I found...`
-                    };
-
-                    setChatMessages(prev => [...prev, responseMessage]);
-                    setIsChatLoading(false);
-                }, 2000);
-            }, 1000);
+            setIsChatLoading(false);
 
         } catch (error) {
             console.error('Error sending message:', error);
@@ -445,43 +428,24 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
             if (createResponse.ok) {
                 const chatData = await createResponse.json();
-                setCurrentChatId(chatData.chat.id);
+                console.log('Chat created with preset:', chatData);
+                setCurrentChatId(chatData.data.chat.id);
 
-                // Add the user message to the chat interface
-                const userMessage = {
-                    role: 'user',
-                    content: prompt,
-                    user: auth.user?.name
-                };
-                setChatMessages([userMessage]);
-                setIsChatLoading(true);
-
-                // Simulate AI response
-                setTimeout(async () => {
-                    // Send assistant response to server
-                    await fetch(`/api/chats/${chatData.chat.id}/messages`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            content: `I've processed your request: "${prompt}". Here's what I found...`,
-                            role: 'assistant'
-                        })
-                    });
-
-                    const responseMessage = {
-                        role: 'assistant',
-                        type: 'response',
-                        summary: `Response to: ${prompt}`,
-                        content: `I've processed your request: "${prompt}". Here's what I found...`
+                // Load the chat messages to get the AI response
+                const chatResponse = await fetch(`/api/chats/${chatData.data.chat.id}`);
+                if (chatResponse.ok) {
+                    const chatData = await chatResponse.json();
+                    setChatMessages(chatData.data.messages);
+                } else {
+                    // Fallback: just add the user message
+                    const userMessage = {
+                        role: 'user',
+                        content: prompt,
+                        user: auth.user?.name
                     };
-
-                    setChatMessages(prev => [...prev, responseMessage]);
-                    setIsChatLoading(false);
-                }, 2000);
+                    setChatMessages([userMessage]);
+                }
+                setIsChatLoading(false);
             }
         } catch (error) {
             console.error('Error creating chat with preset:', error);
@@ -515,7 +479,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
             if (response.ok) {
                 const data = await response.json();
                 setCurrentChatId(chatId);
-                setChatMessages(data.messages);
+                setChatMessages(data.data.messages);
                 setShowChatSidebar(false);
             }
         } catch (error) {

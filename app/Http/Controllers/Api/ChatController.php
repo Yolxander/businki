@@ -189,6 +189,11 @@ class ChatController extends Controller
      */
     public function createChat(Request $request): JsonResponse
     {
+        Log::info('Creating chat', [
+            'user_id' => Auth::id(),
+            'request_data' => $request->all()
+        ]);
+
         $validator = Validator::make($request->all(), [
             'type' => 'required|string|in:general,projects,clients,bobbi-flow,calendar,system,analytics',
             'first_message' => 'nullable|string|max:1000',
@@ -196,6 +201,9 @@ class ChatController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::error('Chat creation validation failed', [
+                'errors' => $validator->errors()
+            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
@@ -212,6 +220,11 @@ class ChatController extends Controller
                 'last_activity_at' => now(),
             ]);
 
+            Log::info('Chat created successfully', [
+                'chat_id' => $chat->id,
+                'user_id' => $chat->user_id
+            ]);
+
             // If there's a first message, create the message record and generate AI response
             if ($request->first_message) {
                 $userMessage = $chat->messages()->create([
@@ -221,7 +234,7 @@ class ChatController extends Controller
 
                 // Generate AI response for the first message
                 $aiResult = $this->aiChatService->processMessage($chat, $request->first_message);
-                
+
                 if ($aiResult['success']) {
                     $aiResponse = $chat->messages()->create([
                         'role' => 'assistant',
@@ -262,6 +275,12 @@ class ChatController extends Controller
      */
     public function sendMessage(Request $request, int $chatId): JsonResponse
     {
+        Log::info('Sending message', [
+            'chat_id' => $chatId,
+            'user_id' => Auth::id(),
+            'request_data' => $request->all()
+        ]);
+
         $validator = Validator::make($request->all(), [
             'content' => 'required|string|max:4000',
             'role' => 'required|string|in:user,assistant',
@@ -269,6 +288,9 @@ class ChatController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::error('Message validation failed', [
+                'errors' => $validator->errors()
+            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
@@ -278,6 +300,11 @@ class ChatController extends Controller
 
         try {
             $chat = Chat::where('user_id', Auth::id())->findOrFail($chatId);
+
+            Log::info('Chat found', [
+                'chat_id' => $chat->id,
+                'chat_type' => $chat->type
+            ]);
 
             // Create the user message
             $userMessage = $chat->messages()->create([
@@ -297,7 +324,7 @@ class ChatController extends Controller
             $aiResponse = null;
             if ($request->role === 'user') {
                 $aiResult = $this->aiChatService->processMessage($chat, $request->content, $request->options ?? []);
-                
+
                 if ($aiResult['success']) {
                     // Create AI response message
                     $aiResponse = $chat->messages()->create([
@@ -375,7 +402,7 @@ class ChatController extends Controller
         try {
             $type = $request->get('type', 'general');
             $suggestions = $this->aiChatService->getChatTypeSuggestions($type);
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -430,7 +457,7 @@ class ChatController extends Controller
     {
         try {
             $userId = Auth::id();
-            
+
             $stats = [
                 'total_chats' => Chat::where('user_id', $userId)->count(),
                 'total_messages' => ChatMessage::whereHas('chat', function($query) use ($userId) {
@@ -471,4 +498,4 @@ class ChatController extends Controller
             ], 500);
         }
     }
-} 
+}

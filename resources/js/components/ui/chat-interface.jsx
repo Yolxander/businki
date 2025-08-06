@@ -110,7 +110,7 @@ export default function ChatInterface({
                             <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
                         </div>
                     </div>
-                    <div className="flex-shrink-0 bg-card rounded-lg p-4 border border-border">
+                    <div className="max-w-[70%] bg-card rounded-lg p-4 border border-border">
                         <div className="space-y-3">
                             <div className="flex items-center space-x-2">
                                 <Check className="w-4 h-4 text-green-500" />
@@ -149,7 +149,7 @@ export default function ChatInterface({
                             <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
                         </div>
                     </div>
-                    <div className="flex-shrink-0 bg-card rounded-lg p-4 border border-border">
+                    <div className="max-w-[70%] bg-card rounded-lg p-4 border border-border">
                         <div className="mb-3">
                             <p className="text-sm text-muted-foreground">{message.summary}</p>
                             <div className="flex space-x-2 mt-2">
@@ -226,8 +226,8 @@ export default function ChatInterface({
                         <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
                     </div>
                 </div>
-                <div className="flex-shrink-0 bg-card rounded-lg p-4 border border-border">
-                    <p className="text-sm">{message.content}</p>
+                <div className="max-w-[70%] bg-card rounded-lg p-4 border border-border">
+                    <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                 </div>
             </div>
         );
@@ -236,9 +236,9 @@ export default function ChatInterface({
     const renderUserMessage = (message) => {
         return (
             <div className="flex items-start space-x-3 mb-6 justify-end">
-                <div className="flex-shrink-0">
+                <div className="max-w-[70%]">
                     <div className="bg-gradient-to-br from-[#d1ff75]/20 to-[#d1ff75]/10 rounded-lg p-4 border border-[#d1ff75]/20 shadow-sm">
-                        <p className="text-sm text-foreground">{message.content}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap break-words">{message.content}</p>
                     </div>
                 </div>
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
@@ -295,7 +295,7 @@ export default function ChatInterface({
                                         <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
                                     </div>
                                 </div>
-                                <div className="flex-shrink-0 bg-card rounded-lg p-4 border border-border">
+                                <div className="max-w-[70%] bg-card rounded-lg p-4 border border-border">
                                     <div className="flex space-x-2">
                                         <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
                                         <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
