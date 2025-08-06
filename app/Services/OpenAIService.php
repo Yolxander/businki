@@ -645,4 +645,248 @@ class OpenAIService
 
         return '$' . number_format($cost, 4);
     }
+
+    /**
+     * Generate intent detection using OpenAI models
+     */
+    public function generateIntentDetection(string $message, array $context = [], array $options = []): array
+    {
+        try {
+            $model = $options['model'] ?? $this->model;
+            $temperature = $options['temperature'] ?? 0.1; // Low temperature for consistent intent detection
+            $maxTokens = $options['max_tokens'] ?? 1000;
+            $topP = $options['top_p'] ?? 0.9;
+
+            $prompt = $this->buildIntentDetectionPrompt($message, $context);
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'system', 'content' => 'You are an AI assistant specialized in detecting user intents from business management conversations.'],
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'max_tokens' => $maxTokens,
+                'temperature' => $temperature,
+                'top_p' => $topP,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $content = $data['choices'][0]['message']['content'] ?? '';
+                $usage = $data['usage'] ?? [];
+
+                return [
+                    'content' => $content,
+                    'tokens' => $usage['total_tokens'] ?? 0,
+                    'cost' => $this->calculateCost($usage['total_tokens'] ?? 0, $model),
+                    'parsed_intent' => $this->parseIntentDetectionResponse($content, $message)
+                ];
+            } else {
+                $errorBody = $response->body();
+                $statusCode = $response->status();
+
+                Log::error('OpenAI intent detection failed', [
+                    'status_code' => $statusCode,
+                    'response_body' => $errorBody,
+                    'model' => $model
+                ]);
+
+                throw new Exception("OpenAI intent detection failed: {$errorBody}");
+            }
+        } catch (Exception $e) {
+            Log::error('OpenAI intent detection error', [
+                'error' => $e->getMessage(),
+                'message' => $message
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Build prompt for intent detection
+     */
+    private function buildIntentDetectionPrompt(string $message, array $context = []): string
+    {
+        return "Analyze the user message and identify the primary intent and any relevant entities. Return your response in the following JSON format:
+
+{
+    \"intent\": {
+        \"type\": \"[intent_type]\",
+        \"action\": \"[action]\",
+        \"confidence\": [confidence_score_0_to_1],
+        \"entities\": {
+            \"[entity_type]\": \"[entity_value]\"
+        }
+    }
+}
+
+Available intent types:
+- client: Client management (create, read, update, delete, list)
+- project: Project management (create, read, update, delete, list)
+- task: Task management (create, read, update, delete, list)
+- proposal: Proposal management (create, read, update, delete, list)
+- analytics: Data analysis and reporting
+- calendar: Scheduling and time management
+- general: General business queries
+- system: System configuration and settings
+
+Available actions:
+- create: Create new item
+- read: View or get information
+- update: Modify existing item
+- delete: Remove item
+- list: Show multiple items
+- analyze: Analyze data or generate reports
+- schedule: Schedule or plan
+- configure: Configure settings
+
+Entity types to extract:
+- name: Person or company name
+- email: Email address
+- phone: Phone number
+- company: Company name
+- project_id: Project identifier
+- task_id: Task identifier
+- client_id: Client identifier
+- date: Date or time
+- status: Status information
+- priority: Priority level
+- amount: Monetary amount
+- description: Description or details
+
+Context information: " . json_encode($context) . "
+
+User message: " . $message;
+    }
+
+    /**
+     * Parse intent detection response
+     */
+    private function parseIntentDetectionResponse(string $response, string $originalMessage): array
+    {
+        try {
+            // Try to extract JSON from the response
+            $jsonMatch = preg_match('/\{.*\}/s', $response, $matches);
+            if ($jsonMatch) {
+                $jsonData = json_decode($matches[0], true);
+                if (json_last_error() === JSON_ERROR_NONE && isset($jsonData['intent'])) {
+                    return $this->validateAndEnhanceIntent($jsonData['intent'], $originalMessage);
+                }
+            }
+
+            // If JSON parsing fails, try to extract intent from text
+            return $this->extractIntentFromText($response, $originalMessage);
+        } catch (Exception $e) {
+            Log::error('Failed to parse intent detection response', [
+                'error' => $e->getMessage(),
+                'response' => $response
+            ]);
+
+            return [
+                'type' => 'general',
+                'action' => 'none',
+                'confidence' => 0.3,
+                'entities' => [],
+                'raw_response' => $response
+            ];
+        }
+    }
+
+    /**
+     * Validate and enhance intent data
+     */
+    private function validateAndEnhanceIntent(array $intent, string $originalMessage): array
+    {
+        $validTypes = ['client', 'project', 'task', 'proposal', 'analytics', 'calendar', 'general', 'system'];
+        $validActions = ['create', 'read', 'update', 'delete', 'list', 'analyze', 'schedule', 'configure'];
+
+        // Validate intent type
+        if (!isset($intent['type']) || !in_array($intent['type'], $validTypes)) {
+            $intent['type'] = 'general';
+        }
+
+        // Validate action
+        if (!isset($intent['action']) || !in_array($intent['action'], $validActions)) {
+            $intent['action'] = 'none';
+        }
+
+        // Validate confidence
+        if (!isset($intent['confidence']) || !is_numeric($intent['confidence'])) {
+            $intent['confidence'] = 0.5;
+        }
+        $intent['confidence'] = max(0, min(1, $intent['confidence']));
+
+        // Ensure entities is an array
+        if (!isset($intent['entities']) || !is_array($intent['entities'])) {
+            $intent['entities'] = [];
+        }
+
+        // Add original message for reference
+        $intent['original_message'] = $originalMessage;
+
+        return $intent;
+    }
+
+    /**
+     * Extract intent from text response when JSON parsing fails
+     */
+    private function extractIntentFromText(string $response, string $originalMessage): array
+    {
+        $intent = [
+            'type' => 'general',
+            'action' => 'none',
+            'confidence' => 0.4,
+            'entities' => [],
+            'original_message' => $originalMessage
+        ];
+
+        // Try to extract intent type from text
+        $responseLower = strtolower($response);
+
+        if (str_contains($responseLower, 'client')) {
+            $intent['type'] = 'client';
+        } elseif (str_contains($responseLower, 'project')) {
+            $intent['type'] = 'project';
+        } elseif (str_contains($responseLower, 'task')) {
+            $intent['type'] = 'task';
+        } elseif (str_contains($responseLower, 'proposal')) {
+            $intent['type'] = 'proposal';
+        } elseif (str_contains($responseLower, 'analytics') || str_contains($responseLower, 'report')) {
+            $intent['type'] = 'analytics';
+        } elseif (str_contains($responseLower, 'calendar') || str_contains($responseLower, 'schedule')) {
+            $intent['type'] = 'calendar';
+        }
+
+        // Try to extract action
+        if (str_contains($responseLower, 'create') || str_contains($responseLower, 'add')) {
+            $intent['action'] = 'create';
+        } elseif (str_contains($responseLower, 'read') || str_contains($responseLower, 'show') || str_contains($responseLower, 'view')) {
+            $intent['action'] = 'read';
+        } elseif (str_contains($responseLower, 'update') || str_contains($responseLower, 'edit')) {
+            $intent['action'] = 'update';
+        } elseif (str_contains($responseLower, 'delete') || str_contains($responseLower, 'remove')) {
+            $intent['action'] = 'delete';
+        } elseif (str_contains($responseLower, 'list') || str_contains($responseLower, 'all')) {
+            $intent['action'] = 'list';
+        }
+
+        return $intent;
+    }
+
+    /**
+     * Get available models for intent detection
+     */
+    public function getIntentDetectionModels(): array
+    {
+        return [
+            'gpt-4o' => 'GPT-4 Omni (Best for intent detection)',
+            'gpt-4o-mini' => 'GPT-4 Omni Mini (Fast intent detection)',
+            'gpt-4-turbo' => 'GPT-4 Turbo (Good for intent detection)',
+            'gpt-3.5-turbo' => 'GPT-3.5 Turbo (Fast and cost-effective)'
+        ];
+    }
 }

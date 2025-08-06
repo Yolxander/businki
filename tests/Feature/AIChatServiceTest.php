@@ -10,6 +10,8 @@ use App\Services\AIChatService;
 use App\Services\OpenAIService;
 use App\Services\ContextAwareService;
 use App\Services\AIMLAPIService;
+use App\Services\ClientService;
+use App\Services\AIIntentDetectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Mockery;
@@ -41,6 +43,8 @@ class AIChatServiceTest extends TestCase
         $openAIService = Mockery::mock(OpenAIService::class);
         $contextAwareService = Mockery::mock(ContextAwareService::class);
         $aimlapiService = Mockery::mock(AIMLAPIService::class);
+        $clientService = Mockery::mock(ClientService::class);
+        $aiIntentDetectionService = Mockery::mock(AIIntentDetectionService::class);
 
         // Mock OpenAI service responses
         $openAIService->shouldReceive('generateChatCompletionWithParams')
@@ -62,10 +66,21 @@ class AIChatServiceTest extends TestCase
             'user_permissions' => ['projects' => true]
         ]);
 
+        // Mock AI Intent Detection Service
+        $aiIntentDetectionService->shouldReceive('detectIntent')
+            ->andReturn([
+                'type' => 'general',
+                'action' => 'none',
+                'confidence' => 0.3,
+                'entities' => []
+            ]);
+
         $this->aiChatService = new AIChatService(
             $openAIService,
             $contextAwareService,
-            $aimlapiService
+            $aimlapiService,
+            $clientService,
+            $aiIntentDetectionService
         );
 
         // Mock Log facade for all tests
@@ -97,6 +112,8 @@ class AIChatServiceTest extends TestCase
         $openAIService = Mockery::mock(OpenAIService::class);
         $contextAwareService = Mockery::mock(ContextAwareService::class);
         $aimlapiService = Mockery::mock(AIMLAPIService::class);
+        $clientService = Mockery::mock(ClientService::class);
+        $aiIntentDetectionService = Mockery::mock(AIIntentDetectionService::class);
 
         $openAIService->shouldReceive('generateChatCompletionWithParams')
             ->andThrow(new \Exception('AI service unavailable'));
@@ -105,14 +122,25 @@ class AIChatServiceTest extends TestCase
         $contextAwareService->shouldReceive('getPlatformContext')->andReturn([]);
         $contextAwareService->shouldReceive('getUserContext')->andReturn([]);
 
+        // Mock AI Intent Detection Service
+        $aiIntentDetectionService->shouldReceive('detectIntent')
+            ->andReturn([
+                'type' => 'general',
+                'action' => 'none',
+                'confidence' => 0.3,
+                'entities' => []
+            ]);
+
         $aiChatService = new AIChatService(
             $openAIService,
             $contextAwareService,
-            $aimlapiService
+            $aimlapiService,
+            $clientService,
+            $aiIntentDetectionService
         );
 
                 $result = $aiChatService->processMessage($this->chat, 'Test message');
-        
+
         // The service should handle the error gracefully and still return success
         $this->assertTrue($result['success']);
         $this->assertStringContainsString('error', $result['response']);

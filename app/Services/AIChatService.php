@@ -16,20 +16,20 @@ class AIChatService
     private ContextAwareService $contextAwareService;
     private AIMLAPIService $aimlapiService;
     private ClientService $clientService;
-    private IntentDetectionService $intentDetectionService;
+    private AIIntentDetectionService $aiIntentDetectionService;
 
     public function __construct(
         OpenAIService $openAIService,
         ContextAwareService $contextAwareService,
         AIMLAPIService $aimlapiService,
         ClientService $clientService,
-        IntentDetectionService $intentDetectionService
+        AIIntentDetectionService $aiIntentDetectionService
     ) {
         $this->openAIService = $openAIService;
         $this->contextAwareService = $contextAwareService;
         $this->aimlapiService = $aimlapiService;
         $this->clientService = $clientService;
-        $this->intentDetectionService = $intentDetectionService;
+        $this->aiIntentDetectionService = $aiIntentDetectionService;
     }
 
     /**
@@ -41,12 +41,25 @@ class AIChatService
             // Get previous context from chat history
             $previousContext = $this->getPreviousClientContext($chat);
 
-            // Check for client-related intents first
-            $clientIntent = $this->intentDetectionService->detectClientIntent($userMessage, $previousContext);
+            // Use AI-powered intent detection first
+            $aiIntent = $this->aiIntentDetectionService->detectIntent($userMessage, $previousContext);
 
-            if ($clientIntent['type'] === 'client' && $clientIntent['confidence'] >= 0.7) {
-                return $this->handleClientIntent($chat, $userMessage, $clientIntent, $previousContext);
+            // If AI intent detection has high confidence, use it
+            if ($aiIntent['confidence'] >= 0.7) {
+                // Handle specific intent types
+                if ($aiIntent['type'] === 'client') {
+                    return $this->handleClientIntent($chat, $userMessage, $aiIntent, $previousContext);
+                } elseif ($aiIntent['type'] === 'project') {
+                    return $this->handleProjectIntent($chat, $userMessage, $aiIntent, $previousContext);
+                } elseif ($aiIntent['type'] === 'task') {
+                    return $this->handleTaskIntent($chat, $userMessage, $aiIntent, $previousContext);
+                } elseif ($aiIntent['type'] === 'proposal') {
+                    return $this->handleProposalIntent($chat, $userMessage, $aiIntent, $previousContext);
+                }
             }
+
+            // If AI intent detection has low confidence, continue with general AI response
+            // The AIIntentDetectionService already handles rule-based fallback internally
 
             // Get chat context and history
             $chatContext = $this->buildChatContext($chat, $userMessage);
@@ -69,7 +82,9 @@ class AIChatService
                     'model_used' => $aiResponse['model'] ?? 'unknown',
                     'chat_type' => $chat->type,
                     'context_used' => $chatContext['context_summary'] ?? [],
-                    'client_intent_detected' => false
+                    'ai_intent_detected' => $aiIntent['confidence'] >= 0.7,
+                    'intent_type' => $aiIntent['type'] ?? 'none',
+                    'intent_confidence' => $aiIntent['confidence'] ?? 0
                 ]
             ];
 
@@ -974,5 +989,191 @@ class AIChatService
     {
         $contextKey = "client_context_{$chat->id}";
         Cache::forget($contextKey);
+    }
+
+    /**
+     * Handle project-related intents
+     */
+    private function handleProjectIntent(Chat $chat, string $userMessage, array $intent, array $previousContext = []): array
+    {
+        try {
+            $action = $intent['action'] ?? 'none';
+            $entities = $intent['entities'] ?? [];
+
+            switch ($action) {
+                case 'create':
+                    return [
+                        'success' => true,
+                        'response' => "I'll help you create a new project. Please provide the project details like name, description, and timeline.",
+                        'metadata' => [
+                            'intent_type' => 'project',
+                            'action' => 'create',
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities,
+                            'requires_followup' => true
+                        ]
+                    ];
+
+                case 'read':
+                case 'list':
+                    return [
+                        'success' => true,
+                        'response' => "I'll help you find project information. Let me search for projects that match your criteria.",
+                        'metadata' => [
+                            'intent_type' => 'project',
+                            'action' => $action,
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities
+                        ]
+                    ];
+
+                default:
+                    return [
+                        'success' => true,
+                        'response' => "I understand you're asking about projects. How can I help you with project management?",
+                        'metadata' => [
+                            'intent_type' => 'project',
+                            'action' => 'none',
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities
+                        ]
+                    ];
+            }
+        } catch (Exception $e) {
+            Log::error('Project intent handling failed', [
+                'error' => $e->getMessage(),
+                'intent' => $intent
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'I encountered an error while processing your project request. Please try again.',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Handle task-related intents
+     */
+    private function handleTaskIntent(Chat $chat, string $userMessage, array $intent, array $previousContext = []): array
+    {
+        try {
+            $action = $intent['action'] ?? 'none';
+            $entities = $intent['entities'] ?? [];
+
+            switch ($action) {
+                case 'create':
+                    return [
+                        'success' => true,
+                        'response' => "I'll help you create a new task. Please provide the task details like title, description, and priority.",
+                        'metadata' => [
+                            'intent_type' => 'task',
+                            'action' => 'create',
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities,
+                            'requires_followup' => true
+                        ]
+                    ];
+
+                case 'read':
+                case 'list':
+                    return [
+                        'success' => true,
+                        'response' => "I'll help you find task information. Let me search for tasks that match your criteria.",
+                        'metadata' => [
+                            'intent_type' => 'task',
+                            'action' => $action,
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities
+                        ]
+                    ];
+
+                default:
+                    return [
+                        'success' => true,
+                        'response' => "I understand you're asking about tasks. How can I help you with task management?",
+                        'metadata' => [
+                            'intent_type' => 'task',
+                            'action' => 'none',
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities
+                        ]
+                    ];
+            }
+        } catch (Exception $e) {
+            Log::error('Task intent handling failed', [
+                'error' => $e->getMessage(),
+                'intent' => $intent
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'I encountered an error while processing your task request. Please try again.',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Handle proposal-related intents
+     */
+    private function handleProposalIntent(Chat $chat, string $userMessage, array $intent, array $previousContext = []): array
+    {
+        try {
+            $action = $intent['action'] ?? 'none';
+            $entities = $intent['entities'] ?? [];
+
+            switch ($action) {
+                case 'create':
+                    return [
+                        'success' => true,
+                        'response' => "I'll help you create a new proposal. Please provide the client information and project requirements.",
+                        'metadata' => [
+                            'intent_type' => 'proposal',
+                            'action' => 'create',
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities,
+                            'requires_followup' => true
+                        ]
+                    ];
+
+                case 'read':
+                case 'list':
+                    return [
+                        'success' => true,
+                        'response' => "I'll help you find proposal information. Let me search for proposals that match your criteria.",
+                        'metadata' => [
+                            'intent_type' => 'proposal',
+                            'action' => $action,
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities
+                        ]
+                    ];
+
+                default:
+                    return [
+                        'success' => true,
+                        'response' => "I understand you're asking about proposals. How can I help you with proposal management?",
+                        'metadata' => [
+                            'intent_type' => 'proposal',
+                            'action' => 'none',
+                            'confidence' => $intent['confidence'],
+                            'entities' => $entities
+                        ]
+                    ];
+            }
+        } catch (Exception $e) {
+            Log::error('Proposal intent handling failed', [
+                'error' => $e->getMessage(),
+                'intent' => $intent
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'I encountered an error while processing your proposal request. Please try again.',
+                'error' => $e->getMessage()
+            ];
+        }
     }
 }

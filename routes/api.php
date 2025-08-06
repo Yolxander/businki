@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\ListingController;
 use App\Http\Controllers\Api\AIGenerationController;
 use App\Http\Controllers\Api\AISettingsController;
+use App\Http\Controllers\Api\IntentDetectionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
@@ -159,6 +160,15 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // AI Models routes
     Route::get('ai-models/default', [AISettingsController::class, 'getDefaultModel']);
+
+    // Intent Detection routes
+    Route::prefix('intent-detection')->group(function () {
+        Route::post('/detect', [IntentDetectionController::class, 'detectIntent']);
+        Route::post('/test', [IntentDetectionController::class, 'testIntentDetection']);
+        Route::get('/models', [IntentDetectionController::class, 'getAvailableModels']);
+        Route::get('/stats', [IntentDetectionController::class, 'getStats']);
+        Route::post('/batch', [IntentDetectionController::class, 'batchDetectIntent']);
+    });
 
     // Prompt Engineering routes
     Route::post('prompt-engineering/make-reusable', [App\Http\Controllers\Api\PromptEngineeringController::class, 'makeReusable']);
