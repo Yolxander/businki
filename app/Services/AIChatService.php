@@ -562,7 +562,7 @@ class AIChatService
             $result = null;
             $response = '';
 
-            switch ($action) {
+                        switch ($action) {
                 case 'create':
                     // If this is a follow-up, merge with previous data
                     if (isset($intent['is_followup']) && $intent['is_followup'] && !empty($previousContext)) {
@@ -574,6 +574,9 @@ class AIChatService
                     // If creation was successful, clear any stored context
                     if ($result['success']) {
                         $this->clearClientContext($chat);
+                    } else if (isset($result['current_field'])) {
+                        // If we need more fields, ask for the next one
+                        $result = $this->handleSequentialFieldCollection($result, $data);
                     }
                     break;
 
@@ -784,7 +787,7 @@ class AIChatService
         }
     }
 
-    /**
+        /**
      * Get default interactive response when AI fails
      */
     private function getDefaultInteractiveResponse(array $missingFields): string
@@ -801,11 +804,10 @@ class AIChatService
             return $fieldNames[$field] ?? $field;
         }, $missingFields);
 
-        if (count($missingFieldNames) === 1) {
-            return "I'd be happy to help you create a client! I just need the client's " . $missingFieldNames[0] . ".";
-        } else {
-            return "Great! To create this client, I need their " . implode(' and ', $missingFieldNames) . ".";
-        }
+        // Ask for one field at a time, starting with the first missing field
+        $firstMissingField = $missingFieldNames[0];
+
+        return "I'd be happy to help you create a client! What is the client's " . $firstMissingField . "?";
     }
 
     /**
@@ -903,7 +905,7 @@ class AIChatService
         return $suggestions[$chatType] ?? $suggestions['general'];
     }
 
-    /**
+        /**
      * Store client context for follow-up messages
      */
     private function storeClientContext(Chat $chat, array $result, array $data): void
@@ -913,10 +915,56 @@ class AIChatService
         $context = [
             'missing_fields' => $result['missing_fields'] ?? [],
             'existing_data' => $data,
+            'current_field' => $result['current_field'] ?? null,
             'timestamp' => now()->timestamp
         ];
 
         Cache::put($contextKey, $context, 300); // Store for 5 minutes
+    }
+
+    /**
+     * Handle sequential field collection for client creation
+     */
+    private function handleSequentialFieldCollection(array $result, array $existingData): array
+    {
+        $missingFields = $result['missing_fields'] ?? [];
+        $currentField = $result['current_field'] ?? null;
+
+        if (empty($missingFields) || !$currentField) {
+            return $result;
+        }
+
+        // Remove the current field from missing fields
+        $remainingFields = array_filter($missingFields, function($field) use ($currentField) {
+            return $field !== $currentField;
+        });
+
+        $fieldNames = [
+            'first_name' => 'first name',
+            'last_name' => 'last name',
+            'email' => 'email address',
+            'phone' => 'phone number',
+            'company_name' => 'company name'
+        ];
+
+        $nextField = $remainingFields[0] ?? null;
+        $nextFieldName = $fieldNames[$nextField] ?? $nextField;
+
+        if ($nextField) {
+            // Ask for the next field
+            $result['message'] = "Great! Now what is the client's " . $nextFieldName . "?";
+            $result['missing_fields'] = $remainingFields;
+            $result['current_field'] = $nextField;
+            $result['existing_data'] = $existingData;
+        } else {
+            // All fields collected, create the client
+            $finalResult = $this->clientService->createClient($existingData);
+            if ($finalResult['success']) {
+                $result = $finalResult;
+            }
+        }
+
+        return $result;
     }
 
     /**

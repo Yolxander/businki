@@ -428,37 +428,152 @@ class IntentDetectionService
         $isSimpleName = preg_match('/^[A-Z][a-z]+$/', $simpleResponse);
         $isSimpleEmail = preg_match('/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$/', $simpleResponse);
 
+        // Check if we have a current field being asked for
+        $currentField = $previousContext['current_field'] ?? null;
+        if ($currentField) {
+            // If we're asking for a specific field, any non-empty response should be considered valid
+            return !empty(trim($message)) && strlen(trim($message)) < 100; // Reasonable length for a field response
+        }
+
         return $hasEmail || $hasName || $hasPhone || $isSimpleName || $isSimpleEmail;
     }
 
-    /**
+        /**
      * Extract additional client data from follow-up message
      */
     private function extractAdditionalClientData(string $message, array $previousContext): array
     {
         $data = [];
         $missingFields = $previousContext['missing_fields'] ?? [];
+        $currentField = $previousContext['current_field'] ?? null;
 
-        // Extract email if it was missing
-        if (in_array('email', $missingFields)) {
-            if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $message, $matches)) {
-                $data['email'] = $matches[0];
+        // If we have a current field being asked for, extract that specific field
+        if ($currentField) {
+            $data = $this->extractSpecificField($message, $currentField);
+        } else {
+            // Extract email if it was missing
+            if (in_array('email', $missingFields)) {
+                if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $message, $matches)) {
+                    $data['email'] = $matches[0];
+                }
+            }
+
+            // Extract name if it was missing
+            if (in_array('first_name', $missingFields) || in_array('last_name', $missingFields)) {
+                $nameData = $this->extractNameData($message, $missingFields);
+                $data = array_merge($data, $nameData);
+            }
+
+            // Extract phone if it was missing
+            if (in_array('phone', $missingFields)) {
+                if (preg_match('/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/', $message, $matches)) {
+                    $data['phone'] = $matches[0];
+                } elseif (preg_match('/phone\s+([0-9\-]+)/i', $message, $matches)) {
+                    $data['phone'] = $matches[1];
+                }
             }
         }
 
-        // Extract name if it was missing
-        if (in_array('first_name', $missingFields) || in_array('last_name', $missingFields)) {
-            $namePatterns = [
-                'name is ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)',
-                'named ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)',
-                'called ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)',
-                'first name ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)',
-                'last name ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)'
-            ];
+        // Merge with previous data
+        if (!empty($previousContext['existing_data'])) {
+            $data = array_merge($previousContext['existing_data'], $data);
+        }
 
-            foreach ($namePatterns as $pattern) {
-                if (preg_match("/{$pattern}/i", $message, $matches)) {
-                    $name = trim($matches[1]);
+        return $data;
+    }
+
+    /**
+     * Extract data for a specific field
+     */
+    private function extractSpecificField(string $message, string $field): array
+    {
+        $data = [];
+        $message = trim($message);
+
+        switch ($field) {
+            case 'first_name':
+                // Extract first name from simple response
+                if (preg_match('/^[A-Z][a-z]+$/', $message)) {
+                    $data['first_name'] = ucfirst(strtolower($message));
+                } elseif (preg_match('/^([A-Z][a-z]+)\s+[A-Z][a-z]+$/', $message, $matches)) {
+                    $data['first_name'] = ucfirst(strtolower($matches[1]));
+                } else {
+                    // If no pattern matches, treat the whole message as first name
+                    $data['first_name'] = ucfirst(strtolower(trim($message)));
+                }
+                break;
+
+            case 'last_name':
+                // Extract last name from simple response
+                if (preg_match('/^[A-Z][a-z]+$/', $message)) {
+                    $data['last_name'] = ucfirst(strtolower($message));
+                } elseif (preg_match('/^[A-Z][a-z]+\s+([A-Z][a-z]+)$/', $message, $matches)) {
+                    $data['last_name'] = ucfirst(strtolower($matches[1]));
+                } else {
+                    // If no pattern matches, treat the whole message as last name
+                    $data['last_name'] = ucfirst(strtolower(trim($message)));
+                }
+                break;
+
+            case 'email':
+                if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $message, $matches)) {
+                    $data['email'] = $matches[0];
+                }
+                break;
+
+            case 'phone':
+                if (preg_match('/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/', $message, $matches)) {
+                    $data['phone'] = $matches[0];
+                } elseif (preg_match('/phone\s+([0-9\-]+)/i', $message, $matches)) {
+                    $data['phone'] = $matches[1];
+                }
+                break;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Extract name data from message
+     */
+    private function extractNameData(string $message, array $missingFields): array
+    {
+        $data = [];
+
+        $namePatterns = [
+            'name is ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)',
+            'named ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)',
+            'called ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)',
+            'first name ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)',
+            'last name ([a-zA-Z\s]+?)(?:\s+with|\s+email|\s+phone|$)'
+        ];
+
+        foreach ($namePatterns as $pattern) {
+            if (preg_match("/{$pattern}/i", $message, $matches)) {
+                $name = trim($matches[1]);
+                $nameParts = explode(' ', $name);
+
+                if (count($nameParts) >= 2) {
+                    $data['first_name'] = ucfirst(strtolower($nameParts[0]));
+                    $data['last_name'] = ucfirst(strtolower(implode(' ', array_slice($nameParts, 1))));
+                } else {
+                    $data['first_name'] = ucfirst(strtolower($name));
+                }
+                break;
+            }
+        }
+
+        // If no pattern matched, try to extract just names
+        if (empty($data['first_name'])) {
+            preg_match_all('/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/', $message, $matches);
+            if (!empty($matches[0])) {
+                $commonWords = ['Show', 'Find', 'Get', 'View', 'Search', 'Look', 'Client', 'Who', 'Is', 'Tell', 'Me', 'About', 'The', 'Is', 'Are', 'Have', 'Has', 'Will', 'Can', 'Could', 'Would', 'Should'];
+                $potentialNames = array_filter($matches[0], function($word) use ($commonWords) {
+                    return !in_array($word, $commonWords);
+                });
+
+                if (!empty($potentialNames)) {
+                    $name = implode(' ', $potentialNames);
                     $nameParts = explode(' ', $name);
 
                     if (count($nameParts) >= 2) {
@@ -467,59 +582,21 @@ class IntentDetectionService
                     } else {
                         $data['first_name'] = ucfirst(strtolower($name));
                     }
-                    break;
-                }
-            }
-
-            // If no pattern matched, try to extract just names
-            if (empty($data['first_name'])) {
-                preg_match_all('/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/', $message, $matches);
-                if (!empty($matches[0])) {
-                    $commonWords = ['Show', 'Find', 'Get', 'View', 'Search', 'Look', 'Client', 'Who', 'Is', 'Tell', 'Me', 'About', 'The', 'Is', 'Are', 'Have', 'Has', 'Will', 'Can', 'Could', 'Would', 'Should'];
-                    $potentialNames = array_filter($matches[0], function($word) use ($commonWords) {
-                        return !in_array($word, $commonWords);
-                    });
-
-                    if (!empty($potentialNames)) {
-                        $name = implode(' ', $potentialNames);
-                        $nameParts = explode(' ', $name);
-
-                        if (count($nameParts) >= 2) {
-                            $data['first_name'] = ucfirst(strtolower($nameParts[0]));
-                            $data['last_name'] = ucfirst(strtolower(implode(' ', array_slice($nameParts, 1))));
-                        } else {
-                            $data['first_name'] = ucfirst(strtolower($name));
-                        }
-                    }
-                }
-            }
-
-            // Handle simple responses (just a name)
-            if (empty($data['first_name']) && empty($data['last_name'])) {
-                $simpleResponse = trim($message);
-                if (preg_match('/^[A-Z][a-z]+$/', $simpleResponse)) {
-                    // If we have a first name but need last name, or vice versa
-                    if (in_array('last_name', $missingFields)) {
-                        $data['last_name'] = ucfirst(strtolower($simpleResponse));
-                    } elseif (in_array('first_name', $missingFields)) {
-                        $data['first_name'] = ucfirst(strtolower($simpleResponse));
-                    }
                 }
             }
         }
 
-        // Extract phone if it was missing
-        if (in_array('phone', $missingFields)) {
-            if (preg_match('/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/', $message, $matches)) {
-                $data['phone'] = $matches[0];
-            } elseif (preg_match('/phone\s+([0-9\-]+)/i', $message, $matches)) {
-                $data['phone'] = $matches[1];
+        // Handle simple responses (just a name)
+        if (empty($data['first_name']) && empty($data['last_name'])) {
+            $simpleResponse = trim($message);
+            if (preg_match('/^[A-Z][a-z]+$/', $simpleResponse)) {
+                // If we have a first name but need last name, or vice versa
+                if (in_array('last_name', $missingFields)) {
+                    $data['last_name'] = ucfirst(strtolower($simpleResponse));
+                } elseif (in_array('first_name', $missingFields)) {
+                    $data['first_name'] = ucfirst(strtolower($simpleResponse));
+                }
             }
-        }
-
-        // Merge with previous data
-        if (!empty($previousContext['existing_data'])) {
-            $data = array_merge($previousContext['existing_data'], $data);
         }
 
         return $data;

@@ -19,31 +19,31 @@ class ClientService
             // Validate required fields
             $requiredFields = ['first_name', 'last_name', 'email'];
             $missingFields = [];
-            
+
             foreach ($requiredFields as $field) {
                 if (empty($data[$field])) {
                     $missingFields[] = $field;
                 }
             }
-            
+
             if (!empty($missingFields)) {
                 $fieldNames = [
                     'first_name' => 'first name',
-                    'last_name' => 'last name', 
+                    'last_name' => 'last name',
                     'email' => 'email address'
                 ];
-                
+
                 $missingFieldNames = array_map(function($field) use ($fieldNames) {
                     return $fieldNames[$field] ?? $field;
                 }, $missingFields);
-                
+
                 $message = "I need a few more details to create the client. ";
                 if (count($missingFieldNames) === 1) {
                     $message .= "Please provide the " . $missingFieldNames[0] . ".";
                 } else {
                     $message .= "Please provide: " . implode(', ', $missingFieldNames) . ".";
                 }
-                
+
                 return [
                     'success' => false,
                     'message' => $message,
@@ -300,4 +300,4 @@ class ClientService
             ];
         }
     }
-} 
+}
