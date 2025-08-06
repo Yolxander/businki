@@ -769,6 +769,8 @@ class AIChatService
     {
         try {
             $missingFields = $result['missing_fields'] ?? [];
+            $currentField = $result['current_field'] ?? null;
+
             $fieldNames = [
                 'first_name' => 'first name',
                 'last_name' => 'last name',
@@ -777,19 +779,32 @@ class AIChatService
                 'company_name' => 'company name'
             ];
 
+            // If we have a current field being asked for, ask specifically for that field
+            if ($currentField && isset($fieldNames[$currentField])) {
+                $fieldName = $fieldNames[$currentField];
+                return "Great! Now what is the client's " . $fieldName . "?";
+            }
+
+            // If no current field is set, ask for the first missing field
+            if (!empty($missingFields)) {
+                $firstMissingField = $missingFields[0];
+                $fieldName = $fieldNames[$firstMissingField] ?? $firstMissingField;
+                return "I'd be happy to help you create a client! What is the client's " . $fieldName . "?";
+            }
+
+            // Build a simple prompt for AIML as fallback
             $missingFieldNames = array_map(function($field) use ($fieldNames) {
                 return $fieldNames[$field] ?? $field;
             }, $missingFields);
 
-            // Build a simple prompt for AIML
             $prompt = "User wants to create a client but is missing: " . implode(', ', $missingFieldNames) . ". ";
             $prompt .= "User said: \"{$userMessage}\". ";
-            $prompt .= "Ask them for the missing information in a friendly, conversational way.";
+            $prompt .= "Ask them for the first missing field in a friendly, conversational way.";
 
             // Use AIML API instead of OpenAI
             $response = $this->aimlapiService->generateChatCompletion($prompt);
 
-            return $response['content'] ?? $this->getDefaultInteractiveResponse($missingFieldNames);
+            return $response['content'] ?? $this->getDefaultInteractiveResponse($missingFields);
 
         } catch (Exception $e) {
             Log::error('AIML Interactive Response Failed', [
@@ -815,14 +830,14 @@ class AIChatService
             'company_name' => 'company name'
         ];
 
-        $missingFieldNames = array_map(function($field) use ($fieldNames) {
-            return $fieldNames[$field] ?? $field;
-        }, $missingFields);
-
         // Ask for one field at a time, starting with the first missing field
-        $firstMissingField = $missingFieldNames[0];
+        if (!empty($missingFields)) {
+            $firstMissingField = $missingFields[0];
+            $fieldName = $fieldNames[$firstMissingField] ?? $firstMissingField;
+            return "I'd be happy to help you create a client! What is the client's " . $fieldName . "?";
+        }
 
-        return "I'd be happy to help you create a client! What is the client's " . $firstMissingField . "?";
+        return "I'd be happy to help you create a client! What is the client's first name?";
     }
 
     /**
@@ -945,8 +960,13 @@ class AIChatService
         $missingFields = $result['missing_fields'] ?? [];
         $currentField = $result['current_field'] ?? null;
 
-        if (empty($missingFields) || !$currentField) {
+        if (empty($missingFields)) {
             return $result;
+        }
+
+        // If no current field is set, set it to the first missing field
+        if (!$currentField) {
+            $currentField = $missingFields[0];
         }
 
         // Remove the current field from missing fields

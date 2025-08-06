@@ -49,6 +49,7 @@ class ClientService
                     'message' => $message,
                     'data' => null,
                     'missing_fields' => $missingFields,
+                    'current_field' => $missingFields[0], // Set the first missing field as current
                     'requires_interaction' => true
                 ];
             }
