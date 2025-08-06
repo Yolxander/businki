@@ -24,6 +24,11 @@ class DashboardController extends Controller
             ->orderBy('position')
             ->get();
 
+        // If no widgets exist, create skeleton widgets
+        if ($widgets->isEmpty()) {
+            $widgets = $this->createSkeletonWidgets($user);
+        }
+
         // Get basic statistics for widget data
         $stats = [
             'totalClients' => Client::count(),
@@ -53,6 +58,7 @@ class DashboardController extends Controller
             'clients' => $clients,
             'widgets' => $widgets,
             'dashboardMode' => $user->dashboard_mode ?? 'default',
+            'hasData' => $this->hasUserData($user),
         ]);
     }
 
@@ -209,5 +215,154 @@ class DashboardController extends Controller
     {
         // This is a placeholder - implement your actual monthly revenue calculation
         return 25000; // Example value
+    }
+
+    /**
+     * Create skeleton widgets for new users
+     */
+    private function createSkeletonWidgets($user)
+    {
+        $skeletonWidgets = [
+            [
+                'id' => 'skeleton_quick_stats_1',
+                'user_id' => $user->id,
+                'widget_type' => 'quick_stats',
+                'widget_key' => 'total_projects',
+                'title' => 'Total Projects',
+                'description' => 'Track your project count',
+                'configuration' => [
+                    'metric_type' => 'projects',
+                    'metric_filter' => 'all',
+                    'icon' => 'Briefcase',
+                    'trend' => '+0 this week',
+                    'show_trend' => true,
+                    'refresh_interval' => 300
+                ],
+                'is_active' => true,
+                'position' => 1,
+                'is_skeleton' => true,
+            ],
+            [
+                'id' => 'skeleton_quick_stats_2',
+                'user_id' => $user->id,
+                'widget_type' => 'quick_stats',
+                'widget_key' => 'total_clients',
+                'title' => 'Total Clients',
+                'description' => 'Track your client count',
+                'configuration' => [
+                    'metric_type' => 'clients',
+                    'metric_filter' => 'all',
+                    'icon' => 'Users',
+                    'trend' => '+0 this week',
+                    'show_trend' => true,
+                    'refresh_interval' => 300
+                ],
+                'is_active' => true,
+                'position' => 2,
+                'is_skeleton' => true,
+            ],
+            [
+                'id' => 'skeleton_quick_stats_3',
+                'user_id' => $user->id,
+                'widget_type' => 'quick_stats',
+                'widget_key' => 'pending_tasks',
+                'title' => 'Pending Tasks',
+                'description' => 'Track your pending tasks',
+                'configuration' => [
+                    'metric_type' => 'tasks',
+                    'metric_filter' => 'pending',
+                    'icon' => 'Clock',
+                    'trend' => '+0 this week',
+                    'show_trend' => true,
+                    'refresh_interval' => 300
+                ],
+                'is_active' => true,
+                'position' => 3,
+                'is_skeleton' => true,
+            ],
+            [
+                'id' => 'skeleton_quick_stats_4',
+                'user_id' => $user->id,
+                'widget_type' => 'quick_stats',
+                'widget_key' => 'total_proposals',
+                'title' => 'Total Proposals',
+                'description' => 'Track your proposal count',
+                'configuration' => [
+                    'metric_type' => 'proposals',
+                    'metric_filter' => 'all',
+                    'icon' => 'FileText',
+                    'trend' => '+0 this week',
+                    'show_trend' => true,
+                    'refresh_interval' => 300
+                ],
+                'is_active' => true,
+                'position' => 4,
+                'is_skeleton' => true,
+            ],
+            [
+                'id' => 'skeleton_recent_tasks',
+                'user_id' => $user->id,
+                'widget_type' => 'recent_tasks',
+                'widget_key' => 'recent_tasks',
+                'title' => 'Recent Tasks',
+                'description' => 'Your latest tasks',
+                'configuration' => [
+                    'max_items' => 5,
+                    'show_priority' => true,
+                    'show_due_date' => true,
+                ],
+                'is_active' => true,
+                'position' => 5,
+                'is_skeleton' => true,
+            ],
+            [
+                'id' => 'skeleton_recent_projects',
+                'user_id' => $user->id,
+                'widget_type' => 'recent_projects',
+                'widget_key' => 'recent_projects',
+                'title' => 'Recent Projects',
+                'description' => 'Your latest projects',
+                'configuration' => [
+                    'max_items' => 5,
+                    'show_progress' => true,
+                    'show_client' => true,
+                ],
+                'is_active' => true,
+                'position' => 6,
+                'is_skeleton' => true,
+            ],
+            [
+                'id' => 'skeleton_quick_actions',
+                'user_id' => $user->id,
+                'widget_type' => 'quick_actions',
+                'widget_key' => 'quick_actions',
+                'title' => 'Quick Actions',
+                'description' => 'Common actions',
+                'configuration' => [
+                    'actions' => [
+                        'create_project' => true,
+                        'create_client' => true,
+                        'create_task' => true,
+                        'zen_mode' => true,
+                    ],
+                ],
+                'is_active' => true,
+                'position' => 7,
+                'is_skeleton' => true,
+            ],
+        ];
+
+        return collect($skeletonWidgets);
+    }
+
+    /**
+     * Check if user has any data
+     */
+    private function hasUserData($user)
+    {
+        return Client::count() > 0 || 
+               Project::count() > 0 || 
+               Task::count() > 0 || 
+               Proposal::count() > 0;
     }
 }

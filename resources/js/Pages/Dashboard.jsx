@@ -61,7 +61,7 @@ import {
     MessageSquare
 } from 'lucide-react';
 
-export default function Dashboard({ auth, stats, clients = [], widgets = [], dashboardMode: initialDashboardMode = 'default' }) {
+export default function Dashboard({ auth, stats, clients = [], widgets = [], dashboardMode: initialDashboardMode = 'default', hasData = false }) {
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
     const [showAISetupModal, setShowAISetupModal] = useState(false);
     const [showAlert, setShowAlert] = useState(false);
@@ -801,6 +801,264 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         };
     };
 
+    const renderSkeletonWidget = (widget, index) => {
+        const isSkeleton = widget.is_skeleton || !hasData;
+
+        if (widget.widget_type === 'quick_stats') {
+            return (
+                <Card key={widget.widget_key || index} className={`bg-card border-border ${isSkeleton ? 'border-dashed border-2' : ''}`}>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            {widget.title}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {isSkeleton ? (
+                            <div className="text-center py-8">
+                                <div className="text-2xl font-bold text-muted-foreground mb-2">0</div>
+                                <p className="text-xs text-muted-foreground mb-4">{widget.configuration?.trend || '+0 this week'}</p>
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleCreateFromWidget(widget)}
+                                    className="w-full"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Create {widget.title.replace('Total ', '').toLowerCase()}
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold text-foreground">
+                                    {getDynamicValue(widget)}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {widget.configuration?.trend || '+0 this week'}
+                                </p>
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        if (widget.widget_type === 'recent_tasks') {
+            return (
+                <Card key={widget.widget_key || index} className={`bg-card border-border ${isSkeleton ? 'border-dashed border-2' : ''}`}>
+                    <CardHeader>
+                        <CardTitle className="text-lg font-semibold">{widget.title}</CardTitle>
+                        <CardDescription>{widget.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isSkeleton ? (
+                            <div className="text-center py-8">
+                                <div className="text-muted-foreground mb-4">No tasks yet</div>
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleCreateFromWidget(widget)}
+                                    className="w-full"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Create First Task
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {stats.recentTasks?.slice(0, 5).map((task, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                        <div className="flex items-center space-x-3">
+                                            {getTaskStatusIcon(task.status)}
+                                            <div>
+                                                <p className="font-medium text-sm">{task.title}</p>
+                                                <p className="text-xs text-muted-foreground">{task.project_name}</p>
+                                            </div>
+                                        </div>
+                                        <Badge variant={getPriorityColor(task.priority)} className="text-xs">
+                                            {task.priority}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        if (widget.widget_type === 'recent_projects') {
+            return (
+                <Card key={widget.widget_key || index} className={`bg-card border-border ${isSkeleton ? 'border-dashed border-2' : ''}`}>
+                    <CardHeader>
+                        <CardTitle className="text-lg font-semibold">{widget.title}</CardTitle>
+                        <CardDescription>{widget.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isSkeleton ? (
+                            <div className="text-center py-8">
+                                <div className="text-muted-foreground mb-4">No projects yet</div>
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleCreateFromWidget(widget)}
+                                    className="w-full"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Create First Project
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {stats.recentProjects?.slice(0, 5).map((project, idx) => (
+                                    <div key={idx} className="p-3 bg-muted rounded-lg">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="font-medium text-sm">{project.name}</h4>
+                                            <Badge variant={getStatusColor(project.status)} className="text-xs">
+                                                {getStatusText(project.status)}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mb-2">{project.client}</p>
+                                        <div className="w-full bg-background rounded-full h-2">
+                                            <div
+                                                className="bg-primary h-2 rounded-full"
+                                                style={{ width: `${project.progress}%` }}
+                                            ></div>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">{project.progress}% complete</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        if (widget.widget_type === 'quick_actions') {
+            return (
+                <Card key={widget.widget_key || index} className={`bg-card border-border ${isSkeleton ? 'border-dashed border-2' : ''}`}>
+                    <CardHeader>
+                        <CardTitle className="text-lg font-semibold">{widget.title}</CardTitle>
+                        <CardDescription>{widget.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                variant="outline"
+                                className="h-20 flex flex-col items-center justify-center"
+                                onClick={() => setShowNewProjectModal(true)}
+                            >
+                                <Plus className="w-6 h-6 mb-2" />
+                                <span className="text-sm">New Project</span>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="h-20 flex flex-col items-center justify-center"
+                                onClick={() => router.get('/clients/create')}
+                            >
+                                <Users className="w-6 h-6 mb-2" />
+                                <span className="text-sm">New Client</span>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="h-20 flex flex-col items-center justify-center"
+                                onClick={() => router.get('/tasks/create')}
+                            >
+                                <CheckSquare className="w-6 h-6 mb-2" />
+                                <span className="text-sm">New Task</span>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="h-20 flex flex-col items-center justify-center"
+                                onClick={() => router.get('/zen-mode')}
+                            >
+                                <Target className="w-6 h-6 mb-2" />
+                                <span className="text-sm">Zen Mode</span>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        return null;
+    };
+
+    const getDynamicValue = (widget) => {
+        const config = widget.configuration || {};
+        const metricType = config.metric_type || '';
+        const metricFilter = config.metric_filter || '';
+
+        // Generate the dynamic key that matches the backend
+        const dynamicKey = `dynamic_${metricType}_${metricFilter}`;
+
+        // Try to get the dynamic value first
+        if (stats[dynamicKey] !== undefined) {
+            if (metricType === 'revenue') {
+                return `$${(stats[dynamicKey] || 0).toLocaleString()}`;
+            }
+            return stats[dynamicKey]?.toString() || '0';
+        }
+
+        // Fallback to static values if dynamic key doesn't exist
+        switch (metricType) {
+            case 'projects':
+                if (metricFilter === 'active') {
+                    return stats.totalProjects || '0';
+                }
+                return stats.totalProjects || '0';
+
+            case 'clients':
+                return stats.totalClients || '0';
+
+            case 'tasks':
+                if (metricFilter === 'pending') {
+                    return stats.pendingTasks || '0';
+                }
+                return stats.totalTasks || '0';
+
+            case 'proposals':
+                if (metricFilter === 'draft') {
+                    return stats.dynamic_proposals_draft || '0';
+                } else if (metricFilter === 'sent') {
+                    return stats.dynamic_proposals_sent || '0';
+                } else if (metricFilter === 'accepted') {
+                    return stats.dynamic_proposals_accepted || '0';
+                }
+                return stats.dynamic_proposals_all || '0';
+
+            case 'revenue':
+                return '0'; // Revenue widget removed
+
+            case 'subtasks':
+                return '0'; // Will be calculated dynamically
+
+            default:
+                return '0';
+        }
+    };
+
+    const handleCreateFromWidget = (widget) => {
+        switch (widget.widget_type) {
+            case 'quick_stats':
+                if (widget.configuration?.metric_type === 'projects') {
+                    setShowNewProjectModal(true);
+                } else if (widget.configuration?.metric_type === 'clients') {
+                    router.get('/clients/create');
+                } else if (widget.configuration?.metric_type === 'tasks') {
+                    router.get('/tasks/create');
+                } else if (widget.configuration?.metric_type === 'proposals') {
+                    router.get('/proposals/create');
+                }
+                break;
+            case 'recent_tasks':
+                router.get('/tasks/create');
+                break;
+            case 'recent_projects':
+                setShowNewProjectModal(true);
+                break;
+            default:
+                break;
+        }
+    };
+
     const widgetData = renderWidgets();
 
     return (
@@ -1056,79 +1314,9 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                                         {/* Dashboard Widgets */}
                             {!rightSidebarCollapsed && (
                                 <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                                    {widgetData.quickStatsWidgets.slice(0, 4).map((widget, index) => {
-                                        // Calculate dynamic value based on widget configuration
-                                        const getDynamicValue = (widget) => {
-                                            const config = widget.configuration || {};
-                                            const metricType = config.metric_type || '';
-                                            const metricFilter = config.metric_filter || '';
-
-                                            // Generate the dynamic key that matches the backend
-                                            const dynamicKey = `dynamic_${metricType}_${metricFilter}`;
-
-                                            // Try to get the dynamic value first
-                                            if (statsData[dynamicKey] !== undefined) {
-                                                if (metricType === 'revenue') {
-                                                    return `$${(statsData[dynamicKey] || 0).toLocaleString()}`;
-                                                }
-                                                return statsData[dynamicKey]?.toString() || '0';
-                                            }
-
-                                            // Fallback to static values if dynamic key doesn't exist
-                                            switch (metricType) {
-                                                case 'projects':
-                                                    if (metricFilter === 'active') {
-                                                        return statsData.totalProjects || '0';
-                                                    }
-                                                    return statsData.totalProjects || '0';
-
-                                                case 'clients':
-                                                    return statsData.totalClients || '0';
-
-                                                case 'tasks':
-                                                    if (metricFilter === 'pending') {
-                                                        return statsData.pendingTasks || '0';
-                                                    }
-                                                    return statsData.totalTasks || '0';
-
-                                                case 'proposals':
-                                                    if (metricFilter === 'draft') {
-                                                        return statsData.dynamic_proposals_draft || '0';
-                                                    } else if (metricFilter === 'sent') {
-                                                        return statsData.dynamic_proposals_sent || '0';
-                                                    } else if (metricFilter === 'accepted') {
-                                                        return statsData.dynamic_proposals_accepted || '0';
-                                                    }
-                                                    return statsData.dynamic_proposals_all || '0';
-
-                                                case 'revenue':
-                                                    return '0'; // Revenue widget removed
-
-                                                case 'subtasks':
-                                                    return '0'; // Will be calculated dynamically
-
-                                                default:
-                                                    return '0';
-                                            }
-                                        };
-
-                                        const dynamicValue = getDynamicValue(widget);
-                                        const trend = widget.configuration?.trend || '+0 this week';
-
-                                        return (
-                                            <Card key={widget.widget_key} className="bg-card border-border">
-                                                <CardHeader className="pb-2">
-                                                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                                                        {widget.title}
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div className="text-2xl font-bold text-foreground">{dynamicValue}</div>
-                                                    <p className="text-xs text-muted-foreground">{trend}</p>
-                                                </CardContent>
-                                            </Card>
-                                        );
-                                    })}
+                                    {widgetData.quickStatsWidgets.slice(0, 4).map((widget, index) =>
+                                        renderSkeletonWidget(widget, index)
+                                    )}
                                 </div>
                             )}
 
@@ -1160,89 +1348,9 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
                                                 {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {widgetData.quickStatsWidgets.map((widget, index) => {
-                        // Calculate dynamic value based on widget configuration
-                        const getDynamicValue = (widget) => {
-                            const config = widget.configuration || {};
-                            const metricType = config.metric_type || '';
-                            const metricFilter = config.metric_filter || '';
-
-                            // Generate the dynamic key that matches the backend
-                            const dynamicKey = `dynamic_${metricType}_${metricFilter}`;
-
-                            // Try to get the dynamic value first
-                            if (statsData[dynamicKey] !== undefined) {
-                                if (metricType === 'revenue') {
-                                    return `$${(statsData[dynamicKey] || 0).toLocaleString()}`;
-                                }
-                                return statsData[dynamicKey]?.toString() || '0';
-                            }
-
-                            // Fallback to static values if dynamic key doesn't exist
-                            switch (metricType) {
-                                case 'projects':
-                                    if (metricFilter === 'active') {
-                                        return statsData.totalProjects || '0';
-                                    }
-                                    return statsData.totalProjects || '0';
-
-                                case 'clients':
-                                    return statsData.totalClients || '0';
-
-                                case 'tasks':
-                                    if (metricFilter === 'pending') {
-                                        return statsData.pendingTasks || '0';
-                                    }
-                                    return statsData.totalTasks || '0';
-
-                                                                case 'proposals':
-                                    if (metricFilter === 'draft') {
-                                        return statsData.dynamic_proposals_draft || '0';
-                                    } else if (metricFilter === 'sent') {
-                                        return statsData.dynamic_proposals_sent || '0';
-                                    } else if (metricFilter === 'accepted') {
-                                        return statsData.dynamic_proposals_accepted || '0';
-                                    }
-                                    return statsData.dynamic_proposals_all || '0';
-
-                                case 'revenue':
-                                    return '0'; // Revenue widget removed
-
-                                case 'subtasks':
-                                    return '0'; // Will be calculated dynamically
-
-                                default:
-                                    return '0';
-                            }
-                        };
-
-                        const dynamicValue = getDynamicValue(widget);
-                        const trend = widget.configuration?.trend || '+0 this week';
-
-                        return (
-                            <Card
-                                key={widget.widget_key}
-                                className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
-                                onClick={() => isEditMode && handleWidgetClick('quick_stats', widget.widget_key)}
-                            >
-                                {isEditMode && (
-                                    <div className="absolute top-2 right-2 z-10">
-                                        <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
-                                    </div>
-                                )}
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                                        {widget.title}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-foreground">{dynamicValue}</div>
-                                    <p className="text-xs text-muted-foreground">{widget.description}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">{trend}</p>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+                    {widgetData.quickStatsWidgets.map((widget, index) =>
+                        renderSkeletonWidget(widget, index)
+                    )}
                 </div>
 
                 {/* Main Content Grid */}
@@ -1250,223 +1358,15 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                     {/* Recent Tasks & Projects */}
                     <div className="lg:col-span-2 space-y-6">
                                                 {/* Recent Tasks */}
-                        {widgetData.recentTasksWidget && (
-                            <Card
-                                className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
-                                onClick={() => isEditMode && handleWidgetClick('recent_tasks', widgetData.recentTasksWidget.widget_key)}
-                            >
-                                {isEditMode && (
-                                    <div className="absolute top-2 right-2 z-10">
-                                        <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
-                                    </div>
-                                )}
-                                <CardHeader>
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <CardTitle className="text-foreground">{widgetData.recentTasksWidget.title}</CardTitle>
-                                            <CardDescription className="text-muted-foreground">{widgetData.recentTasksWidget.description}</CardDescription>
-                                        </div>
-                                        <Link href="/tasks">
-                                            <Button variant="outline" size="sm">
-                                                View All
-                                                <ArrowRight className="w-4 h-4 ml-2" />
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4 max-h-60 overflow-y-auto">
-                                    {statsData.recentTasks && statsData.recentTasks.length > 0 ? (
-                                        statsData.recentTasks.map((task) => (
-                                            <div key={task.id} className="group">
-                                                <div className="flex items-start space-x-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer relative">
-                                                    {/* Zen Mode Button - appears on hover */}
-                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-                                                        <Link href={`/zen-mode?task=${task.id}`}>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-6 w-6 p-0 bg-background/80 backdrop-blur hover:bg-primary/10"
-                                                                title="Enter Zen Mode"
-                                                            >
-                                                                <Zap className="w-3 h-3 text-primary" />
-                                                            </Button>
-                                                        </Link>
-                                                    </div>
-                                                    <Link href={`/tasks/${task.id}`} className="flex items-start space-x-3 flex-1">
-                                                        {getTaskStatusIcon(task.status)}
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium text-foreground truncate">
-                                                                {task.title}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">{task.project_name}</p>
-                                                            <div className="flex items-center space-x-2 mt-1">
-                                                                <Badge className={getPriorityColor(task.priority)} size="sm">
-                                                                    {task.priority}
-                                                                </Badge>
-                                                                {task.due_date && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        Due {new Date(task.due_date).toLocaleDateString()}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                            <p className="text-sm">No tasks yet</p>
-                                            <p className="text-xs">Create your first task to get started</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                        )}
+                        {widgetData.recentTasksWidget && renderSkeletonWidget(widgetData.recentTasksWidget, 'recent_tasks')}
 
                         {/* Recent Projects */}
-                        {widgetData.recentProjectsWidget && (
-                            <Card
-                                className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
-                                onClick={() => isEditMode && handleWidgetClick('recent_projects', widgetData.recentProjectsWidget.widget_key)}
-                            >
-                                {isEditMode && (
-                                    <div className="absolute top-2 right-2 z-10">
-                                        <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
-                                    </div>
-                                )}
-                                <CardHeader>
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <CardTitle className="text-foreground">{widgetData.recentProjectsWidget.title}</CardTitle>
-                                            <CardDescription className="text-muted-foreground">{widgetData.recentProjectsWidget.description}</CardDescription>
-                                        </div>
-                                        <Link href="/projects">
-                                            <Button variant="outline" size="sm">
-                                                View All
-                                                <ArrowRight className="w-4 h-4 ml-2" />
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4 max-h-80 overflow-y-auto">
-                                    {statsData.recentProjects && statsData.recentProjects.length > 0 ? (
-                                        statsData.recentProjects.map((project) => (
-                                            <Link key={project.id} href={`/projects/${project.id}`}>
-                                                <div className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center space-x-3">
-                                                            <h3 className="font-medium text-foreground">{project.name}</h3>
-                                                            <div className="flex items-center">
-                                                                <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)} mr-2`}></div>
-                                                                <span className="text-sm text-muted-foreground">{getStatusText(project.status)}</span>
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-sm text-muted-foreground mt-1">{project.client}</p>
-                                                        <div className="flex items-center space-x-4 mt-2">
-                                                            <div className="flex items-center space-x-2">
-                                                                <Target className="w-4 h-4 text-muted-foreground" />
-                                                                <span className="text-sm text-muted-foreground">
-                                                                    {project.tasks.completed}/{project.tasks.total} tasks
-                                                                </span>
-                                                            </div>
-                                                            {project.due_date && (
-                                                                <div className="flex items-center space-x-2">
-                                                                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                                                                    <span className="text-sm text-muted-foreground">
-                                                                        Due {new Date(project.due_date).toLocaleDateString()}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                            <div
-                                                                className="h-full bg-primary transition-all duration-300"
-                                                                style={{ width: `${project.progress}%` }}
-                                                            ></div>
-                                                        </div>
-                                                        <span className="text-sm font-medium text-muted-foreground">
-                                                            {project.progress}%
-                                                        </span>
-                                                        <Button variant="ghost" size="sm">
-                                                            <Eye className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </Link>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                            <p className="text-sm">No projects yet</p>
-                                            <p className="text-xs">Create your first project to get started</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                        )}
+                        {widgetData.recentProjectsWidget && renderSkeletonWidget(widgetData.recentProjectsWidget, 'recent_projects')}
                     </div>
 
                     {/* Quick Actions */}
                     <div className="space-y-6">
-                        {widgetData.quickActionsWidget && (
-                            <Card
-                                className={`bg-card border-border relative ${isEditMode ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
-                                onClick={() => isEditMode && handleWidgetClick('quick_actions', widgetData.quickActionsWidget.widget_key)}
-                            >
-                                {isEditMode && (
-                                    <div className="absolute top-2 right-2 z-10">
-                                        <Edit className="w-5 h-5 text-[#d1ff75] animate-pulse" />
-                                    </div>
-                                )}
-                                <CardHeader>
-                                    <CardTitle className="text-foreground">{widgetData.quickActionsWidget.title}</CardTitle>
-                                    <CardDescription className="text-muted-foreground">{widgetData.quickActionsWidget.description}</CardDescription>
-                                </CardHeader>
-                            <CardContent className="space-y-3">
-                                <Link href="/clients/create">
-                                    <Button className="w-full justify-start" variant="outline">
-                                        <Users className="w-4 h-4 mr-2" />
-                                        Add New Client
-                                    </Button>
-                                </Link>
-                                <Button
-                                    className="w-full justify-start"
-                                    variant="outline"
-                                    onClick={() => setShowNewProjectModal(true)}
-                                >
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    Create Project
-                                </Button>
-                                <Link href="/tasks/create">
-                                    <Button className="w-full justify-start" variant="outline">
-                                        <Target className="w-4 h-4 mr-2" />
-                                        Add Task
-                                    </Button>
-                                </Link>
-
-                                <Link href="/zen-mode">
-                                    <Button className="w-full justify-start" variant="outline">
-                                        <Zap className="w-4 h-4 mr-2" />
-                                        Zen Mode
-                                    </Button>
-                                </Link>
-                                <Link href="/playground">
-                                    <Button className="w-full justify-start" variant="outline">
-                                        <Brain className="w-4 h-4 mr-2" />
-                                        AI Playground
-                                    </Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
-                        )}
+                        {widgetData.quickActionsWidget && renderSkeletonWidget(widgetData.quickActionsWidget, 'quick_actions')}
                     </div>
                 </div>
 
