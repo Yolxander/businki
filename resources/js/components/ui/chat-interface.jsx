@@ -23,7 +23,9 @@ export default function ChatInterface({
     isLoading = false,
     presetPrompts = [],
     onPresetClick,
-    context = 'general'
+    context = 'general',
+    presetChatFlow = null,
+    presetChatStep = 0
 }) {
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef(null);
@@ -219,6 +221,59 @@ export default function ChatInterface({
             );
         }
 
+        // Handle error messages
+        if (message.type === 'error') {
+            return (
+                <div className="flex items-start space-x-3 mb-6">
+                    <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <div className="w-4 h-4 bg-background rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-red-500">!</span>
+                        </div>
+                    </div>
+                    <div className="max-w-[70%] bg-red-50 rounded-lg p-4 border border-red-200">
+                        <p className="text-sm text-red-700 whitespace-pre-wrap break-words">{message.content}</p>
+                    </div>
+                </div>
+            );
+        }
+
+        // Handle system messages (preset chat flows)
+        if (message.type === 'system') {
+            return (
+                <div className="flex items-start space-x-3 mb-6">
+                    <div className="w-8 h-8 bg-[#d1ff75] rounded-lg flex items-center justify-center flex-shrink-0">
+                        <div className="w-4 h-4 bg-background rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-[#d1ff75] orbitron">B</span>
+                        </div>
+                    </div>
+                    <div className="max-w-[70%] bg-card rounded-lg p-4 border border-border">
+                        <p className="text-sm whitespace-pre-wrap break-words mb-3">{message.content}</p>
+                        {message.options && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                                {message.options.map((option, index) => (
+                                    <Button
+                                        key={index}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            // Handle option selection
+                                            if (onSendMessage) {
+                                                onSendMessage(option);
+                                            }
+                                        }}
+                                        className="text-xs px-3 py-1 h-auto"
+                                    >
+                                        {option}
+                                    </Button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Default system message
         return (
             <div className="flex items-start space-x-3 mb-6">
                 <div className="w-8 h-8 bg-[#d1ff75] rounded-lg flex items-center justify-center flex-shrink-0">
@@ -317,7 +372,7 @@ export default function ChatInterface({
                             ref={inputRef}
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            placeholder="Ask a question or make a request..."
+                            placeholder={presetChatFlow ? "Enter your response..." : "Ask a question or make a request..."}
                             className="w-full h-12 pl-4 pr-12 text-lg border-2 border-border focus:border-primary"
                             disabled={isLoading}
                         />

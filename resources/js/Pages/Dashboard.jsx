@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { presetChatFlows } from '@/data/presetChatFlows';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -347,6 +348,81 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
     // Chat handlers
     const handleSendMessage = async (message) => {
+        // Handle preset chat flows
+        if (presetChatFlow) {
+            const currentFlow = presetChatFlows[presetChatFlow];
+            const currentStep = currentFlow.steps[presetChatStep];
+
+            // Add user message to chat
+            const userMessage = {
+                role: 'user',
+                content: message,
+                user: auth.user?.name
+            };
+            setChatMessages(prev => [...prev, userMessage]);
+
+            // Validate the input
+            if (currentStep.validation) {
+                const validationError = currentStep.validation(message);
+                if (validationError) {
+                    const errorMessage = {
+                        role: 'assistant',
+                        content: `❌ ${validationError}\n\nPlease try again:`,
+                        type: 'error'
+                    };
+                    setChatMessages(prev => [...prev, errorMessage]);
+                    return;
+                }
+            }
+
+            // Store the data
+            if (currentStep.field) {
+                setPresetChatData(prev => ({
+                    ...prev,
+                    [currentStep.field]: message
+                }));
+            }
+
+            // Move to next step
+            const nextStepIndex = presetChatStep + 1;
+
+            if (nextStepIndex < currentFlow.steps.length) {
+                const nextStep = currentFlow.steps[nextStepIndex];
+                let nextMessage = nextStep.message;
+
+                // Replace placeholders with actual data
+                Object.keys(presetChatData).forEach(key => {
+                    const placeholder = `{${key}}`;
+                    nextMessage = nextMessage.replace(placeholder, presetChatData[key]);
+                });
+
+                const systemMessage = {
+                    role: 'assistant',
+                    content: nextMessage,
+                    type: 'system',
+                    options: nextStep.options
+                };
+
+                setChatMessages(prev => [...prev, systemMessage]);
+                setPresetChatStep(nextStepIndex);
+
+                // If this is the final step, handle completion
+                if (nextStep.isFinal) {
+                    // Here you would typically make an API call to create the project/task
+                    console.log('Preset chat flow completed:', presetChatData);
+
+                    // Reset the preset flow
+                    setTimeout(() => {
+                        setPresetChatFlow(null);
+                        setPresetChatStep(0);
+                        setPresetChatData({});
+                    }, 3000);
+                }
+            }
+            return;
+        }
+
+        // Regular chat handling
         try {
             let chatId = currentChatId;
 
@@ -432,7 +508,38 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
     };
 
     const handlePresetClick = async (prompt) => {
-        // Create a new chat with the preset message
+        // Handle reset case
+        if (prompt === 'reset') {
+            setPresetChatFlow(null);
+            setPresetChatStep(0);
+            setPresetChatData({});
+            setCurrentChatId(null);
+            setChatMessages([]);
+            return;
+        }
+
+        // Check if this is a preset chat flow
+        if (presetChatFlows[prompt]) {
+            // Start preset chat flow
+            setPresetChatFlow(prompt);
+            setPresetChatStep(0);
+            setPresetChatData({});
+            setCurrentChatId(null);
+            setChatMessages([]);
+
+            // Add the first system message
+            const firstStep = presetChatFlows[prompt].steps[0];
+            const systemMessage = {
+                role: 'assistant',
+                content: firstStep.message,
+                type: 'system',
+                options: firstStep.options
+            };
+            setChatMessages([systemMessage]);
+            return;
+        }
+
+        // Regular preset prompt handling (fallback)
         try {
             const createResponse = await fetch('/api/chats', {
                 method: 'POST',
@@ -480,6 +587,10 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         setCurrentChatId(null);
         setChatMessages([]);
         setShowChatSidebar(false);
+        // Reset preset chat flow state
+        setPresetChatFlow(null);
+        setPresetChatStep(0);
+        setPresetChatData({});
     };
 
     // Save chat sidebar state to sessionStorage whenever it changes
@@ -581,75 +692,24 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         console.log('Edit chat:', chatId);
     };
 
+    // State for preset chat flows
+    const [presetChatFlow, setPresetChatFlow] = useState(null);
+    const [presetChatStep, setPresetChatStep] = useState(0);
+    const [presetChatData, setPresetChatData] = useState({});
+
+
+
     const getContextPrompts = (context) => {
-        switch (context) {
-            case 'projects':
-                return [
-                    'Show me all active projects with their progress',
-                    'Create a new project timeline and milestones',
-                    'Generate a project progress report for this month',
-                    'Find projects with overdue tasks',
-                    'Review project budget and expenses',
-                    'Assign tasks to team members',
-                    'Schedule project meetings',
-                    'Track project deliverables'
-                ];
-            case 'clients':
-                return [
-                    'List all clients with their contact information',
-                    'Show me clients with outstanding invoices',
-                    'Generate a client satisfaction report',
-                    'Find clients with recent activity',
-                    'Schedule client meetings',
-                    'Track client communications',
-                    'Create client proposals',
-                    'Review client feedback'
-                ];
-            case 'bobbi-flow':
-                return [
-                    'Show me the current workflow status',
-                    'List all automated processes',
-                    'Generate a workflow efficiency report',
-                    'Find bottlenecks in current processes',
-                    'Create workflow templates',
-                    'Track workflow metrics',
-                    'Automate workflow steps',
-                    'Generate workflow reports'
-                ];
-            case 'calendar':
-                return [
-                    'Show me all meetings this week',
-                    'List upcoming deadlines',
-                    'Generate a calendar summary',
-                    'Find conflicting appointments',
-                    'Block time for focused work',
-                    'Coordinate team schedules',
-                    'Set up recurring events',
-                    'Track time allocation'
-                ];
-            case 'analytics':
-                return [
-                    'Generate a revenue report for this quarter',
-                    'Show me performance metrics',
-                    'Create a trend analysis report',
-                    'Find areas for improvement',
-                    'Track business KPIs',
-                    'Monitor trends and patterns',
-                    'Generate insights dashboard',
-                    'Export analytics data'
-                ];
-            default:
-                return [
-                    'Show me invoices ranked by amount',
-                    'Generate a project report',
-                    'Show me all pending tasks for this week',
-                    'Create a summary of client communications',
-                    'Review and update task priorities across all projects',
-                    'Create a proposal template for new client work',
-                    'Analyze project performance and identify bottlenecks',
-                    'Schedule team meetings for the upcoming week'
-                ];
+        // Only show preset chat options for the general context
+        if (context === 'general') {
+            return [
+                'Create Project',
+                'Create Task'
+            ];
         }
+
+        // For other contexts, return empty array to show no preset options
+        return [];
     };
 
     const handleWidgetClick = async (widgetType, widgetKey) => {
@@ -1301,24 +1361,45 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                         <div className={`${showChatSidebar && chatSidebarCollapsed ? 'ml-16' : ''} flex-1 bg-background flex flex-col transition-all duration-300`}>
                             <div className="flex items-center justify-between p-4 border-b border-border">
                                 <div className="flex items-center space-x-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                            if (showChatSidebar) {
-                                                setChatSidebarCollapsed(!chatSidebarCollapsed);
-                                            } else {
-                                                setShowChatSidebar(true);
-                                            }
-                                        }}
-                                        className="text-muted-foreground hover:text-foreground"
-                                    >
-                                        <MessageSquare className="w-4 h-4 mr-2" />
-                                        {aiContext === 'general' ? 'Recent Chats' : `${aiContext.charAt(0).toUpperCase() + aiContext.slice(1)} Chats`}
-                                        {showChatSidebar && chatSidebarCollapsed && (
-                                            <span className="ml-2 text-xs text-muted-foreground">(Collapsed)</span>
-                                        )}
-                                    </Button>
+                                    {presetChatFlow ? (
+                                        <div className="flex items-center justify-between w-full">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-muted-foreground hover:text-foreground"
+                                            >
+                                                <MessageSquare className="w-4 h-4 mr-2" />
+                                                {presetChatFlow} - Step {presetChatStep + 1}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handlePresetClick('reset')}
+                                                className="text-muted-foreground hover:text-foreground"
+                                            >
+                                                Exit Flow
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                if (showChatSidebar) {
+                                                    setChatSidebarCollapsed(!chatSidebarCollapsed);
+                                                } else {
+                                                    setShowChatSidebar(true);
+                                                }
+                                            }}
+                                            className="text-muted-foreground hover:text-foreground"
+                                        >
+                                            <MessageSquare className="w-4 h-4 mr-2" />
+                                            {aiContext === 'general' ? 'Recent Chats' : `${aiContext.charAt(0).toUpperCase() + aiContext.slice(1)} Chats`}
+                                            {showChatSidebar && chatSidebarCollapsed && (
+                                                <span className="ml-2 text-xs text-muted-foreground">(Collapsed)</span>
+                                            )}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                             <ChatInterface
@@ -1328,6 +1409,8 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                 onPresetClick={handlePresetClick}
                                 context={aiContext}
                                 presetPrompts={getContextPrompts(aiContext)}
+                                presetChatFlow={presetChatFlow}
+                                presetChatStep={presetChatStep}
                             />
                         </div>
 
