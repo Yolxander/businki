@@ -99,16 +99,16 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         return savedChatSidebarCollapsedState ? JSON.parse(savedChatSidebarCollapsedState) : false;
     });
 
-    // Collapsible sections state
+    // Collapsible sections state - only one can be expanded at a time
     const [workCollapsed, setWorkCollapsed] = useState(() => {
         // Initialize work section collapsed state from sessionStorage
         const savedWorkCollapsedState = sessionStorage.getItem('bobbi-work-section-collapsed');
-        return savedWorkCollapsedState ? JSON.parse(savedWorkCollapsedState) : false;
+        return savedWorkCollapsedState ? JSON.parse(savedWorkCollapsedState) : true; // Default to collapsed
     });
     const [systemCollapsed, setSystemCollapsed] = useState(() => {
         // Initialize system section collapsed state from sessionStorage
         const savedSystemCollapsedState = sessionStorage.getItem('bobbi-system-section-collapsed');
-        return savedSystemCollapsedState ? JSON.parse(savedSystemCollapsedState) : false;
+        return savedSystemCollapsedState ? JSON.parse(savedSystemCollapsedState) : true; // Default to collapsed
     });
 
     // AI Generation form state
@@ -506,6 +506,29 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
     useEffect(() => {
         sessionStorage.setItem('bobbi-system-section-collapsed', JSON.stringify(systemCollapsed));
     }, [systemCollapsed]);
+
+    // Accordion behavior - only one section can be expanded at a time
+    const handleWorkToggle = () => {
+        if (workCollapsed) {
+            // If work is collapsed, expand it and collapse system
+            setWorkCollapsed(false);
+            setSystemCollapsed(true);
+        } else {
+            // If work is expanded, collapse it
+            setWorkCollapsed(true);
+        }
+    };
+
+    const handleSystemToggle = () => {
+        if (systemCollapsed) {
+            // If system is collapsed, expand it and collapse work
+            setSystemCollapsed(false);
+            setWorkCollapsed(true);
+        } else {
+            // If system is expanded, collapse it
+            setSystemCollapsed(true);
+        }
+    };
 
     // Listen for close sidebar event
     useEffect(() => {
@@ -1120,7 +1143,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                             variant="ghost"
                                             size="sm"
                                             className="h-6 w-6 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
-                                            onClick={() => setWorkCollapsed(!workCollapsed)}
+                                            onClick={handleWorkToggle}
                                         >
                                             {workCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                         </Button>
@@ -1171,7 +1194,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                             variant="ghost"
                                             size="sm"
                                             className="h-6 w-6 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
-                                            onClick={() => setSystemCollapsed(!systemCollapsed)}
+                                            onClick={handleSystemToggle}
                                         >
                                             {systemCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                         </Button>
@@ -1220,17 +1243,28 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                             {/* Trial Info */}
                             <div className="p-6 border-t border-sidebar-border">
                                 <div className="p-4 bg-gradient-to-br from-[#d1ff75]/10 to-[#d1ff75]/5 rounded-lg border border-[#d1ff75]/20 shadow-sm">
-                                    <div className="flex items-center space-x-2 mb-2">
-                                        <div className="w-2 h-2 bg-[#d1ff75] rounded-full animate-pulse"></div>
-                                        <p className="text-sm font-medium text-sidebar-foreground">Your trial ends in 14 days</p>
-                                    </div>
-                                    <p className="text-xs text-sidebar-foreground/70 mb-3 leading-relaxed">
-                                        Enjoy working with reports, extract data, advanced search experience and much more.
-                                    </p>
-                                    <Button className="w-full bg-[#d1ff75] hover:bg-[#d1ff75]/90 text-black font-medium text-sm shadow-sm">
-                                        <ArrowRight className="w-4 h-4 mr-1" />
-                                        Upgrade
-                                    </Button>
+                                    {(!workCollapsed || !systemCollapsed) ? (
+                                        // Show only upgrade button when any section is expanded
+                                        <Button className="w-full bg-[#d1ff75] hover:bg-[#d1ff75]/90 text-black font-medium text-sm shadow-sm">
+                                            <ArrowRight className="w-4 h-4 mr-1" />
+                                            Upgrade
+                                        </Button>
+                                    ) : (
+                                        // Show full trial info when all sections are collapsed
+                                        <>
+                                            <div className="flex items-center space-x-2 mb-2">
+                                                <div className="w-2 h-2 bg-[#d1ff75] rounded-full animate-pulse"></div>
+                                                <p className="text-sm font-medium text-sidebar-foreground">Your trial ends in 14 days</p>
+                                            </div>
+                                            <p className="text-xs text-sidebar-foreground/70 mb-3 leading-relaxed">
+                                                Enjoy working with reports, extract data, advanced search experience and much more.
+                                            </p>
+                                            <Button className="w-full bg-[#d1ff75] hover:bg-[#d1ff75]/90 text-black font-medium text-sm shadow-sm">
+                                                <ArrowRight className="w-4 h-4 mr-1" />
+                                                Upgrade
+                                            </Button>
+                                        </>
+                                    )}
                                 </div>
 
                                 {/* User Profile */}
