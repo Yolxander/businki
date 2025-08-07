@@ -553,14 +553,10 @@ class AIChatService
         $contextKey = "client_context_{$chat->id}";
         $context = Cache::get($contextKey, []);
 
-        // Check if context is still valid (within 5 minutes)
-        if (!empty($context) && isset($context['timestamp'])) {
-            $age = now()->timestamp - $context['timestamp'];
-            if ($age > 300) { // 5 minutes
-                Cache::forget($contextKey);
-                return [];
-            }
-        }
+        Log::info('Retrieved client context', [
+            'chat_id' => $chat->id,
+            'context' => $context
+        ]);
 
         return $context;
     }
@@ -591,7 +587,7 @@ class AIChatService
                         $this->clearClientContext($chat);
                     } else if (isset($result['current_field'])) {
                         // If we need more fields, ask for the next one
-                        $result = $this->handleSequentialFieldCollection($result, $data);
+                        $result = $this->handleSequentialFieldCollection($chat, $result, $data);
                     }
                     break;
 
@@ -949,13 +945,18 @@ class AIChatService
             'timestamp' => now()->timestamp
         ];
 
+        Log::info('Storing client context', [
+            'chat_id' => $chat->id,
+            'context' => $context
+        ]);
+
         Cache::put($contextKey, $context, 300); // Store for 5 minutes
     }
 
     /**
      * Handle sequential field collection for client creation
      */
-    private function handleSequentialFieldCollection(array $result, array $existingData): array
+    private function handleSequentialFieldCollection(Chat $chat, array $result, array $existingData): array
     {
         $missingFields = $result['missing_fields'] ?? [];
         $currentField = $result['current_field'] ?? null;
@@ -992,9 +993,31 @@ class AIChatService
             $result['current_field'] = $nextField;
             $result['existing_data'] = $existingData;
         } else {
-            // All fields collected, create the client
+            // All fields collected, create the client immediately
+            $clientName = ($existingData['first_name'] ?? '') . ' ' . ($existingData['last_name'] ?? '');
+            $clientEmail = $existingData['email'] ?? '';
+
+            Log::info('All fields collected, creating client', [
+                'existing_data' => $existingData,
+                'client_name' => trim($clientName),
+                'client_email' => $clientEmail
+            ]);
+
+            // Create the client immediately
             $finalResult = $this->clientService->createClient($existingData);
+
+            Log::info('Client creation result', [
+                'success' => $finalResult['success'],
+                'message' => $finalResult['message'],
+                'data' => $finalResult['data'] ?? null
+            ]);
+
             if ($finalResult['success']) {
+                $result = $finalResult;
+                // Clear the context after successful creation
+                $this->clearClientContext($chat);
+            } else {
+                // If creation failed, return the error
                 $result = $finalResult;
             }
         }

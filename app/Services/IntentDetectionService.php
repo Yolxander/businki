@@ -492,26 +492,36 @@ class IntentDetectionService
 
         switch ($field) {
             case 'first_name':
-                // Extract first name from simple response
-                if (preg_match('/^[A-Z][a-z]+$/', $message)) {
-                    $data['first_name'] = ucfirst(strtolower($message));
-                } elseif (preg_match('/^([A-Z][a-z]+)\s+[A-Z][a-z]+$/', $message, $matches)) {
-                    $data['first_name'] = ucfirst(strtolower($matches[1]));
+                // Check if the message is actually an email address
+                if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $message, $matches)) {
+                    $data['email'] = $matches[0];
                 } else {
-                    // If no pattern matches, treat the whole message as first name
-                    $data['first_name'] = ucfirst(strtolower(trim($message)));
+                    // Extract first name from simple response
+                    if (preg_match('/^[A-Z][a-z]+$/', $message)) {
+                        $data['first_name'] = ucfirst(strtolower($message));
+                    } elseif (preg_match('/^([A-Z][a-z]+)\s+[A-Z][a-z]+$/', $message, $matches)) {
+                        $data['first_name'] = ucfirst(strtolower($matches[1]));
+                    } else {
+                        // If no pattern matches, treat the whole message as first name
+                        $data['first_name'] = ucfirst(strtolower(trim($message)));
+                    }
                 }
                 break;
 
             case 'last_name':
-                // Extract last name from simple response
-                if (preg_match('/^[A-Z][a-z]+$/', $message)) {
-                    $data['last_name'] = ucfirst(strtolower($message));
-                } elseif (preg_match('/^[A-Z][a-z]+\s+([A-Z][a-z]+)$/', $message, $matches)) {
-                    $data['last_name'] = ucfirst(strtolower($matches[1]));
+                // Check if the message is actually an email address
+                if (preg_match('/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/', $message, $matches)) {
+                    $data['email'] = $matches[0];
                 } else {
-                    // If no pattern matches, treat the whole message as last name
-                    $data['last_name'] = ucfirst(strtolower(trim($message)));
+                    // Extract last name from simple response
+                    if (preg_match('/^[A-Z][a-z]+$/', $message)) {
+                        $data['last_name'] = ucfirst(strtolower($message));
+                    } elseif (preg_match('/^[A-Z][a-z]+\s+([A-Z][a-z]+)$/', $message, $matches)) {
+                        $data['last_name'] = ucfirst(strtolower($matches[1]));
+                    } else {
+                        // If no pattern matches, treat the whole message as last name
+                        $data['last_name'] = ucfirst(strtolower(trim($message)));
+                    }
                 }
                 break;
 
