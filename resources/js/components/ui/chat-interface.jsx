@@ -26,6 +26,17 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function ChatInterface({
     messages = [],
@@ -41,6 +52,8 @@ export default function ChatInterface({
     onDeleteChat = null
 }) {
     const [inputValue, setInputValue] = useState('');
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [chatToDelete, setChatToDelete] = useState(null);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -66,6 +79,20 @@ export default function ChatInterface({
 
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text);
+    };
+
+    const handleDeleteClick = (chatId, e) => {
+        e.stopPropagation();
+        setChatToDelete(chatId);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (chatToDelete && onDeleteChat) {
+            onDeleteChat(chatToDelete);
+        }
+        setDeleteDialogOpen(false);
+        setChatToDelete(null);
     };
 
     const getContextPrompts = (context) => {
@@ -391,12 +418,7 @@ export default function ChatInterface({
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
                                                                     <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            if (confirm('Are you sure you want to delete this chat?')) {
-                                                                                onDeleteChat(chat.id);
-                                                                            }
-                                                                        }}
+                                                                        onClick={(e) => handleDeleteClick(chat.id, e)}
                                                                         className="text-destructive"
                                                                     >
                                                                         <Trash2 className="h-3 w-3 mr-2" />
@@ -478,6 +500,27 @@ export default function ChatInterface({
                     Bobbi is currently in Beta. Some information produced may be inaccurate or incomplete.
                 </div>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Chat</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete this chat? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConfirmDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
