@@ -690,6 +690,8 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                     setCurrentChatId(null);
                     setChatMessages([]);
                 }
+                // Reload recent chats after deletion
+                loadRecentChats();
             }
         } catch (error) {
             console.error('Error deleting chat:', error);
@@ -1480,6 +1482,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                 presetChatStep={presetChatStep}
                                 recentChats={recentChats}
                                 onChatSelect={handleChatSelect}
+                                onDeleteChat={handleDeleteChat}
                             />
                         </div>
 

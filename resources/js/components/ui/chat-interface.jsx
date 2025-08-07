@@ -1,21 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import {
-    Send,
+    ArrowRight,
+    Copy,
+    Check,
     Paperclip,
     Command,
-    RefreshCw,
-    Copy,
-    Edit3,
-    Check,
-    ChevronDown,
-    ArrowRight,
+    Trash2,
+    MoreHorizontal,
     FileText,
     Building,
     TrendingUp,
-    BarChart3
+    BarChart3,
+    RefreshCw,
+    Edit3,
+    ChevronDown
 } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function ChatInterface({
     messages = [],
@@ -27,7 +37,8 @@ export default function ChatInterface({
     presetChatFlow = null,
     presetChatStep = 0,
     recentChats = [],
-    onChatSelect = null
+    onChatSelect = null,
+    onDeleteChat = null
 }) {
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef(null);
@@ -344,26 +355,60 @@ export default function ChatInterface({
                                 <h3 className="text-sm font-semibold text-muted-foreground mb-4">Recent Chats</h3>
                                 <div className="space-y-2">
                                     {recentChats.slice(0, 5).map((chat) => (
-                                        <Button
+                                        <div
                                             key={chat.id}
-                                            variant="ghost"
-                                            className="w-full justify-start text-left hover:bg-[#d1ff75]/10 hover:text-foreground border-border hover:border-[#d1ff75]/20 transition-all duration-200 cursor-pointer h-auto p-3"
-                                            onClick={() => onChatSelect && onChatSelect(chat.id)}
+                                            className="group relative"
                                         >
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                                    <div className="w-8 h-8 bg-[#d1ff75]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-xs font-bold text-[#d1ff75]">C</span>
+                                            <Button
+                                                variant="ghost"
+                                                className="w-full justify-start text-left hover:bg-[#d1ff75]/10 hover:text-foreground border-border hover:border-[#d1ff75]/20 transition-all duration-200 cursor-pointer h-auto p-3"
+                                                onClick={() => onChatSelect && onChatSelect(chat.id)}
+                                            >
+                                                <div className="flex items-center justify-between w-full">
+                                                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                                        <div className="w-8 h-8 bg-[#d1ff75]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                            <span className="text-xs font-bold text-[#d1ff75]">C</span>
+                                                        </div>
+                                                        <div className="min-w-0 flex-1 text-left">
+                                                            <div className="font-medium text-sm leading-5 truncate max-w-[300px]">{chat.full_title || chat.title}</div>
+                                                        </div>
                                                     </div>
-                                                    <div className="min-w-0 flex-1 text-left">
-                                                        <div className="font-medium text-sm leading-5 truncate max-w-[300px]">{chat.full_title || chat.title}</div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <div className="text-xs text-muted-foreground flex-shrink-0">
+                                                            {chat.last_activity_at || 'N/A'}
+                                                        </div>
+                                                        {onDeleteChat && (
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                        <MoreHorizontal className="h-3 w-3" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (confirm('Are you sure you want to delete this chat?')) {
+                                                                                onDeleteChat(chat.id);
+                                                                            }
+                                                                        }}
+                                                                        className="text-destructive"
+                                                                    >
+                                                                        <Trash2 className="h-3 w-3 mr-2" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                                                    {chat.last_activity_at || 'N/A'}
-                                                </div>
-                                            </div>
-                                        </Button>
+                                            </Button>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
