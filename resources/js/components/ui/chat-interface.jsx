@@ -350,13 +350,17 @@ export default function ChatInterface({
                                             className="w-full justify-start text-left hover:bg-[#d1ff75]/10 hover:text-foreground border-border hover:border-[#d1ff75]/20 transition-all duration-200 cursor-pointer h-auto p-3"
                                             onClick={() => onChatSelect && onChatSelect(chat.id)}
                                         >
-                                            <div className="flex items-center space-x-3 w-full">
-                                                <div className="w-8 h-8 bg-[#d1ff75]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-xs font-bold text-[#d1ff75]">C</span>
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                                    <div className="w-8 h-8 bg-[#d1ff75]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-xs font-bold text-[#d1ff75]">C</span>
+                                                    </div>
+                                                    <div className="min-w-0 flex-1 text-left">
+                                                        <div className="font-medium text-sm leading-5 truncate max-w-[300px]">{chat.title}</div>
+                                                    </div>
                                                 </div>
-                                                <div className="min-w-0 flex-1 text-left">
-                                                    <div className="font-medium text-sm leading-5 truncate">{chat.title}</div>
-                                                    <div className="text-xs text-muted-foreground truncate">{chat.updated_at}</div>
+                                                <div className="text-xs text-muted-foreground ml-2 flex-shrink-0">
+                                                    {new Date(chat.updated_at).toLocaleDateString()}
                                                 </div>
                                             </div>
                                         </Button>
