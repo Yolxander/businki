@@ -296,69 +296,7 @@ export default function BobbiFlow({ auth, tasks = [] }) {
                         ))}
                     </div>
                 </div>
-                {/* FLOW SUMMARY BAR (Sticky Under Kanban) */}
-                {!focusMode && (
-                    <div className="flex-shrink-0 border-t border-border/50 bg-background/95 backdrop-blur">
-                        <div className="flex items-center justify-between px-6 py-3">
-                            <div className="flex items-center space-x-6">
-                                <div className="flex items-center space-x-2">
-                                    <Timer className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium">Flow Summary:</span>
-                                    <Badge variant="outline" className="text-xs">
-                                        {completedTasks} Tasks Done
-                                    </Badge>
-                                    <Badge variant="outline" className="text-xs">
-                                        {reviewTasks} Review
-                                    </Badge>
-                                </div>
-                                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                    <Sparkles className="w-4 h-4" />
-                                    <span>AI Suggests: "Quick win task"</span>
-                                    <ChevronRight className="w-3 h-3" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                {/* DAILY PERFORMANCE FOOTER */}
-                {!focusMode && (
-                    <div className="flex-shrink-0 border-t border-border/50 bg-background/95">
-                        <div className="flex items-center justify-between px-6 py-3">
-                            <div className="flex items-center space-x-6 text-sm">
-                                <div className="flex items-center space-x-2">
-                                    <CheckCircle className="w-4 h-4 text-green-500" />
-                                    <span>{completedTasks} Tasks Completed</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <AlertCircle className="w-4 h-4 text-orange-500" />
-                                    <span>1 Blocked</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <Play className="w-4 h-4 text-blue-500" />
-                                    <span>2h 15m Focused</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <Sparkles className="w-4 h-4 text-purple-500" />
-                                    <span>Sync Project</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                                    <Focus className="w-4 h-4" />
-                                    <span>Daily Review</span>
-                                    <ChevronRight className="w-3 h-3" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                                    <Bot className="w-4 h-4" />
-                                    <span>Automation Settings</span>
-                                </Button>
-                                <Button variant="ghost" size="sm">
-                                    <Play className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+
             </div>
         </AuthenticatedLayout>
     );
