@@ -339,11 +339,20 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         }
     };
 
-    const handleContextChange = (context) => {
+        const handleContextChange = (context) => {
+        // In chat mode, don't allow switching to bobbi-flow context, but allow tasks
+        if (dashboardMode === 'ai_assistant' && context === 'bobbi-flow') {
+            return;
+        }
+        
         setAiContext(context);
         // Reset chat when context changes
         setCurrentChatId(null);
         setChatMessages([]);
+        // Reset preset chat flow state
+        setPresetChatFlow(null);
+        setPresetChatStep(0);
+        setPresetChatData({});
     };
 
     // Chat handlers
@@ -699,12 +708,57 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
 
 
-    const getContextPrompts = (context) => {
+        const getContextPrompts = (context) => {
         // Only show preset chat options for the general context
         if (context === 'general') {
             return [
                 'Create Project',
                 'Create Task'
+            ];
+        }
+
+        if (context === 'projects') {
+            return [
+                'View All Projects',
+                'Create New Project',
+                'Update Project Status',
+                'Create Project Tasks'
+            ];
+        }
+
+        if (context === 'clients') {
+            return [
+                'View All Clients',
+                'Add New Client',
+                'Update Client Information',
+                'Generate Client Report'
+            ];
+        }
+
+        if (context === 'calendar') {
+            return [
+                'View This Week\'s Schedule',
+                'Schedule New Meeting',
+                'Check Deadlines',
+                'Generate Calendar Report'
+            ];
+        }
+
+        if (context === 'bobbi-flow') {
+            return [
+                'View All Tasks',
+                'Create New Task',
+                'Update Task Status',
+                'Manage Subtasks'
+            ];
+        }
+        
+        if (context === 'tasks') {
+            return [
+                'View All Tasks',
+                'Create New Task',
+                'Update Task Status',
+                'Manage Subtasks'
             ];
         }
 
@@ -1226,14 +1280,25 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                                 <Users className="w-4 h-4 mr-2" />
                                                 Clients
                                             </Button>
-                                            <Button
-                                                variant="ghost"
-                                                className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'bobbi-flow' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
-                                                onClick={() => handleContextChange('bobbi-flow')}
-                                            >
-                                                <Target className="w-4 h-4 mr-2" />
-                                                Bobbi Flow
-                                            </Button>
+                                            {dashboardMode !== 'ai_assistant' ? (
+                                                <Button
+                                                    variant="ghost"
+                                                    className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'bobbi-flow' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                                    onClick={() => handleContextChange('bobbi-flow')}
+                                                >
+                                                    <Target className="w-4 h-4 mr-2" />
+                                                    Bobbi Flow
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    variant="ghost"
+                                                    className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'tasks' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
+                                                    onClick={() => handleContextChange('tasks')}
+                                                >
+                                                    <Target className="w-4 h-4 mr-2" />
+                                                    Tasks
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost"
                                                 className={`w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent ${aiContext === 'calendar' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}`}
@@ -1354,6 +1419,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                 chatType={aiContext}
                                 collapsed={chatSidebarCollapsed}
                                 onToggleCollapse={() => setChatSidebarCollapsed(!chatSidebarCollapsed)}
+                                dashboardMode={dashboardMode}
                             />
                         )}
 

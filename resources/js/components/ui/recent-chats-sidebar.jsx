@@ -25,15 +25,23 @@ export default function RecentChatsSidebar({
     onEditChat,
     chatType = 'general',
     collapsed = false,
-    onToggleCollapse
+    onToggleCollapse,
+    dashboardMode = 'default'
 }) {
     const [recentChats, setRecentChats] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(false);
 
-    const loadRecentChats = async () => {
+        const loadRecentChats = async () => {
         setLoading(true);
         try {
+            // In chat mode, don't load bobbi-flow chats, but allow tasks
+            if (dashboardMode === 'ai_assistant' && chatType === 'bobbi-flow') {
+                setRecentChats([]);
+                setHasMore(false);
+                return;
+            }
+            
             const response = await fetch(`/api/chats/recent?type=${chatType}&limit=5`);
             const data = await response.json();
             setRecentChats(data.data.chats);
@@ -47,6 +55,13 @@ export default function RecentChatsSidebar({
 
     const loadMoreChats = async () => {
         try {
+            // In chat mode, don't load bobbi-flow chats
+            if (dashboardMode === 'ai_assistant' && chatType === 'bobbi-flow') {
+                setRecentChats([]);
+                setHasMore(false);
+                return;
+            }
+
             const response = await fetch(`/api/chats/all?type=${chatType}&page=1&per_page=10`);
             const data = await response.json();
             setRecentChats(data.data.data);
@@ -88,6 +103,7 @@ export default function RecentChatsSidebar({
             projects: '📁',
             clients: '👥',
             'bobbi-flow': '🔄',
+            tasks: '📋',
             calendar: '📅',
             system: '⚙️',
             analytics: '📊'
@@ -100,7 +116,8 @@ export default function RecentChatsSidebar({
             general: 'General',
             projects: 'Projects',
             clients: 'Clients',
-            'bobbi-flow': 'Bobbi Flow',
+            'bobbi-flow': dashboardMode === 'ai_assistant' ? 'Tasks' : 'Bobbi Flow',
+            tasks: 'Tasks',
             calendar: 'Calendar',
             system: 'System',
             analytics: 'Analytics'

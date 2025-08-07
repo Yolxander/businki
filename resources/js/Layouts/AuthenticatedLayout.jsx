@@ -89,7 +89,7 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
             '/dashboard': 'Dashboard',
             '/projects': 'Projects',
             '/clients': 'Clients',
-            '/bobbi-flow': 'Bobbi Flow',
+            '/bobbi-flow': dashboardMode === 'ai_assistant' ? 'Tasks' : 'Bobbi Flow',
             '/calendar': 'Calendar',
             '/ai-settings': 'AI Settings',
             '/playground': 'Playground',
@@ -221,7 +221,7 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
         { name: 'Clients', href: '/clients', icon: Users },
         // { name: 'Proposals', href: '/proposals', icon: FileText },
         // { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
-        { name: 'Bobbi Flow', href: '/bobbi-flow', icon: Target },
+        { name: dashboardMode === 'ai_assistant' ? 'Tasks' : 'Bobbi Flow', href: '/bobbi-flow', icon: Target },
         { name: 'Calendar', href: '/calendar', icon: Calendar },
     ];
 
