@@ -1,5 +1,127 @@
 // Preset chat flow definitions
 export const presetChatFlows = {
+    'Plan my day': {
+        steps: [
+            {
+                message: "Let's plan your day! What's your main focus for today?",
+                field: 'daily_focus',
+                validation: (value) => value.trim().length > 0 ? null : 'Please describe your main focus for today'
+            },
+            {
+                message: "How many hours do you have available to work today?",
+                field: 'available_hours',
+                validation: (value) => {
+                    const hours = parseInt(value);
+                    return !isNaN(hours) && hours > 0 && hours <= 24 ? null : 'Please enter a valid number of hours (1-24)';
+                }
+            },
+            {
+                message: "What's your energy level today? (This helps me prioritize tasks)",
+                field: 'energy_level',
+                validation: (value) => ['high', 'medium', 'low'].includes(value.toLowerCase()) ? null : 'Please select an energy level',
+                options: ['High', 'Medium', 'Low']
+            },
+            {
+                message: "Perfect! I'll create a personalized daily plan for you. Here's what I'm considering:\n\n" +
+                         "Main Focus: {daily_focus}\n" +
+                         "Available Time: {available_hours} hours\n" +
+                         "Energy Level: {energy_level}\n\n" +
+                         "Creating your daily plan...",
+                field: null,
+                isFinal: true
+            }
+        ]
+    },
+    'Review priorities': {
+        steps: [
+            {
+                message: "Let's review your priorities! What time period would you like to focus on?",
+                field: 'priority_period',
+                validation: (value) => ['today', 'this week', 'this month', 'all'].includes(value.toLowerCase()) ? null : 'Please select a time period',
+                options: ['Today', 'This Week', 'This Month', 'All Time']
+            },
+            {
+                message: "What type of priorities would you like to review?",
+                field: 'priority_type',
+                validation: (value) => ['tasks', 'projects', 'both'].includes(value.toLowerCase()) ? null : 'Please select a priority type',
+                options: ['Tasks Only', 'Projects Only', 'Both Tasks & Projects']
+            },
+            {
+                message: "Great! I'll review your {priority_type} priorities for {priority_period}. This will show you:\n\n" +
+                         "• High priority items that need attention\n" +
+                         "• Overdue tasks and projects\n" +
+                         "• Upcoming deadlines\n" +
+                         "• Suggested focus areas\n\n" +
+                         "Analyzing your priorities...",
+                field: null,
+                isFinal: true
+            }
+        ]
+    },
+    'Check deadlines': {
+        steps: [
+            {
+                message: "Let's check your deadlines! What time range would you like to review?",
+                field: 'deadline_range',
+                validation: (value) => ['today', 'this week', 'next week', 'this month'].includes(value.toLowerCase()) ? null : 'Please select a time range',
+                options: ['Today', 'This Week', 'Next Week', 'This Month']
+            },
+            {
+                message: "Would you like to see overdue items as well?",
+                field: 'include_overdue',
+                validation: (value) => ['yes', 'no'].includes(value.toLowerCase()) ? null : 'Please select yes or no',
+                options: ['Yes', 'No']
+            },
+            {
+                message: "Perfect! I'll check your deadlines for {deadline_range} {include_overdue === 'yes' ? 'including overdue items' : 'excluding overdue items'}. This will show you:\n\n" +
+                         "• Upcoming deadlines\n" +
+                         "• Task and project due dates\n" +
+                         "• Priority levels\n" +
+                         "• Suggested actions\n\n" +
+                         "Checking your deadlines...",
+                field: null,
+                isFinal: true
+            }
+        ]
+    },
+    'Start new project': {
+        steps: [
+            {
+                message: "Let's start a new project! What would you like to call this project?",
+                field: 'project_name',
+                validation: (value) => value.trim().length > 0 ? null : 'Project name is required'
+            },
+            {
+                message: "What's the main goal or purpose of this project?",
+                field: 'project_goal',
+                validation: (value) => value.trim().length > 0 ? null : 'Please describe the project goal'
+            },
+            {
+                message: "What's the priority level for this project?",
+                field: 'project_priority',
+                validation: (value) => ['high', 'medium', 'low'].includes(value.toLowerCase()) ? null : 'Please select a priority level',
+                options: ['High', 'Medium', 'Low']
+            },
+            {
+                message: "When would you like to complete this project? (YYYY-MM-DD):",
+                field: 'project_deadline',
+                validation: (value) => {
+                    const date = new Date(value);
+                    return !isNaN(date.getTime()) ? null : 'Please enter a valid date (YYYY-MM-DD)';
+                }
+            },
+            {
+                message: "Perfect! I'll start your new project. Here's what I'm creating:\n\n" +
+                         "Project Name: {project_name}\n" +
+                         "Goal: {project_goal}\n" +
+                         "Priority: {project_priority}\n" +
+                         "Deadline: {project_deadline}\n\n" +
+                         "Starting your new project...",
+                field: null,
+                isFinal: true
+            }
+        ]
+    },
     'Create Project': {
         steps: [
             {

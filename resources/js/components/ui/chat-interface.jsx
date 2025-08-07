@@ -314,7 +314,7 @@ export default function ChatInterface({
                 {messages.length === 0 ? (
                     <div className="text-center py-8">
                         <h2 className="text-2xl font-bold text-foreground mb-2">Hi, there!</h2>
-                        <p className="text-muted-foreground mb-8">What can I help you with?</p>
+                        <p className="text-muted-foreground mb-8">What should we work on today?</p>
 
                         {/* Suggested Prompts */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto w-full px-4">

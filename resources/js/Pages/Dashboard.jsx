@@ -731,8 +731,10 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         // Only show preset chat options for the general context
         if (context === 'general') {
             return [
-                'Create Project',
-                'Create Task'
+                'Plan my day',
+                'Review priorities',
+                'Check deadlines',
+                'Start new project'
             ];
         }
 
