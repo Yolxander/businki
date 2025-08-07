@@ -41,7 +41,7 @@ export default function RecentChatsSidebar({
                 setHasMore(false);
                 return;
             }
-            
+
             const response = await fetch(`/api/chats/recent?type=${chatType}&limit=5`);
             const data = await response.json();
             setRecentChats(data.data.chats);
@@ -53,9 +53,9 @@ export default function RecentChatsSidebar({
         }
     };
 
-    const loadMoreChats = async () => {
+        const loadMoreChats = async () => {
         try {
-            // In chat mode, don't load bobbi-flow chats
+            // In chat mode, don't load bobbi-flow chats, but allow tasks
             if (dashboardMode === 'ai_assistant' && chatType === 'bobbi-flow') {
                 setRecentChats([]);
                 setHasMore(false);

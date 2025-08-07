@@ -90,6 +90,7 @@ export default function AuthenticatedLayout({ user, header, children, focusMode 
             '/projects': 'Projects',
             '/clients': 'Clients',
             '/bobbi-flow': dashboardMode === 'ai_assistant' ? 'Tasks' : 'Bobbi Flow',
+            '/tasks': 'Tasks',
             '/calendar': 'Calendar',
             '/ai-settings': 'AI Settings',
             '/playground': 'Playground',
