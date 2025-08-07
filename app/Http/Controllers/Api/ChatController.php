@@ -45,6 +45,9 @@ class ChatController extends Controller
         try {
             $chats = Chat::where('user_id', Auth::id())
                 ->where('type', $type)
+                ->whereHas('messages', function ($query) {
+                    $query->havingRaw('COUNT(*) > 3');
+                })
                 ->orderBy('last_activity_at', 'desc')
                 ->limit($limit)
                 ->get()
@@ -107,6 +110,9 @@ class ChatController extends Controller
         try {
             $chats = Chat::where('user_id', Auth::id())
                 ->where('type', $type)
+                ->whereHas('messages', function ($query) {
+                    $query->havingRaw('COUNT(*) > 3');
+                })
                 ->orderBy('last_activity_at', 'desc')
                 ->paginate($perPage, ['*'], 'page', $page);
 
@@ -242,6 +248,12 @@ class ChatController extends Controller
                         'metadata' => $aiResult['metadata'] ?? []
                     ]);
                 }
+
+                // Note: Title generation will be handled in sendMessage when message count exceeds 3
+                Log::info('Chat created with initial messages', [
+                    'chat_id' => $chat->id,
+                    'message_count' => $chat->messages()->count()
+                ]);
             }
 
             return response()->json([
@@ -315,9 +327,49 @@ class ChatController extends Controller
             // Update chat's last activity
             $chat->updateLastActivity();
 
-            // If this is the first message and no title is set, generate one
-            if ($chat->messages()->count() === 1 && !$chat->title) {
-                $chat->update(['title' => $chat->generateTitle()]);
+            // Get current message count after adding the new message
+            $messageCount = $chat->messages()->count();
+
+            // Only save chats with more than 3 messages
+            if ($messageCount <= 3) {
+                // For chats with 3 or fewer messages, don't save them permanently
+                // They will be handled as temporary chats
+                Log::info('Chat has 3 or fewer messages, treating as temporary', [
+                    'chat_id' => $chat->id,
+                    'message_count' => $messageCount
+                ]);
+            } else {
+                // For chats with more than 3 messages, ensure they are saved
+                // If chat has more than 5 messages and no title, generate AI title
+                if ($messageCount > 5 && !$chat->title) {
+                    Log::info('Generating AI title for chat with more than 5 messages', [
+                        'chat_id' => $chat->id,
+                        'message_count' => $messageCount
+                    ]);
+
+                    try {
+                        $aiTitle = $chat->generateAITitle();
+                        $chat->update(['title' => $aiTitle]);
+
+                        Log::info('AI title generated successfully', [
+                            'chat_id' => $chat->id,
+                            'title' => $aiTitle
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to generate AI title', [
+                            'chat_id' => $chat->id,
+                            'error' => $e->getMessage()
+                        ]);
+
+                        // Fallback to simple title generation
+                        if (!$chat->title) {
+                            $chat->update(['title' => $chat->generateTitle()]);
+                        }
+                    }
+                } elseif (!$chat->title) {
+                    // For chats with 4-5 messages, use simple title generation
+                    $chat->update(['title' => $chat->generateTitle()]);
+                }
             }
 
             // If this is a user message, generate AI response

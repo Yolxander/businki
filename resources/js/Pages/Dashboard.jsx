@@ -436,6 +436,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
             let chatId = currentChatId;
 
             // If no current chat, create a new one
+            // Note: Chats are only saved permanently when they have more than 3 messages
             if (!chatId) {
                 const createResponse = await fetch('/api/chats', {
                     method: 'POST',
@@ -703,7 +704,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         console.log('Edit chat:', chatId);
     };
 
-    // Load recent chats
+    // Load recent chats (only shows chats with more than 3 messages)
     const loadRecentChats = async () => {
         try {
             const response = await fetch(`/api/chats/recent?type=${aiContext}&limit=5`);
@@ -1375,14 +1376,9 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                             </div>
                                         ))}
                                         {chatMessages.filter(msg => msg.role === 'user').length === 0 && (
-                                            <>
-                                                <div className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent">
-                                                    Send me the detail file for t...
-                                                </div>
-                                                <div className="text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground cursor-pointer p-2 rounded hover:bg-sidebar-accent">
-                                                    I need to generate report
-                                                </div>
-                                            </>
+                                            <div className="text-sm text-sidebar-foreground/50 italic">
+                                                No recent messages
+                                            </div>
                                         )}
                                     </div>
                                 </div>
