@@ -6,7 +6,6 @@ use Tests\TestCase;
 use App\Services\AIIntentDetectionService;
 use App\Services\AIMLAPIService;
 use App\Services\OpenAIService;
-use App\Services\IntentDetectionService;
 use App\Models\AIModel;
 use App\Models\AIProvider;
 use App\Models\User;

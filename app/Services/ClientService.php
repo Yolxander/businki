@@ -27,29 +27,25 @@ class ClientService
             }
 
             if (!empty($missingFields)) {
+                // Use AI to determine the most logical first field to ask for
+                $firstField = $this->determineFirstField($missingFields, $data);
+                
                 $fieldNames = [
                     'first_name' => 'first name',
                     'last_name' => 'last name',
                     'email' => 'email address'
                 ];
 
-                $missingFieldNames = array_map(function($field) use ($fieldNames) {
-                    return $fieldNames[$field] ?? $field;
-                }, $missingFields);
-
-                $message = "I need a few more details to create the client. ";
-                if (count($missingFieldNames) === 1) {
-                    $message .= "Please provide the " . $missingFieldNames[0] . ".";
-                } else {
-                    $message .= "Please provide: " . implode(', ', $missingFieldNames) . ".";
-                }
+                $fieldName = $fieldNames[$firstField] ?? $firstField;
+                $message = "Great! Now what is the client's " . $fieldName . "?";
 
                 return [
                     'success' => false,
                     'message' => $message,
                     'data' => null,
                     'missing_fields' => $missingFields,
-                    'current_field' => $missingFields[0], // Set the first missing field as current
+                    'current_field' => $firstField,
+                    'existing_data' => $data,
                     'requires_interaction' => true
                 ];
             }
@@ -91,6 +87,35 @@ class ClientService
                 'data' => null
             ];
         }
+    }
+
+    /**
+     * Determine the most logical first field to ask for
+     */
+    private function determineFirstField(array $missingFields, array $existingData): string
+    {
+        // Priority order for fields
+        $fieldPriority = ['first_name', 'last_name', 'email', 'phone', 'company_name'];
+        
+        // If we have some data, prioritize fields that would complete the name
+        if (!empty($existingData)) {
+            if (isset($existingData['first_name']) && !isset($existingData['last_name']) && in_array('last_name', $missingFields)) {
+                return 'last_name';
+            }
+            if (isset($existingData['last_name']) && !isset($existingData['first_name']) && in_array('first_name', $missingFields)) {
+                return 'first_name';
+            }
+        }
+        
+        // Return the highest priority missing field
+        foreach ($fieldPriority as $field) {
+            if (in_array($field, $missingFields)) {
+                return $field;
+            }
+        }
+        
+        // Fallback to first missing field
+        return $missingFields[0];
     }
 
     /**

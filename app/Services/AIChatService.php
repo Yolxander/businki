@@ -58,6 +58,11 @@ class AIChatService
                 }
             }
 
+            // Check if this is a field response in an existing context
+            if (!empty($previousContext) && $this->isFieldResponse($userMessage, $previousContext)) {
+                return $this->handleFieldResponse($chat, $userMessage, $previousContext);
+            }
+
             // If AI intent detection has low confidence, continue with general AI response
             // The AIIntentDetectionService already handles rule-based fallback internally
 
@@ -84,7 +89,8 @@ class AIChatService
                     'context_used' => $chatContext['context_summary'] ?? [],
                     'ai_intent_detected' => $aiIntent['confidence'] >= 0.7,
                     'intent_type' => $aiIntent['type'] ?? 'none',
-                    'intent_confidence' => $aiIntent['confidence'] ?? 0
+                    'intent_confidence' => $aiIntent['confidence'] ?? 0,
+                    'client_intent_detected' => ($aiIntent['type'] === 'client')
                 ]
             ];
 
@@ -636,6 +642,10 @@ class AIChatService
                     $result = $this->clientService->listClients($data);
                     break;
 
+                case 'field_response':
+                    // Handle field response in context
+                    return $this->handleFieldResponse($chat, $userMessage, $previousContext);
+
                 default:
                     $result = [
                         'success' => false,
@@ -654,7 +664,7 @@ class AIChatService
                     $this->storeClientContext($chat, $result, $data);
 
                     // Use AIML API for interactive responses instead of OpenAI
-                    $response = $this->generateInteractiveResponse($userMessage, $result, $action);
+                    $response = $this->generateInteractiveResponse($chat, $userMessage, $result, $action);
                 } else {
                     $response = $result['message'];
                 }
@@ -759,51 +769,51 @@ class AIChatService
     }
 
     /**
-     * Generate interactive response using AIML API
+     * Enhanced AI-driven field collection with context awareness
      */
-    private function generateInteractiveResponse(string $userMessage, array $result, string $action): string
+    private function generateInteractiveResponse(Chat $chat, string $userMessage, array $result, string $action): string
     {
         try {
             $missingFields = $result['missing_fields'] ?? [];
+            $existingData = $result['existing_data'] ?? [];
             $currentField = $result['current_field'] ?? null;
 
-            $fieldNames = [
-                'first_name' => 'first name',
-                'last_name' => 'last name',
-                'email' => 'email address',
-                'phone' => 'phone number',
-                'company_name' => 'company name'
-            ];
+            // If no missing fields, we're done
+            if (empty($missingFields)) {
+                return "All required information has been collected. You're ready to create the client.";
+            }
 
-            // If we have a current field being asked for, ask specifically for that field
-            if ($currentField && isset($fieldNames[$currentField])) {
-                $fieldName = $fieldNames[$currentField];
+            // Use AI to determine the next field to ask for
+            $nextField = $this->determineNextFieldWithAI($userMessage, $missingFields, $existingData, $action);
+
+            if ($nextField) {
+                $fieldNames = [
+                    'first_name' => 'first name',
+                    'last_name' => 'last name',
+                    'email' => 'email address',
+                    'phone' => 'phone number',
+                    'company_name' => 'company name'
+                ];
+
+                $fieldName = $fieldNames[$nextField] ?? $nextField;
+
+                // Update the result to track the current field
+                $result['current_field'] = $nextField;
+                $result['missing_fields'] = array_filter($missingFields, function($field) use ($nextField) {
+                    return $field !== $nextField;
+                });
+
+                // Store context for next interaction
+                $this->storeClientContext($chat, $result, $existingData);
+
                 return "Great! Now what is the client's " . $fieldName . "?";
             }
 
-            // If no current field is set, ask for the first missing field
-            if (!empty($missingFields)) {
-                $firstMissingField = $missingFields[0];
-                $fieldName = $fieldNames[$firstMissingField] ?? $firstMissingField;
-                return "I'd be happy to help you create a client! What is the client's " . $fieldName . "?";
-            }
-
-            // Build a simple prompt for AIML as fallback
-            $missingFieldNames = array_map(function($field) use ($fieldNames) {
-                return $fieldNames[$field] ?? $field;
-            }, $missingFields);
-
-            $prompt = "User wants to create a client but is missing: " . implode(', ', $missingFieldNames) . ". ";
-            $prompt .= "User said: \"{$userMessage}\". ";
-            $prompt .= "Ask them for the first missing field in a friendly, conversational way.";
-
-            // Use AIML API instead of OpenAI
-            $response = $this->aimlapiService->generateChatCompletion($prompt);
-
-            return $response['content'] ?? $this->getDefaultInteractiveResponse($missingFields);
+            // Fallback to asking for the first missing field
+            return $this->getDefaultInteractiveResponse($missingFields);
 
         } catch (Exception $e) {
-            Log::error('AIML Interactive Response Failed', [
+            Log::error('Enhanced AI Interactive Response Failed', [
                 'error' => $e->getMessage(),
                 'user_message' => $userMessage,
                 'action' => $action
@@ -811,6 +821,130 @@ class AIChatService
 
             return $this->getDefaultInteractiveResponse($result['missing_fields'] ?? []);
         }
+    }
+
+    /**
+     * Use AI to determine the next field to ask for based on context
+     */
+    private function determineNextFieldWithAI(string $userMessage, array $missingFields, array $existingData, string $action): ?string
+    {
+        $fieldNames = [
+            'first_name' => 'first name',
+            'last_name' => 'last name',
+            'email' => 'email address',
+            'phone' => 'phone number',
+            'company_name' => 'company name'
+        ];
+
+        // Build context-aware prompt
+        $prompt = $this->buildContextAwareFieldPrompt($userMessage, $missingFields, $existingData, $action);
+
+        try {
+            // Use AIML API to determine next field
+            $response = $this->aimlapiService->generateChatCompletion($prompt);
+            $content = $response['content'] ?? '';
+
+            // Extract field name from AI response
+            $nextField = $this->extractFieldFromAIResponse($content, $missingFields, $fieldNames);
+
+            if ($nextField) {
+                Log::info('AI determined next field', [
+                    'next_field' => $nextField,
+                    'missing_fields' => $missingFields,
+                    'existing_data' => $existingData
+                ]);
+                return $nextField;
+            }
+        } catch (Exception $e) {
+            Log::error('AI field determination failed', [
+                'error' => $e->getMessage(),
+                'missing_fields' => $missingFields
+            ]);
+        }
+
+        // Fallback to first missing field
+        return $missingFields[0] ?? null;
+    }
+
+    /**
+     * Build context-aware prompt for field determination
+     */
+    private function buildContextAwareFieldPrompt(string $userMessage, array $missingFields, array $existingData, string $action): string
+    {
+        $fieldNames = [
+            'first_name' => 'first name',
+            'last_name' => 'last name',
+            'email' => 'email address',
+            'phone' => 'phone number',
+            'company_name' => 'company name'
+        ];
+
+        $missingFieldNames = array_map(function($field) use ($fieldNames) {
+            return $fieldNames[$field] ?? $field;
+        }, $missingFields);
+
+        $prompt = "You are an AI assistant helping to collect client information. ";
+        $prompt .= "The user said: \"{$userMessage}\"\n\n";
+
+        if (!empty($existingData)) {
+            $prompt .= "Information already collected:\n";
+            foreach ($existingData as $field => $value) {
+                if (!empty($value)) {
+                    $fieldName = $fieldNames[$field] ?? $field;
+                    $prompt .= "- {$fieldName}: {$value}\n";
+                }
+            }
+            $prompt .= "\n";
+        }
+
+        $prompt .= "Missing required fields: " . implode(', ', $missingFieldNames) . "\n\n";
+        $prompt .= "Based on the user's message and the context, determine which field should be asked for next. ";
+        $prompt .= "Consider:\n";
+        $prompt .= "1. If the user provided information, extract it and identify the corresponding field\n";
+        $prompt .= "2. If no information was provided, suggest the most logical next field\n";
+        $prompt .= "3. Prioritize fields that are most commonly needed first\n\n";
+        $prompt .= "Respond with ONLY the field name (e.g., 'first_name', 'email', etc.) or 'none' if no field should be asked for.";
+
+        return $prompt;
+    }
+
+    /**
+     * Extract field name from AI response
+     */
+    private function extractFieldFromAIResponse(string $response, array $missingFields, array $fieldNames): ?string
+    {
+        $response = strtolower(trim($response));
+
+        // Direct field name match
+        foreach ($missingFields as $field) {
+            if (str_contains($response, $field) || str_contains($response, str_replace('_', ' ', $field))) {
+                return $field;
+            }
+        }
+
+        // Field name mapping
+        $fieldMapping = array_flip($fieldNames);
+        foreach ($fieldMapping as $displayName => $fieldName) {
+            if (str_contains($response, $displayName)) {
+                return $fieldName;
+            }
+        }
+
+        // Check for common variations
+        $variations = [
+            'name' => 'first_name',
+            'email' => 'email',
+            'phone' => 'phone',
+            'company' => 'company_name'
+        ];
+
+        foreach ($variations as $keyword => $fieldName) {
+            if (str_contains($response, $keyword) && in_array($fieldName, $missingFields)) {
+                return $fieldName;
+            }
+        }
+
+        return null;
     }
 
         /**
@@ -1023,6 +1157,187 @@ class AIChatService
         }
 
         return $result;
+    }
+
+    /**
+     * Check if message is a response to field collection
+     */
+    private function isFieldResponse(string $message, array $context): bool
+    {
+        // Check if we're in a field collection context
+        if (isset($context['missing_fields']) || isset($context['current_field'])) {
+            // Simple heuristics for field responses
+            $message = strtolower(trim($message));
+
+            // Check if it looks like a name, email, phone, or company
+            $namePatterns = ['/^[a-z]+$/i', '/^[a-z]+\s+[a-z]+$/i'];
+            $emailPatterns = ['/@/', '/\.com/', '/\.org/', '/\.net/'];
+            $phonePatterns = ['/\d{3}/', '/\d{10}/', '/\+\d+/'];
+
+            // Check for name patterns
+            foreach ($namePatterns as $pattern) {
+                if (preg_match($pattern, $message) && strlen($message) > 1) {
+                    return true;
+                }
+            }
+
+            // Check for email patterns
+            foreach ($emailPatterns as $pattern) {
+                if (preg_match($pattern, $message)) {
+                    return true;
+                }
+            }
+
+            // Check for phone patterns
+            foreach ($phonePatterns as $pattern) {
+                if (preg_match($pattern, $message)) {
+                    return true;
+                }
+            }
+
+            // Check for company names (multiple words)
+            if (str_word_count($message) > 1 && strlen($message) > 3) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Handle field response in context
+     */
+    private function handleFieldResponse(Chat $chat, string $userMessage, array $context): array
+    {
+        try {
+            // Extract data from user response
+            $extractedData = $this->extractFieldData($userMessage, $context);
+
+            // Merge with existing data
+            $existingData = $context['existing_data'] ?? [];
+            $updatedData = array_merge($existingData, $extractedData);
+
+            // Update missing fields
+            $missingFields = $context['missing_fields'] ?? [];
+            $currentField = $context['current_field'] ?? null;
+
+            // Ensure missingFields is an array with numeric keys
+            if (!is_array($missingFields)) {
+                $missingFields = [];
+            }
+
+            // Remove the field that was just provided
+            if ($currentField && isset($extractedData[$currentField])) {
+                $missingFields = array_values(array_filter($missingFields, function($field) use ($currentField) {
+                    return $field !== $currentField;
+                }));
+            }
+
+            // If no more missing fields, create the client
+            if (empty($missingFields)) {
+                $result = $this->clientService->createClient($updatedData);
+                $this->clearClientContext($chat);
+
+                return [
+                    'success' => true,
+                    'response' => $this->formatClientResponse('create', $result),
+                    'metadata' => [
+                        'client_intent_detected' => true,
+                        'client_action' => 'create',
+                        'client_result' => $result
+                    ]
+                ];
+            }
+
+            // Use AI to determine next field
+            $nextField = $this->determineNextFieldWithAI($userMessage, $missingFields, $updatedData, 'create');
+
+            if ($nextField) {
+                $fieldNames = [
+                    'first_name' => 'first name',
+                    'last_name' => 'last name',
+                    'email' => 'email address',
+                    'phone' => 'phone number',
+                    'company_name' => 'company name'
+                ];
+
+                $fieldName = $fieldNames[$nextField] ?? $nextField;
+
+                // Store updated context
+                $newContext = [
+                    'missing_fields' => $missingFields,
+                    'current_field' => $nextField,
+                    'existing_data' => $updatedData
+                ];
+                $this->storeClientContext($chat, $newContext, $updatedData);
+
+                return [
+                    'success' => true,
+                    'response' => "Great! Now what is the client's " . $fieldName . "?",
+                    'metadata' => [
+                        'client_intent_detected' => true,
+                        'client_action' => 'field_collection',
+                        'missing_fields' => $missingFields,
+                        'current_field' => $nextField
+                    ]
+                ];
+            }
+
+            // Fallback
+            return [
+                'success' => true,
+                'response' => $this->getDefaultInteractiveResponse($missingFields),
+                'metadata' => [
+                    'client_intent_detected' => true,
+                    'client_action' => 'field_collection'
+                ]
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Field response handling failed', [
+                'error' => $e->getMessage(),
+                'user_message' => $userMessage,
+                'context' => $context
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'I encountered an error processing your response. Please try again.',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Extract field data from user response
+     */
+    private function extractFieldData(string $message, array $context): array
+    {
+        $currentField = $context['current_field'] ?? null;
+        $data = [];
+
+        if ($currentField) {
+            // Extract data based on current field
+            switch ($currentField) {
+                case 'first_name':
+                    $data['first_name'] = ucfirst(strtolower(trim($message)));
+                    break;
+                case 'last_name':
+                    $data['last_name'] = ucfirst(strtolower(trim($message)));
+                    break;
+                case 'email':
+                    $data['email'] = trim($message);
+                    break;
+                case 'phone':
+                    $data['phone'] = trim($message);
+                    break;
+                case 'company_name':
+                    $data['company_name'] = trim($message);
+                    break;
+            }
+        }
+
+        return $data;
     }
 
     /**

@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Chat;
 use App\Models\Client;
 use App\Services\AIChatService;
-use App\Services\IntentDetectionService;
 
 // Initialize Laravel
 $app = require_once 'bootstrap/app.php';

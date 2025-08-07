@@ -8,7 +8,7 @@ use App\Models\Chat;
 use App\Models\Client;
 use App\Services\AIChatService;
 use App\Services\ClientService;
-use App\Services\IntentDetectionService;
+use App\Services\AIIntentDetectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class ClientCRUDChatTest extends TestCase
@@ -17,14 +17,14 @@ class ClientCRUDChatTest extends TestCase
 
     private AIChatService $aiChatService;
     private ClientService $clientService;
-    private IntentDetectionService $intentDetectionService;
+    private AIIntentDetectionService $intentDetectionService;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->clientService = app(ClientService::class);
-        $this->intentDetectionService = app(IntentDetectionService::class);
+        $this->intentDetectionService = app(AIIntentDetectionService::class);
         $this->aiChatService = app(AIChatService::class);
     }
 
@@ -33,7 +33,7 @@ class ClientCRUDChatTest extends TestCase
     {
         $message = "Create a new client named John Smith with email john@example.com";
 
-        $intent = $this->intentDetectionService->detectClientIntent($message);
+        $intent = $this->intentDetectionService->detectIntent($message);
 
         $this->assertEquals('client', $intent['type']);
         $this->assertEquals('create', $intent['action']);
@@ -48,7 +48,7 @@ class ClientCRUDChatTest extends TestCase
     {
         $message = "Show client John Smith";
 
-        $intent = $this->intentDetectionService->detectClientIntent($message);
+        $intent = $this->intentDetectionService->detectIntent($message);
 
         $this->assertEquals('client', $intent['type']);
         $this->assertEquals('read', $intent['action']);
@@ -61,7 +61,7 @@ class ClientCRUDChatTest extends TestCase
     {
         $message = "List all clients";
 
-        $intent = $this->intentDetectionService->detectClientIntent($message);
+        $intent = $this->intentDetectionService->detectIntent($message);
 
         $this->assertEquals('client', $intent['type']);
         $this->assertEquals('list', $intent['action']);

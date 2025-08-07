@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Chat;
 use App\Models\Client;
 use App\Services\AIChatService;
-use App\Services\IntentDetectionService;
 
 // Initialize Laravel
 $app = require_once 'bootstrap/app.php';
@@ -23,7 +22,6 @@ $chat = Chat::create([
 ]);
 
 $aiChatService = app(AIChatService::class);
-$intentService = app(IntentDetectionService::class);
 
 // Demo 1: Create a client
 echo "Demo 1: Creating a client\n";

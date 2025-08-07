@@ -11,14 +11,11 @@ use Exception;
 class AIIntentDetectionService
 {
     private AIMLAPIService $aimlapiService;
-    private IntentDetectionService $intentDetectionService;
 
     public function __construct(
-        AIMLAPIService $aimlapiService,
-        IntentDetectionService $intentDetectionService
+        AIMLAPIService $aimlapiService
     ) {
         $this->aimlapiService = $aimlapiService;
-        $this->intentDetectionService = $intentDetectionService;
     }
 
     /**
@@ -78,19 +75,28 @@ class AIIntentDetectionService
      */
     private function getBestIntentDetectionModel(): ?AIModel
     {
-        // Try to get a default model first
-        $defaultModel = AIModel::default()->active()->first();
-        if ($defaultModel) {
-            return $defaultModel;
-        }
+        try {
+            // Try to get a default model first
+            $defaultModel = AIModel::default()->active()->first();
+            if ($defaultModel) {
+                return $defaultModel;
+            }
 
-        // Try to get any active model
-        $activeModel = AIModel::active()->first();
-        if ($activeModel) {
-            return $activeModel;
-        }
+            // Try to get any active model
+            $activeModel = AIModel::active()->first();
+            if ($activeModel) {
+                return $activeModel;
+            }
 
-        return null;
+            // If no AI models are available, return null to trigger rule-based fallback
+            Log::info('No AI models available, using rule-based fallback');
+            return null;
+        } catch (Exception $e) {
+            Log::warning('Error getting AI model, using rule-based fallback', [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
 
     /**
@@ -296,8 +302,8 @@ User message: " . $message;
      */
     private function detectIntentWithRules(string $message, array $context = []): array
     {
-        // Use existing IntentDetectionService for client intents
-        $clientIntent = $this->intentDetectionService->detectClientIntent($message, $context);
+        // Detect client intents
+        $clientIntent = $this->detectClientIntent($message, $context);
 
         if ($clientIntent['type'] !== 'none') {
             return $clientIntent;
@@ -543,6 +549,251 @@ User message: " . $message;
         ];
 
         return $intent;
+    }
+
+    /**
+     * Detect client-related intents
+     */
+    private function detectClientIntent(string $message, array $context = []): array
+    {
+        $message = strtolower(trim($message));
+        $intent = [
+            'type' => 'none',
+            'action' => 'none',
+            'confidence' => 0.0,
+            'entities' => [],
+            'data' => []
+        ];
+
+        // Check if message contains client keywords
+        $clientKeywords = ['client', 'customer', 'contact'];
+        $hasClientKeywords = false;
+        foreach ($clientKeywords as $keyword) {
+            if (str_contains($message, $keyword)) {
+                $hasClientKeywords = true;
+                break;
+            }
+        }
+
+        // Check if this is a response to field collection (context-aware)
+        if (!$hasClientKeywords && !empty($context)) {
+            // If we have context and the message looks like a field response
+            if ($this->isFieldResponse($message, $context)) {
+                $intent['type'] = 'client';
+                $intent['action'] = 'field_response';
+                $intent['confidence'] = 0.8;
+                $intent['data'] = $this->extractFieldResponseData($message, $context);
+                return $intent;
+            }
+        }
+
+        if (!$hasClientKeywords) {
+            return $intent;
+        }
+
+        // Extract client data
+        $data = $this->extractClientData($message);
+
+        // Determine action
+        if (str_contains($message, 'create') || str_contains($message, 'new') || str_contains($message, 'add')) {
+            $intent['type'] = 'client';
+            $intent['action'] = 'create';
+            $intent['confidence'] = 0.8;
+            $intent['data'] = $data;
+        } elseif (str_contains($message, 'show') || str_contains($message, 'view') || str_contains($message, 'get')) {
+            $intent['type'] = 'client';
+            $intent['action'] = 'read';
+            $intent['confidence'] = 0.7;
+            $intent['data'] = $data;
+        } elseif (str_contains($message, 'list') || str_contains($message, 'all')) {
+            $intent['type'] = 'client';
+            $intent['action'] = 'list';
+            $intent['confidence'] = 0.8;
+        } elseif (str_contains($message, 'update') || str_contains($message, 'edit')) {
+            $intent['type'] = 'client';
+            $intent['action'] = 'update';
+            $intent['confidence'] = 0.7;
+            $intent['data'] = $data;
+        } elseif (str_contains($message, 'delete') || str_contains($message, 'remove')) {
+            $intent['type'] = 'client';
+            $intent['action'] = 'delete';
+            $intent['confidence'] = 0.7;
+            $intent['data'] = $data;
+        }
+
+        return $intent;
+    }
+
+    /**
+     * Extract client data from message with enhanced pattern matching
+     */
+    private function extractClientData(string $message): array
+    {
+        $data = [];
+
+        // Extract name from "named" pattern
+        if (preg_match('/named\s+([^,\s]+(?:\s+[^,\s]+)*)/i', $message, $matches)) {
+            $name = trim($matches[1]);
+            $nameParts = explode(' ', $name);
+            if (count($nameParts) >= 2) {
+                $data['first_name'] = ucfirst(strtolower($nameParts[0]));
+                $data['last_name'] = ucfirst(strtolower($nameParts[1]));
+            } else {
+                $data['name'] = strtolower($name);
+            }
+        }
+
+        // Extract name from "Show client" pattern
+        if (preg_match('/show\s+client\s+([^,\s]+(?:\s+[^,\s]+)*)/i', $message, $matches)) {
+            $name = trim($matches[1]);
+            $data['name'] = strtolower($name);
+        }
+
+        // Enhanced name extraction for various patterns
+        $namePatterns = [
+            '/first\s+name\s+(?:is\s+)?([^,\s]+)/i',
+            '/last\s+name\s+(?:is\s+)?([^,\s]+)/i',
+            '/name\s+(?:is\s+)?([^,\s]+(?:\s+[^,\s]+)*)/i',
+            '/it\'s\s+([^,\s]+(?:\s+[^,\s]+)*)/i',
+            '/is\s+([^,\s]+(?:\s+[^,\s]+)*)/i'
+        ];
+
+        foreach ($namePatterns as $pattern) {
+            if (preg_match($pattern, $message, $matches)) {
+                $name = trim($matches[1]);
+                $nameParts = explode(' ', $name);
+                if (count($nameParts) >= 2) {
+                    $data['first_name'] = ucfirst(strtolower($nameParts[0]));
+                    $data['last_name'] = ucfirst(strtolower($nameParts[1]));
+                } else {
+                    $data['first_name'] = ucfirst(strtolower($name));
+                }
+                break;
+            }
+        }
+
+        // Enhanced email extraction
+        $emailPatterns = [
+            '/email\s+(?:is\s+)?([^\s]+@[^\s]+)/i',
+            '/email\s+address\s+(?:is\s+)?([^\s]+@[^\s]+)/i',
+            '/([^\s]+@[^\s]+)/i' // General email pattern
+        ];
+
+        foreach ($emailPatterns as $pattern) {
+            if (preg_match($pattern, $message, $matches)) {
+                $data['email'] = $matches[1];
+                break;
+            }
+        }
+
+        // Enhanced phone extraction
+        $phonePatterns = [
+            '/phone\s+(?:is\s+)?([^\s]+)/i',
+            '/phone\s+number\s+(?:is\s+)?([^\s]+)/i',
+            '/(\d{3}[-.]?\d{3}[-.]?\d{4})/i', // General phone pattern
+            '/(\+\d{1,3}[-.]?\d{1,4}[-.]?\d{1,4}[-.]?\d{1,4})/i' // International format
+        ];
+
+        foreach ($phonePatterns as $pattern) {
+            if (preg_match($pattern, $message, $matches)) {
+                $data['phone'] = $matches[1];
+                break;
+            }
+        }
+
+        // Enhanced company extraction
+        $companyPatterns = [
+            '/company\s+(?:is\s+)?([^,\s]+(?:\s+[^,\s]+)*)/i',
+            '/company\s+name\s+(?:is\s+)?([^,\s]+(?:\s+[^,\s]+)*)/i',
+            '/works?\s+at\s+([^,\s]+(?:\s+[^,\s]+)*)/i',
+            '/from\s+([^,\s]+(?:\s+[^,\s]+)*)/i'
+        ];
+
+        foreach ($companyPatterns as $pattern) {
+            if (preg_match($pattern, $message, $matches)) {
+                $data['company_name'] = trim($matches[1]);
+                break;
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Extract field response data based on context
+     */
+    private function extractFieldResponseData(string $message, array $context): array
+    {
+        $currentField = $context['current_field'] ?? null;
+        $data = [];
+
+        if ($currentField) {
+            // Extract data based on current field
+            switch ($currentField) {
+                case 'first_name':
+                    $data['first_name'] = ucfirst(strtolower(trim($message)));
+                    break;
+                case 'last_name':
+                    $data['last_name'] = ucfirst(strtolower(trim($message)));
+                    break;
+                case 'email':
+                    $data['email'] = trim($message);
+                    break;
+                case 'phone':
+                    $data['phone'] = trim($message);
+                    break;
+                case 'company_name':
+                    $data['company_name'] = trim($message);
+                    break;
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Check if message is a response to field collection
+     */
+    private function isFieldResponse(string $message, array $context): bool
+    {
+        // Check if we're in a field collection context
+        if (isset($context['missing_fields']) || isset($context['current_field'])) {
+            // Simple heuristics for field responses
+            $message = strtolower(trim($message));
+
+            // Check if it looks like a name, email, phone, or company
+            $namePatterns = ['/^[a-z]+$/i', '/^[a-z]+\s+[a-z]+$/i'];
+            $emailPatterns = ['/@/', '/\.com/', '/\.org/', '/\.net/'];
+            $phonePatterns = ['/\d{3}/', '/\d{10}/', '/\+\d+/'];
+
+            // Check for name patterns
+            foreach ($namePatterns as $pattern) {
+                if (preg_match($pattern, $message) && strlen($message) > 1) {
+                    return true;
+                }
+            }
+
+            // Check for email patterns
+            foreach ($emailPatterns as $pattern) {
+                if (preg_match($pattern, $message)) {
+                    return true;
+                }
+            }
+
+            // Check for phone patterns
+            foreach ($phonePatterns as $pattern) {
+                if (preg_match($pattern, $message)) {
+                    return true;
+                }
+            }
+
+            // Check for company names (multiple words)
+            if (str_word_count($message) > 1 && strlen($message) > 3) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
