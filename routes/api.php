@@ -36,15 +36,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('/profiles/{profile}', [ProfileController::class, 'update']);
     Route::get('/profiles/{profile}', [ProfileController::class, 'show']);
 
-    // Client routes
-    Route::get('/clients', [ClientController::class, 'index']);
-    Route::post('/clients', [ClientController::class, 'store']);
-    Route::get('/clients/{id}', [ClientController::class, 'show']);
-    Route::put('/clients/{id}', [ClientController::class, 'update']);
-    Route::delete('/clients/{id}', [ClientController::class, 'destroy']);
-    Route::get('/clients/user/me', [ClientController::class, 'getClientsByUser']);
-    Route::post('/clients/{id}/connect', [ClientController::class, 'connectClient']);
-    Route::delete('/clients/{id}/disconnect', [ClientController::class, 'disconnectClient']);
+    // Client routes moved to web.php to avoid conflicts
 
     Route::apiResource('intakes', IntakeController::class);
     Route::post('intakes/{intake}/forms', [IntakeController::class, 'storeForm']);
@@ -152,7 +144,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('proposals/{proposal}/save-draft', [ProposalController::class, 'saveDraft'])->name('proposals.save-draft');
     Route::get('proposals/{proposal}/preview', [ProposalController::class, 'preview'])->name('proposals.preview');
 
-    // AI Generation routes
+        // AI Generation routes
     Route::post('intake-responses/{id}/generate-proposal', [AIGenerationController::class, 'generateProposal']);
     Route::post('proposals/{id}/generate-project', [AIGenerationController::class, 'generateProject']);
     Route::post('projects/{projectId}/generate-tasks', [AIGenerationController::class, 'generateTasks']);

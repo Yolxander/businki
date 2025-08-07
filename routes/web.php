@@ -270,7 +270,7 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
     Route::get('/zen-mode', function (Request $request) {
         $taskId = $request->query('task');
         $task = null;
-        
+
         if ($taskId) {
             $task = \App\Models\Task::with(['project.client', 'subtasks'])->find($taskId);
             if ($task) {
@@ -290,7 +290,7 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
                 ];
             }
         }
-        
+
         return Inertia::render('ZenMode', [
             'auth' => [
                 'user' => Auth::user(),
@@ -323,6 +323,15 @@ Route::get('/tasks/{task}/start-work', [App\Http\Controllers\TaskController::cla
     Route::get('/api/chats/suggestions', [App\Http\Controllers\Api\ChatController::class, 'getChatSuggestions']);
     Route::delete('/api/chats/{chatId}', [App\Http\Controllers\Api\ChatController::class, 'deleteChat']);
     Route::get('/api/chats/stats', [App\Http\Controllers\Api\ChatController::class, 'getChatStats']);
+
+    // Client API routes
+    Route::get('/api/clients/query-data', [App\Http\Controllers\ClientController::class, 'queryClients']);
+    Route::get('/api/clients/user/me', [App\Http\Controllers\ClientController::class, 'getClientsByUser']);
+    Route::post('/api/clients/{id}/connect', [App\Http\Controllers\ClientController::class, 'connectClient']);
+    Route::delete('/api/clients/{id}/disconnect', [App\Http\Controllers\ClientController::class, 'disconnectClient']);
+
+    // AI Processing routes
+    Route::post('/api/ai/process-client-data', [App\Http\Controllers\Api\AIGenerationController::class, 'processClientData']);
 
     // Update user dashboard mode
     Route::post('/api/user/dashboard-mode', function (Request $request) {

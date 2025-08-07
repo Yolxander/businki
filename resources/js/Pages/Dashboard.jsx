@@ -417,15 +417,21 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
                 // If this is the final step, handle completion
                 if (nextStep.isFinal) {
-                    // Here you would typically make an API call to create the project/task
                     console.log('Preset chat flow completed:', presetChatData);
 
-                    // Reset the preset flow
-                    setTimeout(() => {
-                        setPresetChatFlow(null);
-                        setPresetChatStep(0);
-                        setPresetChatData({});
-                    }, 3000);
+                    // Handle specific preset flows
+                    if (presetChatFlow === 'View All Clients') {
+                        // Use the current message as the view_type since it contains the user's selection
+                        const viewType = message;
+                        await handleClientQuery({ view_type: viewType });
+                    } else {
+                        // Default behavior for other flows
+                        setTimeout(() => {
+                            setPresetChatFlow(null);
+                            setPresetChatStep(0);
+                            setPresetChatData({});
+                        }, 3000);
+                    }
                 }
             }
             return;
@@ -589,6 +595,92 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
             console.error('Error creating chat with preset:', error);
             // Fallback to regular message sending if chat creation fails
             handleSendMessage(prompt);
+        }
+    };
+
+    // Handle client query for preset chat flows
+    const handleClientQuery = async (chatData) => {
+        try {
+            setIsChatLoading(true);
+
+            // Fetch client data from API
+            const response = await fetch(`/api/clients/query-data?view_type=${encodeURIComponent(chatData.view_type)}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('API Error Response:', errorData);
+                throw new Error(errorData.message || 'Failed to fetch client data');
+            }
+
+            const clientData = await response.json();
+
+            if (clientData.status === 'success') {
+                // Send client data to AIML service for processing
+                const aiResponse = await fetch('/api/ai/process-client-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        clients: clientData.data.clients,
+                        view_type: clientData.data.view_type
+                    })
+                });
+
+                if (!aiResponse.ok) {
+                    throw new Error('Failed to process client data with AI');
+                }
+
+                const aiData = await aiResponse.json();
+
+                if (aiData.status === 'success') {
+                    // Add AI response to chat
+                    const aiMessage = {
+                        role: 'assistant',
+                        content: aiData.data.response,
+                        type: 'ai_response'
+                    };
+                    setChatMessages(prev => [...prev, aiMessage]);
+                } else {
+                    // Fallback: show raw client data
+                    const fallbackMessage = {
+                        role: 'assistant',
+                        content: `Here are your ${clientData.data.view_type}:\n\n${JSON.stringify(clientData.data.clients, null, 2)}`,
+                        type: 'fallback'
+                    };
+                    setChatMessages(prev => [...prev, fallbackMessage]);
+                }
+            } else {
+                throw new Error(clientData.message || 'Failed to fetch client data');
+            }
+        } catch (error) {
+            console.error('Error handling client query:', error);
+
+            // Add error message to chat
+            const errorMessage = {
+                role: 'assistant',
+                content: `❌ Error: ${error.message}\n\nPlease try again or contact support if the issue persists.`,
+                type: 'error'
+            };
+            setChatMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsChatLoading(false);
+
+            // Reset the preset flow
+            setTimeout(() => {
+                setPresetChatFlow(null);
+                setPresetChatStep(0);
+                setPresetChatData({});
+            }, 2000);
         }
     };
 

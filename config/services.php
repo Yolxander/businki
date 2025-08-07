@@ -43,9 +43,9 @@ return [
     ],
 
     'aimlapi' => [
-        'api_key' => env('AIMLAPI_API_KEY'),
-        'base_url' => env('AIMLAPI_BASE_URL', 'https://api.aimlapi.com/v1'),
-        'model' => env('AIMLAPI_MODEL', 'gpt-4o'),
+        'api_key' => env('AI_API_KEY'),
+        'base_url' => env('AI_BASE_URL', 'https://api.aimlapi.com/v1'),
+        'model' => env('AI_DEFAULT_MODEL', 'gpt-4o'),
         'max_tokens' => env('AIMLAPI_MAX_TOKENS', 2048),
         'temperature' => env('AIMLAPI_TEMPERATURE', 0.7),
         'top_p' => env('AIMLAPI_TOP_P', 0.9),

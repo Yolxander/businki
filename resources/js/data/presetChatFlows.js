@@ -343,15 +343,10 @@ export const presetChatFlows = {
             {
                 message: "I'll show you all your clients. What would you like to see?",
                 field: 'view_type',
-                options: ['All Clients', 'Active Clients', 'Recent Clients', 'Clients with Outstanding Invoices']
+                options: ['All Clients', 'Active Clients']
             },
             {
-                message: "Perfect! I'm fetching your {view_type} for you. This will show you:\n\n" +
-                         "• Client names and contact information\n" +
-                         "• Company details and industry\n" +
-                         "• Project history and status\n" +
-                         "• Outstanding invoices and payment status\n\n" +
-                         "Loading your clients...",
+                message: "Perfect! I'm fetching your {view_type} for you.\n\nLoading your clients...",
                 field: null,
                 isFinal: true
             }

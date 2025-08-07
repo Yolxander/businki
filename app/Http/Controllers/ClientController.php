@@ -400,4 +400,86 @@ class ClientController extends Controller
             return response()->json(['message' => 'Error fetching clients'], 500);
         }
     }
+
+    /**
+     * Query clients based on view type for preset chat flows
+     */
+            public function queryClients(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'view_type' => 'required|string|in:All Clients,Active Clients'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid view type',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+                        $userId = Auth::id();
+            $viewType = $request->get('view_type');
+
+            $query = Client::whereHas('users', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })->with(['intakes', 'proposals', 'projects']);
+
+            // Apply filters based on view type
+            if ($viewType === 'Active Clients') {
+                $query->where('status', 'active');
+            }
+
+            $clients = $query->get();
+
+            $transformedClients = $clients->map(function ($client) {
+                return [
+                    'id' => $client->id,
+                    'name' => $client->first_name . ' ' . $client->last_name,
+                    'full_name' => $client->first_name . ' ' . $client->last_name,
+                    'contactPerson' => $client->contact_person ?: $client->first_name . ' ' . $client->last_name,
+                    'email' => $client->email,
+                    'phone' => $client->phone,
+                    'website' => $client->website,
+                    'company' => $client->company_name,
+                    'status' => $client->status ?: 'prospect',
+                    'projects' => $client->projects ? $client->projects->count() : 0,
+                    'totalRevenue' => $client->total_revenue ?: 0,
+                    'lastContact' => $client->last_contact ?: now()->subDays(30)->toDateString(),
+                    'rating' => $client->rating ?: 3,
+                    'address' => $client->address,
+                    'city' => $client->city,
+                    'state' => $client->state,
+                    'zip_code' => $client->zip_code,
+                    'description' => $client->description,
+                    'industry' => $client->industry,
+                    'budget_range' => $client->budget_range,
+                    'lead_source' => $client->lead_source,
+                    'intakes_count' => $client->intakes ? $client->intakes->count() : 0,
+                    'proposals_count' => $client->proposals ? $client->proposals->count() : 0,
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'clients' => $transformedClients,
+                    'view_type' => $viewType,
+                    'total_count' => $clients->count()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error querying clients', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'view_type' => $request->get('view_type')
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to query clients'
+            ], 500);
+        }
+    }
 }

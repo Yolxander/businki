@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Subtask;
 use App\Services\OpenAIService;
+use App\Services\AIMLAPIService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +19,12 @@ use Illuminate\Support\Facades\Validator;
 class AIGenerationController extends Controller
 {
     private OpenAIService $openAIService;
+    private AIMLAPIService $aimlAPIService;
 
-    public function __construct(OpenAIService $openAIService)
+    public function __construct(OpenAIService $openAIService, AIMLAPIService $aimlAPIService)
     {
         $this->openAIService = $openAIService;
+        $this->aimlAPIService = $aimlAPIService;
     }
 
     /**
@@ -545,5 +548,67 @@ Format your response as a numbered list, with each subtask on a new line startin
         }
 
         return array_filter($subtasks); // Remove empty entries
+    }
+
+    /**
+     * Process client data with AI and return formatted response
+     */
+    public function processClientData(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'clients' => 'required|array',
+                'view_type' => 'required|string|in:All Clients,Active Clients'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $clients = $request->get('clients');
+            $viewType = $request->get('view_type');
+
+            Log::info('Processing client data with AI', [
+                'user_id' => auth()->id(),
+                'view_type' => $viewType,
+                'client_count' => count($clients)
+            ]);
+
+            $result = $this->aimlAPIService->processClientData($clients, $viewType);
+
+            if ($result['status'] === 'success') {
+                Log::info('Client data processed successfully', [
+                    'user_id' => auth()->id(),
+                    'view_type' => $viewType,
+                    'client_count' => count($clients),
+                    'tokens_used' => $result['data']['tokens_used'] ?? 0
+                ]);
+
+                return response()->json($result);
+            } else {
+                Log::error('Failed to process client data', [
+                    'user_id' => auth()->id(),
+                    'view_type' => $viewType,
+                    'error' => $result['message']
+                ]);
+
+                return response()->json($result, 500);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error processing client data', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to process client data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

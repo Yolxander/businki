@@ -812,4 +812,62 @@ User message: " . $message;
             'gemini-pro' => 'Gemini Pro (Good for intent detection)'
         ];
     }
+
+    /**
+     * Process client data and generate a formatted response
+     */
+    public function processClientData(array $clients, string $viewType, array $options = []): array
+    {
+        try {
+            $prompt = $this->buildClientDataPrompt($clients, $viewType);
+
+            $response = $this->generateChatCompletionWithParams(
+                $prompt,
+                $options['model'] ?? $this->model,
+                $options['temperature'] ?? 0.7,
+                $options['max_tokens'] ?? 2000,
+                $options['top_p'] ?? 0.9
+            );
+
+            // generateChatCompletionWithParams returns content, tokens, and cost directly
+            return [
+                'status' => 'success',
+                'data' => [
+                    'response' => $response['content'],
+                    'view_type' => $viewType,
+                    'client_count' => count($clients),
+                    'tokens_used' => $response['tokens'],
+                    'cost' => $response['cost']
+                ]
+            ];
+        } catch (Exception $e) {
+            Log::error('Error processing client data', [
+                'error' => $e->getMessage(),
+                'view_type' => $viewType,
+                'client_count' => count($clients)
+            ]);
+
+            return [
+                'status' => 'error',
+                'message' => 'Failed to process client data: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Build a prompt for processing client data
+     */
+    private function buildClientDataPrompt(array $clients, string $viewType): string
+    {
+        $clientData = json_encode($clients, JSON_PRETTY_PRINT);
+
+        return "You are a helpful AI assistant analyzing client data. Here is the client data for '{$viewType}':\n\n" .
+               "Client Data:\n{$clientData}\n\n" .
+               "Please provide a comprehensive analysis of these clients including:\n" .
+               "1. Summary of client information\n" .
+               "2. Key insights and patterns\n" .
+               "3. Recommendations for client management\n" .
+               "4. Notable statistics and metrics\n\n" .
+               "Format your response in a clear, professional manner suitable for a business dashboard.";
+    }
 }
