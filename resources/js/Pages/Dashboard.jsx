@@ -78,17 +78,38 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
     const [isGeneratingWidget, setIsGeneratingWidget] = useState(false);
     const [dashboardMode, setDashboardMode] = useState(initialDashboardMode); // 'default' or 'ai_assistant'
     const [aiContext, setAiContext] = useState('general'); // 'general', 'projects', 'clients', 'bobbi-flow', 'calendar', 'analytics'
-    const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+    const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(() => {
+        // Initialize right sidebar collapsed state from sessionStorage
+        const savedRightSidebarCollapsedState = sessionStorage.getItem('bobbi-right-sidebar-collapsed');
+        return savedRightSidebarCollapsedState ? JSON.parse(savedRightSidebarCollapsedState) : false;
+    });
 
     // Chat state
     const [chatMessages, setChatMessages] = useState([]);
     const [isChatLoading, setIsChatLoading] = useState(false);
     const [currentChatId, setCurrentChatId] = useState(null);
-    const [showChatSidebar, setShowChatSidebar] = useState(false);
+    const [showChatSidebar, setShowChatSidebar] = useState(() => {
+        // Initialize chat sidebar state from sessionStorage
+        const savedChatSidebarState = sessionStorage.getItem('bobbi-chat-sidebar-collapsed');
+        return savedChatSidebarState ? JSON.parse(savedChatSidebarState) : false;
+    });
+    const [chatSidebarCollapsed, setChatSidebarCollapsed] = useState(() => {
+        // Initialize chat sidebar collapsed state from sessionStorage
+        const savedChatSidebarCollapsedState = sessionStorage.getItem('bobbi-chat-sidebar-collapsed-state');
+        return savedChatSidebarCollapsedState ? JSON.parse(savedChatSidebarCollapsedState) : false;
+    });
 
     // Collapsible sections state
-    const [workCollapsed, setWorkCollapsed] = useState(false);
-    const [systemCollapsed, setSystemCollapsed] = useState(false);
+    const [workCollapsed, setWorkCollapsed] = useState(() => {
+        // Initialize work section collapsed state from sessionStorage
+        const savedWorkCollapsedState = sessionStorage.getItem('bobbi-work-section-collapsed');
+        return savedWorkCollapsedState ? JSON.parse(savedWorkCollapsedState) : false;
+    });
+    const [systemCollapsed, setSystemCollapsed] = useState(() => {
+        // Initialize system section collapsed state from sessionStorage
+        const savedSystemCollapsedState = sessionStorage.getItem('bobbi-system-section-collapsed');
+        return savedSystemCollapsedState ? JSON.parse(savedSystemCollapsedState) : false;
+    });
 
     // AI Generation form state
     const [aiFormData, setAiFormData] = useState({
@@ -460,6 +481,31 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         setChatMessages([]);
         setShowChatSidebar(false);
     };
+
+    // Save chat sidebar state to sessionStorage whenever it changes
+    useEffect(() => {
+        sessionStorage.setItem('bobbi-chat-sidebar-collapsed', JSON.stringify(showChatSidebar));
+    }, [showChatSidebar]);
+
+    // Save chat sidebar collapsed state to sessionStorage whenever it changes
+    useEffect(() => {
+        sessionStorage.setItem('bobbi-chat-sidebar-collapsed-state', JSON.stringify(chatSidebarCollapsed));
+    }, [chatSidebarCollapsed]);
+
+    // Save right sidebar collapsed state to sessionStorage whenever it changes
+    useEffect(() => {
+        sessionStorage.setItem('bobbi-right-sidebar-collapsed', JSON.stringify(rightSidebarCollapsed));
+    }, [rightSidebarCollapsed]);
+
+    // Save work section collapsed state to sessionStorage whenever it changes
+    useEffect(() => {
+        sessionStorage.setItem('bobbi-work-section-collapsed', JSON.stringify(workCollapsed));
+    }, [workCollapsed]);
+
+    // Save system section collapsed state to sessionStorage whenever it changes
+    useEffect(() => {
+        sessionStorage.setItem('bobbi-system-section-collapsed', JSON.stringify(systemCollapsed));
+    }, [systemCollapsed]);
 
     // Listen for close sidebar event
     useEffect(() => {
@@ -1044,23 +1090,27 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                         <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
                             {/* Logo */}
                             <div className="p-6 border-b border-sidebar-border">
-                                <div className="flex items-center space-x-2">
-                                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                                        <Brain className="w-5 h-5 text-primary-foreground" />
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                                            <Brain className="w-5 h-5 text-primary-foreground" />
+                                        </div>
+                                        <span className="text-xl font-bold text-sidebar-foreground">Bobbi</span>
                                     </div>
-                                    <span className="text-xl font-bold text-sidebar-foreground">Bobbi</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleContextChange('general')}
+                                        className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+                                        title="New Chat"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             </div>
 
                             {/* Navigation */}
                             <div className="flex-1 p-6 space-y-4">
-                                <Button
-                                    className="w-full justify-start bg-primary text-primary-foreground hover:bg-primary/90"
-                                    onClick={() => handleContextChange('general')}
-                                >
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    New Chat
-                                </Button>
 
                                 {/* Work Section */}
                                 <div className="space-y-2">
@@ -1208,22 +1258,32 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                 onDeleteChat={handleDeleteChat}
                                 onEditChat={handleEditChat}
                                 chatType={aiContext}
-                                collapsed={false}
+                                collapsed={chatSidebarCollapsed}
+                                onToggleCollapse={() => setChatSidebarCollapsed(!chatSidebarCollapsed)}
                             />
                         )}
 
                         {/* Main Content */}
-                        <div className="flex-1 bg-background flex flex-col">
+                        <div className={`${showChatSidebar && chatSidebarCollapsed ? 'ml-16' : ''} flex-1 bg-background flex flex-col transition-all duration-300`}>
                             <div className="flex items-center justify-between p-4 border-b border-border">
                                 <div className="flex items-center space-x-2">
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => setShowChatSidebar(!showChatSidebar)}
+                                        onClick={() => {
+                                            if (showChatSidebar) {
+                                                setChatSidebarCollapsed(!chatSidebarCollapsed);
+                                            } else {
+                                                setShowChatSidebar(true);
+                                            }
+                                        }}
                                         className="text-muted-foreground hover:text-foreground"
                                     >
                                         <MessageSquare className="w-4 h-4 mr-2" />
                                         {aiContext === 'general' ? 'Recent Chats' : `${aiContext.charAt(0).toUpperCase() + aiContext.slice(1)} Chats`}
+                                        {showChatSidebar && chatSidebarCollapsed && (
+                                            <span className="ml-2 text-xs text-muted-foreground">(Collapsed)</span>
+                                        )}
                                     </Button>
                                 </div>
                             </div>

@@ -24,7 +24,8 @@ export default function RecentChatsSidebar({
     onDeleteChat,
     onEditChat,
     chatType = 'general',
-    collapsed = false
+    collapsed = false,
+    onToggleCollapse
 }) {
     const [recentChats, setRecentChats] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -121,7 +122,7 @@ export default function RecentChatsSidebar({
                             window.dispatchEvent(new CustomEvent('closeChatSidebar'));
                         }
                     }}
-                    className="mb-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    className="mb-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
                     title="New Chat"
                 >
                     <Plus className="h-4 w-4" />
@@ -140,6 +141,17 @@ export default function RecentChatsSidebar({
                         </Button>
                     ))}
                 </div>
+                {onToggleCollapse && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onToggleCollapse}
+                        className="mt-4 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+                        title="Expand Sidebar"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                )}
             </div>
         );
     }
@@ -152,22 +164,35 @@ export default function RecentChatsSidebar({
                     <h3 className="text-sm font-semibold text-sidebar-foreground">
                         {getTypeLabel(chatType)} Chats
                     </h3>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                            onNewChat();
-                            // Close the sidebar after creating new chat
-                            if (typeof window !== 'undefined') {
-                                // Trigger a custom event to close sidebar if needed
-                                window.dispatchEvent(new CustomEvent('closeChatSidebar'));
-                            }
-                        }}
-                        className="h-6 w-6 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        title="New Chat"
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center space-x-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                                onNewChat();
+                                // Close the sidebar after creating new chat
+                                if (typeof window !== 'undefined') {
+                                    // Trigger a custom event to close sidebar if needed
+                                    window.dispatchEvent(new CustomEvent('closeChatSidebar'));
+                                }
+                            }}
+                            className="h-6 w-6 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            title="New Chat"
+                        >
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                        {onToggleCollapse && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onToggleCollapse}
+                                className="h-6 w-6 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                title="Collapse Sidebar"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
 

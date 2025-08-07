@@ -63,6 +63,11 @@ class AIChatService
                 return $this->handleFieldResponse($chat, $userMessage, $previousContext);
             }
 
+            // Check if this is an update field response in an existing context
+            if (!empty($previousContext) && $this->isUpdateFieldResponse($userMessage, $previousContext)) {
+                return $this->handleUpdateFieldResponse($chat, $userMessage, $previousContext);
+            }
+
             // If AI intent detection has low confidence, continue with general AI response
             // The AIIntentDetectionService already handles rule-based fallback internally
 
@@ -616,6 +621,23 @@ class AIChatService
 
                     if ($identifier && !empty($updates)) {
                         $result = $this->clientService->updateClient($identifier, $updates);
+                    } else if ($identifier) {
+                        // Store context for update field collection
+                        $updateContext = [
+                            'client_identifier' => $identifier,
+                            'update_action' => 'pending',
+                            'timestamp' => now()->timestamp
+                        ];
+
+                        $contextKey = "client_context_{$chat->id}";
+                        Cache::put($contextKey, $updateContext, 300);
+
+                        $result = [
+                            'success' => false,
+                            'message' => "To update {$identifier}'s information, please provide the specific details you would like to change. This could include their name, email address, or any other relevant information. Let me know what you would like to update!",
+                            'data' => null,
+                            'requires_interaction' => true
+                        ];
                     } else {
                         $result = [
                             'success' => false,
@@ -646,6 +668,10 @@ class AIChatService
                     // Handle field response in context
                     return $this->handleFieldResponse($chat, $userMessage, $previousContext);
 
+                case 'update_field_response':
+                    // Handle update field response in context
+                    return $this->handleUpdateFieldResponse($chat, $userMessage, $previousContext);
+
                 default:
                     $result = [
                         'success' => false,
@@ -659,9 +685,11 @@ class AIChatService
                 $response = $this->formatClientResponse($action, $result);
             } else {
                 // Check if this is an interactive response that needs AI processing
-                                if (isset($result['requires_interaction']) && $result['requires_interaction']) {
-                    // Store context for follow-up
-                    $this->storeClientContext($chat, $result, $data);
+                if (isset($result['requires_interaction']) && $result['requires_interaction']) {
+                    // Store context for follow-up (but not for update actions since we already stored it)
+                    if ($action !== 'update') {
+                        $this->storeClientContext($chat, $result, $data);
+                    }
 
                     // Use AIML API for interactive responses instead of OpenAI
                     $response = $this->generateInteractiveResponse($chat, $userMessage, $result, $action);
@@ -1160,6 +1188,38 @@ class AIChatService
     }
 
     /**
+     * Check if message is an update field response
+     */
+    private function isUpdateFieldResponse(string $message, array $context): bool
+    {
+        // Check if we're in an update context
+        if (isset($context['update_action']) || isset($context['client_identifier'])) {
+            $message = strtolower(trim($message));
+
+            // Check for update patterns
+            $updatePatterns = [
+                '/update\s+her\s+(\w+)/i',
+                '/update\s+his\s+(\w+)/i',
+                '/change\s+her\s+(\w+)/i',
+                '/change\s+his\s+(\w+)/i',
+                '/set\s+her\s+(\w+)/i',
+                '/set\s+his\s+(\w+)/i',
+                '/to\s+([^\s]+@[^\s]+)/i', // email pattern
+                '/email\s+to\s+([^\s]+@[^\s]+)/i',
+                '/phone\s+to\s+([^\s]+)/i'
+            ];
+
+            foreach ($updatePatterns as $pattern) {
+                if (preg_match($pattern, $message)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Check if message is a response to field collection
      */
     private function isFieldResponse(string $message, array $context): bool
@@ -1309,6 +1369,41 @@ class AIChatService
     }
 
     /**
+     * Extract update field data from user response
+     */
+    private function extractUpdateFieldData(string $message, array $context): array
+    {
+        $data = [];
+        $message = strtolower(trim($message));
+
+        // Extract email updates
+        if (preg_match('/email\s+to\s+([^\s]+@[^\s]+)/i', $message, $matches)) {
+            $data['email'] = $matches[1];
+        } elseif (preg_match('/to\s+([^\s]+@[^\s]+)/i', $message, $matches)) {
+            $data['email'] = $matches[1];
+        }
+
+        // Extract phone updates
+        if (preg_match('/phone\s+to\s+([^\s]+)/i', $message, $matches)) {
+            $data['phone'] = $matches[1];
+        }
+
+        // Extract name updates
+        if (preg_match('/name\s+to\s+([^,\s]+(?:\s+[^,\s]+)*)/i', $message, $matches)) {
+            $name = trim($matches[1]);
+            $nameParts = explode(' ', $name);
+            if (count($nameParts) >= 2) {
+                $data['first_name'] = ucfirst(strtolower($nameParts[0]));
+                $data['last_name'] = ucfirst(strtolower($nameParts[1]));
+            } else {
+                $data['first_name'] = ucfirst(strtolower($name));
+            }
+        }
+
+        return $data;
+    }
+
+    /**
      * Extract field data from user response
      */
     private function extractFieldData(string $message, array $context): array
@@ -1338,6 +1433,67 @@ class AIChatService
         }
 
         return $data;
+    }
+
+    /**
+     * Handle update field response in context
+     */
+    private function handleUpdateFieldResponse(Chat $chat, string $userMessage, array $context): array
+    {
+        try {
+            // Extract update data from user response
+            $updateData = $this->extractUpdateFieldData($userMessage, $context);
+
+            // Get client identifier from context
+            $clientIdentifier = $context['client_identifier'] ?? null;
+
+            if (!$clientIdentifier) {
+                return [
+                    'success' => false,
+                    'response' => 'I need to know which client you want to update. Please specify the client name or email.',
+                    'error' => 'No client identifier found'
+                ];
+            }
+
+            if (empty($updateData)) {
+                return [
+                    'success' => false,
+                    'response' => 'I couldn\'t understand what you want to update. Please specify what information to change.',
+                    'error' => 'No update data found'
+                ];
+            }
+
+            // Perform the update
+            $result = $this->clientService->updateClient($clientIdentifier, $updateData);
+
+            // Clear context after successful update
+            if ($result['success']) {
+                $this->clearClientContext($chat);
+            }
+
+            return [
+                'success' => true,
+                'response' => $this->formatClientResponse('update', $result),
+                'metadata' => [
+                    'client_intent_detected' => true,
+                    'client_action' => 'update',
+                    'client_result' => $result
+                ]
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Update field response handling failed', [
+                'error' => $e->getMessage(),
+                'user_message' => $userMessage,
+                'context' => $context
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'I encountered an error processing your update request. Please try again.',
+                'error' => $e->getMessage()
+            ];
+        }
     }
 
     /**

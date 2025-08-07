@@ -565,7 +565,7 @@ User message: " . $message;
             'data' => []
         ];
 
-        // Check if message contains client keywords
+        // Check if message contains client keywords or is about a specific person
         $clientKeywords = ['client', 'customer', 'contact'];
         $hasClientKeywords = false;
         foreach ($clientKeywords as $keyword) {
@@ -573,6 +573,12 @@ User message: " . $message;
                 $hasClientKeywords = true;
                 break;
             }
+        }
+
+        // Check if this is about updating a specific person (likely a client)
+        $personName = $this->extractPersonName($message);
+        if (!$hasClientKeywords && $personName && (str_contains($message, 'update') || str_contains($message, 'edit'))) {
+            $hasClientKeywords = true;
         }
 
         // Check if this is a response to field collection (context-aware)
@@ -585,22 +591,79 @@ User message: " . $message;
                 $intent['data'] = $this->extractFieldResponseData($message, $context);
                 return $intent;
             }
+
+            // Check if this is an update field response
+            if ($this->isUpdateFieldResponse($message, $context)) {
+                $intent['type'] = 'client';
+                $intent['action'] = 'update_field_response';
+                $intent['confidence'] = 0.8;
+                $intent['data'] = $this->extractUpdateFieldData($message, $context);
+                return $intent;
+            }
         }
 
         if (!$hasClientKeywords) {
             return $intent;
         }
 
-        // Extract client data
+                // Extract client data
         $data = $this->extractClientData($message);
 
+        // Extract person name if not already in data
+        if (empty($data['name']) && empty($data['first_name'])) {
+            $personName = $this->extractPersonName($message);
+            if ($personName) {
+                $nameParts = explode(' ', $personName);
+                if (count($nameParts) >= 2) {
+                    $data['first_name'] = $nameParts[0];
+                    $data['last_name'] = $nameParts[1];
+                } else {
+                    $data['name'] = strtolower($personName);
+                }
+            }
+        }
+
         // Determine action
-        if (str_contains($message, 'create') || str_contains($message, 'new') || str_contains($message, 'add')) {
+        if (str_contains($message, 'update') || str_contains($message, 'edit')) {
+            $intent['type'] = 'client';
+            $intent['action'] = 'update';
+            $intent['confidence'] = 0.7;
+
+            // Format data for update action
+            $updateData = [
+                'identifier' => [
+                    'name' => $data['name'] ?? null,
+                    'email' => null
+                ],
+                'updates' => [] // Will be filled in subsequent messages
+            ];
+
+            // If we have a name, use it as identifier
+            if (!empty($data['name']) || !empty($data['first_name'])) {
+                $updateData['identifier']['name'] = $data['name'] ?? ($data['first_name'] . ' ' . ($data['last_name'] ?? ''));
+            }
+
+            // For update commands, extract the actual update data
+            if (preg_match('/update\s+([^,\s]+(?:\s+[^,\s]+)*)\s+(\w+)\s+to\s+([^\s]+)/i', $message, $matches)) {
+                $fieldName = strtolower($matches[2]);
+                $newValue = $matches[3];
+                
+                if ($fieldName === 'email') {
+                    $updateData['updates']['email'] = $newValue;
+                } elseif ($fieldName === 'phone') {
+                    $updateData['updates']['phone'] = $newValue;
+                } elseif ($fieldName === 'name') {
+                    $updateData['updates']['first_name'] = ucfirst(strtolower($newValue));
+                }
+            }
+
+            $intent['data'] = $updateData;
+        } elseif (str_contains($message, 'create') || str_contains($message, 'new') || str_contains($message, 'add')) {
             $intent['type'] = 'client';
             $intent['action'] = 'create';
             $intent['confidence'] = 0.8;
             $intent['data'] = $data;
-        } elseif (str_contains($message, 'show') || str_contains($message, 'view') || str_contains($message, 'get')) {
+        } elseif (str_contains($message, 'show') || str_contains($message, 'view') || str_contains($message, 'get') || str_contains($message, 'find')) {
             $intent['type'] = 'client';
             $intent['action'] = 'read';
             $intent['confidence'] = 0.7;
@@ -609,11 +672,6 @@ User message: " . $message;
             $intent['type'] = 'client';
             $intent['action'] = 'list';
             $intent['confidence'] = 0.8;
-        } elseif (str_contains($message, 'update') || str_contains($message, 'edit')) {
-            $intent['type'] = 'client';
-            $intent['action'] = 'update';
-            $intent['confidence'] = 0.7;
-            $intent['data'] = $data;
         } elseif (str_contains($message, 'delete') || str_contains($message, 'remove')) {
             $intent['type'] = 'client';
             $intent['action'] = 'delete';
@@ -645,6 +703,12 @@ User message: " . $message;
 
         // Extract name from "Show client" pattern
         if (preg_match('/show\s+client\s+([^,\s]+(?:\s+[^,\s]+)*)/i', $message, $matches)) {
+            $name = trim($matches[1]);
+            $data['name'] = strtolower($name);
+        }
+
+        // Extract name from "find the client" pattern
+        if (preg_match('/find\s+(?:the\s+)?client\s+([^,\s]+(?:\s+[^,\s]+)*)/i', $message, $matches)) {
             $name = trim($matches[1]);
             $data['name'] = strtolower($name);
         }
@@ -752,6 +816,37 @@ User message: " . $message;
     }
 
     /**
+     * Extract person name from message
+     */
+    private function extractPersonName(string $message): ?string
+    {
+        $message = strtolower(trim($message));
+
+        // Common name patterns
+        $namePatterns = [
+            '/update\s+([a-z]+(?:\s+[a-z]+)*?)(?:\s+info|\s+details|\s+information)?/i',
+            '/edit\s+([a-z]+(?:\s+[a-z]+)*?)(?:\s+info|\s+details|\s+information)?/i',
+            '/change\s+([a-z]+(?:\s+[a-z]+)*?)(?:\s+info|\s+details|\s+information)?/i',
+            '/modify\s+([a-z]+(?:\s+[a-z]+)*?)(?:\s+info|\s+details|\s+information)?/i',
+            '/([a-z]+(?:\s+[a-z]+)*?)\s+info/i',
+            '/([a-z]+(?:\s+[a-z]+)*?)\s+details/i'
+        ];
+
+        foreach ($namePatterns as $pattern) {
+            if (preg_match($pattern, $message, $matches)) {
+                $name = trim($matches[1]);
+                // Filter out common words that aren't names
+                $excludeWords = ['the', 'this', 'that', 'their', 'her', 'his', 'my', 'your', 'our'];
+                if (!in_array(strtolower($name), $excludeWords) && strlen($name) > 1) {
+                    return ucwords($name);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Check if message is a response to field collection
      */
     private function isFieldResponse(string $message, array $context): bool
@@ -794,6 +889,73 @@ User message: " . $message;
         }
 
         return false;
+    }
+
+    /**
+     * Check if message is an update field response
+     */
+    private function isUpdateFieldResponse(string $message, array $context): bool
+    {
+        // Check if we're in an update context
+        if (isset($context['update_action']) || isset($context['client_identifier'])) {
+            $message = strtolower(trim($message));
+
+            // Check for update patterns
+            $updatePatterns = [
+                '/update\s+her\s+(\w+)/i',
+                '/update\s+his\s+(\w+)/i',
+                '/change\s+her\s+(\w+)/i',
+                '/change\s+his\s+(\w+)/i',
+                '/set\s+her\s+(\w+)/i',
+                '/set\s+his\s+(\w+)/i',
+                '/to\s+([^\s]+@[^\s]+)/i', // email pattern
+                '/email\s+to\s+([^\s]+@[^\s]+)/i',
+                '/phone\s+to\s+([^\s]+)/i'
+            ];
+
+            foreach ($updatePatterns as $pattern) {
+                if (preg_match($pattern, $message)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Extract update field data from message
+     */
+    private function extractUpdateFieldData(string $message, array $context): array
+    {
+        $data = [];
+        $message = strtolower(trim($message));
+
+        // Extract email updates
+        if (preg_match('/email\s+to\s+([^\s]+@[^\s]+)/i', $message, $matches)) {
+            $data['email'] = $matches[1];
+        } elseif (preg_match('/to\s+([^\s]+@[^\s]+)/i', $message, $matches)) {
+            $data['email'] = $matches[1];
+        }
+
+        // Extract phone updates
+        if (preg_match('/phone\s+to\s+([^\s]+)/i', $message, $matches)) {
+            $data['phone'] = $matches[1];
+        }
+
+        // Extract name updates
+        if (preg_match('/name\s+to\s+([^,\s]+(?:\s+[^,\s]+)*)/i', $message, $matches)) {
+            $name = trim($matches[1]);
+            $nameParts = explode(' ', $name);
+            if (count($nameParts) >= 2) {
+                $data['first_name'] = ucfirst(strtolower($nameParts[0]));
+                $data['last_name'] = ucfirst(strtolower($nameParts[1]));
+            } else {
+                $data['first_name'] = ucfirst(strtolower($name));
+            }
+        }
+
+        return $data;
     }
 
     /**
