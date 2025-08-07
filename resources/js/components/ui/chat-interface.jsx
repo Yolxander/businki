@@ -25,7 +25,9 @@ export default function ChatInterface({
     onPresetClick,
     context = 'general',
     presetChatFlow = null,
-    presetChatStep = 0
+    presetChatStep = 0,
+    recentChats = [],
+    onChatSelect = null
 }) {
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef(null);
@@ -335,6 +337,33 @@ export default function ChatInterface({
                                 );
                             })}
                         </div>
+
+                        {/* Recent Chats */}
+                        {recentChats.length > 0 && (
+                            <div className="mt-8 max-w-4xl mx-auto w-full px-4">
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-4">Recent Chats</h3>
+                                <div className="space-y-2">
+                                    {recentChats.slice(0, 5).map((chat) => (
+                                        <Button
+                                            key={chat.id}
+                                            variant="ghost"
+                                            className="w-full justify-start text-left hover:bg-[#d1ff75]/10 hover:text-foreground border-border hover:border-[#d1ff75]/20 transition-all duration-200 cursor-pointer h-auto p-3"
+                                            onClick={() => onChatSelect && onChatSelect(chat.id)}
+                                        >
+                                            <div className="flex items-center space-x-3 w-full">
+                                                <div className="w-8 h-8 bg-[#d1ff75]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-xs font-bold text-[#d1ff75]">C</span>
+                                                </div>
+                                                <div className="min-w-0 flex-1 text-left">
+                                                    <div className="font-medium text-sm leading-5 truncate">{chat.title}</div>
+                                                    <div className="text-xs text-muted-foreground truncate">{chat.updated_at}</div>
+                                                </div>
+                                            </div>
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-4">

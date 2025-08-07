@@ -21,7 +21,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import ChatInterface from '@/components/ui/chat-interface';
-import RecentChatsSidebar from '@/components/ui/recent-chats-sidebar';
+
 import {
     Plus,
     Users,
@@ -344,7 +344,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         if (dashboardMode === 'ai_assistant' && context === 'bobbi-flow') {
             return;
         }
-        
+
         setAiContext(context);
         // Reset chat when context changes
         setCurrentChatId(null);
@@ -701,10 +701,29 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
         console.log('Edit chat:', chatId);
     };
 
+    // Load recent chats
+    const loadRecentChats = async () => {
+        try {
+            const response = await fetch(`/api/chats/recent?type=${aiContext}&limit=5`);
+            const data = await response.json();
+            setRecentChats(data.data.chats);
+        } catch (error) {
+            console.error('Error loading recent chats:', error);
+        }
+    };
+
+    // Load recent chats when context changes
+    useEffect(() => {
+        loadRecentChats();
+    }, [aiContext]);
+
     // State for preset chat flows
     const [presetChatFlow, setPresetChatFlow] = useState(null);
     const [presetChatStep, setPresetChatStep] = useState(0);
     const [presetChatData, setPresetChatData] = useState({});
+
+    // State for recent chats
+    const [recentChats, setRecentChats] = useState([]);
 
 
 
@@ -752,7 +771,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                 'Manage Subtasks'
             ];
         }
-        
+
         if (context === 'tasks') {
             return [
                 'View All Tasks',
@@ -1408,20 +1427,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                             </div>
                         </div>
 
-                        {/* Chat Sidebar */}
-                        {showChatSidebar && (
-                            <RecentChatsSidebar
-                                currentChatId={currentChatId}
-                                onChatSelect={handleChatSelect}
-                                onNewChat={handleNewChat}
-                                onDeleteChat={handleDeleteChat}
-                                onEditChat={handleEditChat}
-                                chatType={aiContext}
-                                collapsed={chatSidebarCollapsed}
-                                onToggleCollapse={() => setChatSidebarCollapsed(!chatSidebarCollapsed)}
-                                dashboardMode={dashboardMode}
-                            />
-                        )}
+
 
                         {/* Main Content */}
                         <div className={`${showChatSidebar && chatSidebarCollapsed ? 'ml-16' : ''} flex-1 bg-background flex flex-col transition-all duration-300`}>
@@ -1447,24 +1453,17 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                             </Button>
                                         </div>
                                     ) : (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                if (showChatSidebar) {
-                                                    setChatSidebarCollapsed(!chatSidebarCollapsed);
-                                                } else {
-                                                    setShowChatSidebar(true);
-                                                }
-                                            }}
-                                            className="text-muted-foreground hover:text-foreground"
-                                        >
-                                            <MessageSquare className="w-4 h-4 mr-2" />
-                                            {aiContext === 'general' ? 'Recent Chats' : `${aiContext.charAt(0).toUpperCase() + aiContext.slice(1)} Chats`}
-                                            {showChatSidebar && chatSidebarCollapsed && (
-                                                <span className="ml-2 text-xs text-muted-foreground">(Collapsed)</span>
-                                            )}
-                                        </Button>
+                                        <div className="flex items-center space-x-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleNewChat}
+                                                className="text-muted-foreground hover:text-foreground"
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                New Chat
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -1477,6 +1476,8 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                                 presetPrompts={getContextPrompts(aiContext)}
                                 presetChatFlow={presetChatFlow}
                                 presetChatStep={presetChatStep}
+                                recentChats={recentChats}
+                                onChatSelect={handleChatSelect}
                             />
                         </div>
 
