@@ -356,11 +356,11 @@ export default function ChatInterface({
                                                         <span className="text-xs font-bold text-[#d1ff75]">C</span>
                                                     </div>
                                                     <div className="min-w-0 flex-1 text-left">
-                                                        <div className="font-medium text-sm leading-5 truncate max-w-[300px]">{chat.title}</div>
+                                                        <div className="font-medium text-sm leading-5 truncate max-w-[300px]">{chat.full_title || chat.title}</div>
                                                     </div>
                                                 </div>
                                                 <div className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                                                    {new Date(chat.updated_at).toLocaleDateString()}
+                                                    {chat.last_activity_at || 'N/A'}
                                                 </div>
                                             </div>
                                         </Button>
