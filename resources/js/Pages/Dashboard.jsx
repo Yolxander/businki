@@ -439,6 +439,38 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
             return;
         }
 
+        // Handle follow-up options from client query
+        if (message === 'End Chat') {
+            // Reset the preset flow and clear chat
+            setPresetChatFlow(null);
+            setPresetChatStep(0);
+            setPresetChatData({});
+            setChatMessages([]);
+            setCurrentChatId(null);
+            return;
+        }
+
+        // Handle other preset options from follow-up
+        if (['Add New Client', 'Update Client Information', 'Generate Client Report'].includes(message)) {
+            // Start the selected preset flow
+            setPresetChatFlow(message);
+            setPresetChatStep(0);
+            setPresetChatData({});
+            setCurrentChatId(null);
+            setChatMessages([]);
+
+            // Add the first system message
+            const firstStep = presetChatFlows[message].steps[0];
+            const systemMessage = {
+                role: 'assistant',
+                content: firstStep.message,
+                type: 'system',
+                options: firstStep.options
+            };
+            setChatMessages([systemMessage]);
+            return;
+        }
+
         // Regular chat handling
         try {
             let chatId = currentChatId;
@@ -677,6 +709,15 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                         };
                         setChatMessages(prev => [...prev, aiMessage]);
                     }
+
+                    // Add follow-up message asking what the user would like to do next
+                    const followUpMessage = {
+                        role: 'assistant',
+                        content: "What would you like to do next?",
+                        type: 'system',
+                        options: ['Add New Client', 'Update Client Information', 'Generate Client Report', 'End Chat']
+                    };
+                    setChatMessages(prev => [...prev, followUpMessage]);
                 } else {
                     // Fallback: create separate bubbles for each client
                     const fallbackMessages = clientData.data.clients.map(client => {
@@ -697,6 +738,15 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                     });
 
                     setChatMessages(prev => [...prev, ...fallbackMessages]);
+
+                    // Add follow-up message asking what the user would like to do next
+                    const followUpMessage = {
+                        role: 'assistant',
+                        content: "What would you like to do next?",
+                        type: 'system',
+                        options: ['Add New Client', 'Update Client Information', 'Generate Client Report', 'End Chat']
+                    };
+                    setChatMessages(prev => [...prev, followUpMessage]);
                 }
             } else {
                 throw new Error(clientData.message || 'Failed to fetch client data');
