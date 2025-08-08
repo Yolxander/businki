@@ -412,7 +412,9 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                     options: nextStep.options
                 };
 
-                setChatMessages(prev => [...prev, systemMessage]);
+                if (typeof nextMessage === 'string' && nextMessage.trim() !== '') {
+                    setChatMessages(prev => [...prev, systemMessage]);
+                }
                 setPresetChatStep(nextStepIndex);
 
                 // If this is the final step, handle completion
@@ -621,7 +623,7 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
 
             const clientData = await response.json();
 
-            if (clientData.status === 'success') {
+                        if (clientData.status === 'success') {
                 // Send client data to AIML service for processing
                 const aiResponse = await fetch('/api/ai/process-client-data', {
                     method: 'POST',
@@ -643,21 +645,58 @@ export default function Dashboard({ auth, stats, clients = [], widgets = [], das
                 const aiData = await aiResponse.json();
 
                 if (aiData.status === 'success') {
-                    // Add AI response to chat
-                    const aiMessage = {
-                        role: 'assistant',
-                        content: aiData.data.response,
-                        type: 'ai_response'
-                    };
-                    setChatMessages(prev => [...prev, aiMessage]);
+                    // Split AI output into separate client bubbles and clean formatting
+                    const rawResponse = aiData.data.response || '';
+                    const lines = rawResponse.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+                    const clientMessages = lines
+                        .filter(line => line.includes('@') || line.includes('**')) // Only lines with emails or client names
+                        .map(line => {
+                            // Remove bullet points, markdown, and clean up formatting
+                            const cleaned = line
+                                .replace(/^[-•\u2022]\s*/, '') // Remove bullet points
+                                .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
+                                .replace(/^\s*/, '') // Remove leading spaces
+                                .replace(/\s*$/, ''); // Remove trailing spaces
+
+                            return {
+                                role: 'assistant',
+                                content: cleaned,
+                                type: 'client_item'
+                            };
+                        });
+
+                    if (clientMessages.length > 0) {
+                        setChatMessages(prev => [...prev, ...clientMessages]);
+                    } else {
+                        // Fallback if no client lines found
+                        const aiMessage = {
+                            role: 'assistant',
+                            content: aiData.data.response,
+                            type: 'ai_response'
+                        };
+                        setChatMessages(prev => [...prev, aiMessage]);
+                    }
                 } else {
-                    // Fallback: show raw client data
-                    const fallbackMessage = {
-                        role: 'assistant',
-                        content: `Here are your ${clientData.data.view_type}:\n\n${JSON.stringify(clientData.data.clients, null, 2)}`,
-                        type: 'fallback'
-                    };
-                    setChatMessages(prev => [...prev, fallbackMessage]);
+                    // Fallback: create separate bubbles for each client
+                    const fallbackMessages = clientData.data.clients.map(client => {
+                        const name = client.name || 'Unknown';
+                        const email = client.email || 'N/A';
+                        const status = client.status ? (client.status.charAt(0).toUpperCase() + client.status.slice(1)) : 'Unknown';
+                        const lastContact = client.lastContact || 'N/A';
+                        const rating = (client.rating ?? 'N/A');
+                        const projects = (client.projects ?? 0);
+                        const totalRevenue = typeof client.totalRevenue !== 'undefined' && client.totalRevenue !== null ? `${client.totalRevenue}` : '0.00';
+                        const content = `${name} - ${email} (${status}) - Last Contact: ${lastContact}, Rating: ${rating}, Projects: ${projects}, Total Revenue: $${totalRevenue}`;
+
+                        return {
+                            role: 'assistant',
+                            content: content,
+                            type: 'client_item'
+                        };
+                    });
+
+                    setChatMessages(prev => [...prev, ...fallbackMessages]);
                 }
             } else {
                 throw new Error(clientData.message || 'Failed to fetch client data');

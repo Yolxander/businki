@@ -861,13 +861,11 @@ User message: " . $message;
     {
         $clientData = json_encode($clients, JSON_PRETTY_PRINT);
 
-        return "You are a helpful AI assistant analyzing client data. Here is the client data for '{$viewType}':\n\n" .
+        return "You are a helpful AI assistant. Here is the client data for '{$viewType}':\n\n" .
                "Client Data:\n{$clientData}\n\n" .
-               "Please provide a comprehensive analysis of these clients including:\n" .
-               "1. Summary of client information\n" .
-               "2. Key insights and patterns\n" .
-               "3. Recommendations for client management\n" .
-               "4. Notable statistics and metrics\n\n" .
-               "Format your response in a clear, professional manner suitable for a business dashboard.";
+               "Please provide a clean list of clients with their key information. Format each client as:\n" .
+               "Client Name - Email (Status) - Last Contact: date, Rating: number, Projects: number, Total Revenue: amount\n" .
+               "Each client should be on a separate line with no bullet points or markdown formatting.\n" .
+               "Keep it concise and include all the key details for each client.";
     }
 }

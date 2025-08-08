@@ -346,7 +346,7 @@ export const presetChatFlows = {
                 options: ['All Clients', 'Active Clients']
             },
             {
-                message: "Perfect! I'm fetching your {view_type} for you.\n\nLoading your clients...",
+                message: "",
                 field: null,
                 isFinal: true
             }
